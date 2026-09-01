@@ -240,7 +240,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           fixed top-0 left-0 z-50 h-full flex flex-col
           bg-[#162420]
           border-r border-[#1f3228]
-          shadow-[4px_0_30px_rgba(0,0,0,0.4)]
+          
           transition-all duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0

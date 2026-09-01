@@ -60,8 +60,8 @@ const AdminDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Welcome back, Admin! Here's what's happening with your store today.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Hello, Admin! 👋</h1>
+          <p className="text-gray-500 text-sm mt-1">Here's what's happening with your store today.</p>
         </div>
         <button className="flex items-center space-x-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm shadow-sm">
           <Calendar size={16} className="text-gray-500" />
@@ -73,11 +73,11 @@ const AdminDashboard = () => {
       {/* Top Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {[
-          { title: 'Total Orders', value: '1,248', inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, wave: 'bg-[#184431]/20', iconBg: 'bg-[#184431]' },
-          { title: 'Total Revenue', value: '₹8,45,230', inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, wave: 'bg-[#d8892f]/20', iconBg: 'bg-[#d8892f]' },
-          { title: 'Total Customers', value: '2,532', inc: '15.3%', icon: <Users size={24} className="text-white" />, wave: 'bg-[#184431]/20', iconBg: 'bg-[#184431]' },
-          { title: 'Total Products', value: '896', inc: '10.7%', icon: <Package size={24} className="text-white" />, wave: 'bg-[#7e57c2]/20', iconBg: 'bg-[#7e57c2]' },
-          { title: 'Total Views', value: '12,580', inc: '12.5%', icon: <Eye size={24} className="text-white" />, wave: 'bg-[#c68233]/20', iconBg: 'bg-[#c68233]' },
+          { title: 'Total Orders', value: '1,248', inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#22c55e]' }, // Bright Green
+          { title: 'Total Revenue', value: '₹8,45,230', inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, iconBg: 'bg-[#f59e0b]' }, // Bright Amber
+          { title: 'Total Customers', value: '2,532', inc: '15.3%', icon: <Users size={24} className="text-white" />, iconBg: 'bg-[#06b6d4]' }, // Bright Cyan
+          { title: 'Total Products', value: '896', inc: '10.7%', icon: <Package size={24} className="text-white" />, iconBg: 'bg-[#a855f7]' }, // Bright Purple
+          { title: 'Total Views', value: '12,580', inc: '12.5%', icon: <Eye size={24} className="text-white" />, iconBg: 'bg-[#f97316]' }, // Bright Orange
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm relative overflow-hidden flex flex-col h-full">
             <div className="flex items-start space-x-4 flex-1">
