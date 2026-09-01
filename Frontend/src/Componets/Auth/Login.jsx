@@ -103,10 +103,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex font-sans overflow-hidden bg-[#f4f5f7]">
+    <div className="h-screen w-full flex font-sans overflow-hidden bg-[#f4f5f7]">
       {/* Left Panel */}
       <div 
-        className="hidden lg:flex flex-col justify-between w-1/2 relative z-10 bg-black text-white px-14 py-12"
+        className="hidden lg:flex flex-col justify-between w-1/2 relative z-10 bg-black text-white px-14 py-12 h-full"
         style={{
           backgroundImage: `linear-gradient(to right, rgba(17,19,23,0.95) 0%, rgba(17,19,23,0.8) 50%, rgba(17,19,23,0.95) 100%), url('https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=1200&auto=format&fit=crop')`,
           backgroundSize: 'cover',
@@ -175,8 +175,8 @@ const Login = () => {
       </div>
 
       {/* Right Form Panel */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
-        <div className="w-full max-w-[480px] bg-white p-10 md:p-12 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col">
+      <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
+        <div className="w-full max-w-[480px] bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col max-h-full overflow-y-auto">
           
           {/* Floral decorations Top Right */}
           <svg className="absolute top-0 right-0 text-[#d9b882] w-32 h-32 opacity-30 rounded-tr-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -197,18 +197,18 @@ const Login = () => {
              <circle cx="40" cy="95" r="1" fill="currentColor"/>
           </svg>
 
-          <div className="flex flex-col items-center mb-8 relative z-10">
-            <div className="w-16 h-16 rounded-full bg-[#1f3b31] flex items-center justify-center mb-5 shadow-lg">
+          <div className="flex flex-col items-center mb-6 relative z-10">
+            <div className="w-16 h-16 rounded-full bg-[#1f3b31] flex items-center justify-center mb-4 shadow-lg">
                <div className="relative w-8 h-8">
                   <span className="text-[#d9b882] font-serif text-xl absolute top-0 left-1.5">P</span>
                   <span className="text-[#d9b882] font-serif text-xl absolute bottom-0 right-1.5">F</span>
                </div>
             </div>
-            <h2 className="text-[28px] font-serif font-bold text-[#1a3029] mb-2 tracking-tight">Login to PixelFrame</h2>
+            <h2 className="text-[28px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Login to PixelFrame</h2>
             <p className="text-gray-500 text-[13px]">Please enter your details to access your account</p>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5 relative z-10">
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 relative z-10">
             {/* Identifier */}
             <div>
               <label className="block text-sm font-medium text-gray-800 mb-2">
@@ -320,10 +320,7 @@ const Login = () => {
           </form>
         </div>
 
-        {/* Footer Text */}
-        <div className="absolute bottom-6 w-full text-center text-xs text-gray-400">
-          &copy; 2024 PixelFrame. All rights reserved.
-        </div>
+       
       </div>
     </div>
   );
