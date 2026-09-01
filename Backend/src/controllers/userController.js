@@ -33,7 +33,7 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate unique user_id
-    const user_id = `USER_${uuidv4()}`;
+    const user_id = uuidv4();
 
     // Create user object
     const userData = {

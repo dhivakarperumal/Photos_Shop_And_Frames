@@ -14,7 +14,7 @@ async function seedAdminUser() {
     const pool = await initDB();
 
     // Admin user data
-    const user_id = `USER_${uuidv4()}`;
+    const user_id = uuidv4();
     const username = "Admin";
     const email = "admin@gmail.com";
     const password = "admin@123";
