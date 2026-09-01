@@ -238,9 +238,9 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         data-sidebar="admin-sidebar"
         className={`
           fixed top-0 left-0 z-50 h-full flex flex-col
-          bg-[#0d0d12] bg-[radial-gradient(circle_at_top,_rgba(248,116,14,0.12),transparent_25%),radial-gradient(circle_at_85%_20%,_rgba(255,255,255,0.06),transparent_30%)]
-          border-r border-white/10 backdrop-blur-xl
-          shadow-[4px_0_30px_rgba(0,0,0,0.6)]
+          bg-[#162420]
+          border-r border-[#1f3228]
+          shadow-[4px_0_30px_rgba(0,0,0,0.4)]
           transition-all duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0
@@ -248,18 +248,16 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         `}
       >
         {/* ========== LOGO ========== */}
-        <div className={`flex items-center gap-3 border-b border-white/10 shrink-0 ${collapsed ? "px-3 py-4 justify-center" : "px-4 py-4"}`}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 p-1"
-            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.2) 0%, rgba(249,115,22,0.05) 100%)', border: '1px solid rgba(249,115,22,0.25)', boxShadow: '0 0 18px rgba(249,115,22,0.15), inset 0 1px 0 rgba(255,255,255,0.08)' }}
-          >
+        <div className={`flex items-center gap-3 border-b border-[#1f3228] shrink-0 ${collapsed ? "px-3 py-5 justify-center" : "px-5 py-5"}`}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 p-1 border border-[#d4a843]/30 bg-[#1f3228]">
             <img src={Logo} alt="Logo" className="w-full h-full object-contain drop-shadow-lg" />
           </div>
 
           {!collapsed && (
             <div className="overflow-hidden flex-1">
-              <h1 className="text-sm font-semibold text-white tracking-tight">Q Techx Admin</h1>
-              <p className="text-[11px] text-white/50 truncate">
-                {userProfile?.displayName?.split(" ")[0] || "Administrator"}
+              <h1 className="text-base font-bold text-[#d4a843] tracking-wide font-serif">PixelFrame</h1>
+              <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase">
+                Frame Your Memories
               </p>
             </div>
           )}
@@ -278,7 +276,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           ref={navRef}
           onScroll={handleNavScroll}
           data-sidebar="admin-nav"
-          className="flex-1 px-3 py-4 space-y-2 overflow-y-auto scrollbar-hide"
+          className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-hide"
         >
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -294,21 +292,20 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                     onClick={() => toggleMenu(item.label)}
                     title={collapsed ? item.label : ""}
                     className={`
-                      w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl text-sm
+                      w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm
                       transition-all duration-200 group
                       ${isAnyChildActive
-                        ? "bg-primary/15 text-primary ring-1 ring-primary/20"
-                        : "text-white/60 hover:text-white hover:bg-white/10"
+                        ? "bg-[#1f3228] text-[#d4a843] border-l-2 border-[#d4a843]"
+                        : "text-white hover:text-white hover:bg-[#1f3228]/70"
                       }
                     `}
                   >
-                    <Icon className={`w-[18px] h-[18px] shrink-0 ${isAnyChildActive ? "text-primary" : ""}`} />
+                    <Icon className={`w-[17px] h-[17px] shrink-0 ${isAnyChildActive ? "text-[#d4a843]" : "text-white"}`} />
                     {!collapsed && (
                       <>
-                        <span className="flex-1 text-left font-medium text-white truncate">{item.label}</span>
+                        <span className="flex-1 text-left font-medium truncate text-white">{item.label}</span>
                         <ChevronDown
-                          className={`w-3.5 h-3.5 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""
-                            }`}
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
                         />
                       </>
                     )}
@@ -384,17 +381,17 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                             to={sub.path}
                             onClick={() => isOpen && onClose()}
                             className={`
-                              flex items-center gap-2.5 px-3 py-3 rounded-2xl text-xs
+                              flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs
                               transition-all duration-200
                               ${isActive
-                                ? "bg-primary/90 text-white font-semibold shadow-[0_8px_20px_rgba(248,116,14,0.18)]"
-                                : "text-white/50 hover:text-white hover:bg-white/10"
+                                ? "bg-[#d4a843] text-[#162420] font-semibold"
+                                : "text-white hover:text-white hover:bg-[#1f3228]"
                               }
                             `}
                             title={collapsed && sub.badge ? `${sub.label} (${pendingCount})` : ''}
                           >
-                            <SubIcon className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate flex-1">{sub.label}</span>
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-[#162420]" : "text-white"}`} />
+                            <span className={`truncate flex-1 ${isActive ? "text-[#162420]" : "text-white"}`}>{sub.label}</span>
                             {sub.badge === 'pending' && pendingCount > 0 && !collapsed && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 ml-2 shrink-0">
                                 {pendingCount}
@@ -419,17 +416,17 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                 title={collapsed ? item.label : ""}
                 onClick={() => isOpen && onClose()}
                 className={`
-                  flex items-center gap-3 px-3 py-3.5 rounded-2xl text-sm
+                  flex items-center gap-3 px-3 py-3 rounded-xl text-sm
                   transition-all duration-200
                   ${isActive
-                    ? "bg-primary/90 text-white font-semibold shadow-[0_8px_20px_rgba(248,116,14,0.18)]"
-                    : "text-white/60 hover:text-white hover:bg-white/10"
+                    ? "bg-[#d4a843] text-[#162420] font-semibold shadow-md"
+                    : "text-white hover:text-white hover:bg-[#1f3228]/70"
                   }
                   ${collapsed ? "justify-center" : ""}
                 `}
               >
-                <Icon className="w-[18px] h-[18px] shrink-0" />
-                {!collapsed && <span className="font-medium truncate">{item.label}</span>}
+                <Icon className={`w-[17px] h-[17px] shrink-0 ${isActive ? "text-[#162420]" : "text-white"}`} />
+                {!collapsed && <span className={`font-medium truncate ${isActive ? "text-[#162420]" : "text-white"}`}>{item.label}</span>}
               </NavLink>
             );
           })}
@@ -440,11 +437,11 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           onClick={onToggleCollapse}
           className="
             hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2
-            w-8 h-8 rounded-full
-            bg-primary/90 shadow-xl shadow-primary/40
-            border border-white/10
+            w-7 h-7 rounded-full
+            bg-[#d4a843] shadow-lg
+            border border-[#162420]
             items-center justify-center
-            text-white hover:scale-105 hover:bg-primary transition-all duration-200
+            text-[#162420] hover:scale-105 transition-all duration-200
           "
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -455,9 +452,9 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
 
         {/* ========== BOTTOM USER STRIP ========== */}
         {!collapsed && (
-          <div className="px-3 py-4 border-t border-white/10 shrink-0">
-            <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-white/5 border border-white/10 shadow-inner shadow-black/10">
-              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+          <div className="px-3 py-4 border-t border-[#1f3228] shrink-0">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-[#1f3228] border border-white/5 shadow-inner">
+              <div className="w-9 h-9 rounded-lg bg-[#d4a843] flex items-center justify-center text-[#162420] text-sm font-bold shrink-0">
                 {(userProfile?.displayName?.[0] || "A").toUpperCase()}
               </div>
               <div className="overflow-hidden">
