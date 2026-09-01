@@ -131,7 +131,7 @@ const loginUser = async (req, res) => {
         userId: user.id,
         user_id: user.user_id,
         email: user.email,
-        username: user.full_name,
+        username: user.username,
         role: user.role,
         profile_image: user.profile_image,
       },

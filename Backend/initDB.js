@@ -26,7 +26,7 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL UNIQUE,
-        full_name VARCHAR(255) NOT NULL,
+        username VARCHAR(255) NOT NULL,
         mobile_number VARCHAR(50),
         email VARCHAR(255) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,

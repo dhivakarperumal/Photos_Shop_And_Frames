@@ -33,7 +33,7 @@ async function seedAdminUser() {
     // Insert admin user
     const insertQuery = `
       INSERT INTO users 
-      (user_id, full_name, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
+      (user_id, username, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `;
 

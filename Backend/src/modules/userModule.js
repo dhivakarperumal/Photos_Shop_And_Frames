@@ -20,7 +20,7 @@ const createUser = async (userData) => {
 
   const query = `
     INSERT INTO users 
-    (user_id, full_name, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
+    (user_id, username, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `;
 
@@ -99,7 +99,7 @@ const updateUser = async (userId, updateData) => {
 
   const query = `
     UPDATE users 
-    SET full_name = ?, mobile_number = ?, email = ?, profile_image = ?, 
+    SET username = ?, mobile_number = ?, email = ?, profile_image = ?, 
         role = ?, status = ?, updated_by = ?, updated_at = NOW()
     WHERE id = ?
   `;
