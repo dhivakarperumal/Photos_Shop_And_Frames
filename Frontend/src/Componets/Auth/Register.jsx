@@ -61,14 +61,16 @@ const Register = () => {
     setServerError("");
     try {
       const { data } = await api.post("/users/register", {
+        username: formData.firstName.trim(),
         firstName: formData.firstName.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
+        mobile_number: formData.phone.trim(),
         password: formData.password,
       });
 
-      if (data?.token && data?.user) {
-        login(data.user, data.token);
+      if (data?.token && (data?.user || data?.data)) {
+        login(data.user || data.data, data.token);
       }
       setSubmitted(true);
       navigate("/login", { replace: true });

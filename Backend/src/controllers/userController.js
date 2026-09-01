@@ -10,18 +10,30 @@ const userModule = require("../modules/userModule");
 // Register a new user
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, mobile_number, profile_image } = req.body;
+    const {
+      username,
+      firstName,
+      email,
+      password,
+      mobile_number,
+      phone,
+      profile_image,
+    } = req.body;
+
+    const normalizedUsername = (username || firstName || email || "user").toString().trim();
+    const normalizedEmail = (email || "").toString().trim().toLowerCase();
+    const normalizedPhone = (mobile_number ?? phone ?? "").toString().trim();
 
     // Validation
-    if (!username || !email || !password) {
+    if (!normalizedUsername || !normalizedEmail || !password) {
       return res.status(400).json({
         success: false,
-        message: "username, email, and password are required",
+        message: "Name, email, and password are required",
       });
     }
 
     // Check if user already exists
-    const existingUser = await userModule.isEmailExists(email);
+    const existingUser = await userModule.isEmailExists(normalizedEmail);
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -38,10 +50,10 @@ const registerUser = async (req, res) => {
     // Create user object
     const userData = {
       user_id,
-      username,
-      email,
+      username: normalizedUsername,
+      email: normalizedEmail,
       password: hashedPassword,
-      mobile_number: mobile_number || null,
+      mobile_number: normalizedPhone || null,
       profile_image: profile_image || null,
       role: "user",
       status: "Active",
@@ -53,21 +65,28 @@ const registerUser = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: result.userId, email, role: "user" },
+      { userId: result.userId, email: normalizedEmail, role: "user" },
       process.env.JWT_SECRET || "your_secret_key",
       { expiresIn: "7d" }
     );
 
+    const user = {
+      id: result.userId,
+      user_id,
+      username: normalizedUsername,
+      email: normalizedEmail,
+      role: "user",
+      phone: normalizedPhone,
+      mobile_number: normalizedPhone,
+      profile_image: profile_image || null,
+    };
+
     res.status(201).json({
       success: true,
       message: "User registered successfully",
-      data: {
-        userId: result.userId,
-        user_id,
-        email,
-        username,
-      },
       token,
+      user,
+      data: user,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -81,18 +100,18 @@ const registerUser = async (req, res) => {
 // Login user
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, identifier, password } = req.body;
+    const normalizedIdentifier = (identifier || email || "").toString().trim();
 
     // Validation
-    if (!email || !password) {
+    if (!normalizedIdentifier || !password) {
       return res.status(400).json({
         success: false,
         message: "Email and password are required",
       });
     }
 
-    // Get user by email
-    const user = await userModule.getUserByEmail(email);
+    const user = await userModule.getUserByIdentifier(normalizedIdentifier);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -124,18 +143,23 @@ const loginUser = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    const userPayload = {
+      id: user.id,
+      user_id: user.user_id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      phone: user.mobile_number,
+      mobile_number: user.mobile_number,
+      profile_image: user.profile_image,
+    };
+
     res.status(200).json({
       success: true,
       message: "Login successful",
-      data: {
-        userId: user.id,
-        user_id: user.user_id,
-        email: user.email,
-        username: user.username,
-        role: user.role,
-        profile_image: user.profile_image,
-      },
       token,
+      user: userPayload,
+      data: userPayload,
     });
   } catch (error) {
     console.error("Login error:", error);

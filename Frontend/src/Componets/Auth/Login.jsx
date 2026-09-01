@@ -57,12 +57,13 @@ const Login = () => {
       try {
         const { data } = await api.post("/users/login", {
           identifier: username,
+          email: username,
           password: password,
         });
 
-        if (data?.token && data?.user) {
+        if (data?.token && (data?.user || data?.data)) {
           setIsSubmitting(true);
-          login(data.user, data.token);
+          login(data.user || data.data, data.token);
           setSubmitted(true);
           navigate(getRoleHome(data.user?.role), { replace: true });
         }
@@ -89,10 +90,11 @@ const Login = () => {
     try {
       const { data } = await api.post("/users/login", {
         identifier: formData.username.trim(),
+        email: formData.username.trim(),
         password: formData.password,
       });
 
-      login(data.user, data.token);
+      login(data.user || data.data, data.token);
       setSubmitted(true);
       navigate(getRoleHome(data.user?.role), { replace: true });
     } catch (error) {

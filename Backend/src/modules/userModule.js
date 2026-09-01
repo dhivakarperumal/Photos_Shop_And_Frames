@@ -73,6 +73,17 @@ const getUserById = async (user_id) => {
   }
 };
 
+const getUserByIdentifier = async (identifier) => {
+  const query = "SELECT * FROM users WHERE email = ? OR username = ? LIMIT 1";
+  try {
+    const pool = getDB();
+    const [rows] = await pool.query(query, [identifier, identifier]);
+    return rows.length > 0 ? rows[0] : null;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Get all users
 const getAllUsers = async () => {
   const query = "SELECT id, user_id, username, email, role, status, created_at FROM users";
@@ -159,6 +170,7 @@ const isEmailExists = async (email) => {
 module.exports = {
   createUser,
   getUserByEmail,
+  getUserByIdentifier,
   getUserById,
   getAllUsers,
   updateUser,

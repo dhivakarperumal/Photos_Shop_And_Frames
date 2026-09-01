@@ -15,7 +15,7 @@ console.table({
 
 const { initDB } = require("./src/config/db");
 const { upload } = require("./src/config/multerConfig");
-
+const usersRouter = require("./src/routers/usersRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -79,13 +79,11 @@ app.post("/api/upload", upload.any(), (req, res) => {
 
 
 
-
-
 // Health check (must be before the catch-all /api/* 404 handler)
 app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_ENV || 'development' }));
 
-// Explicit API 404 to prevent API paths from being handled by frontend fallback
-// ⚠️ This MUST be the LAST /api route — anything registered after this will never be reached
+app.use("/api/users", usersRouter);
+
 app.use("/api", (req, res) => {
   res.status(404).json({
     success: false,
@@ -94,99 +92,7 @@ app.use("/api", (req, res) => {
   });
 });
 
-// Serve uploaded files from the backend uploads directory as inline browser content
-app.use(["/uploads", "/api/uploads"], (req, res, next) => {
-  res.setHeader("Content-Disposition", "inline");
 
-  const requestedPath = req.path.replace(/^\/+/, "");
-  const absoluteRequestedPath = path.join(__dirname, "uploads", requestedPath);
-
-  if (fs.existsSync(absoluteRequestedPath)) {
-    return next();
-  }
-
-  const fileName = path.basename(requestedPath);
-  const fallbackCandidates = [
-    path.join(__dirname, "uploads", "projects", "source_code_backup", fileName),
-    path.join(__dirname, "uploads", "projects", "images", fileName),
-  ];
-
-  const resolvedFile = fallbackCandidates.find((candidate) => fs.existsSync(candidate));
-  if (resolvedFile) {
-    return res.sendFile(resolvedFile);
-  }
-
-  next();
-}, express.static(path.join(__dirname, "uploads")));
-
-// Serve frontend production build if available
-const potentialFrontendBuildPaths = [
-  path.join(__dirname, "Frontend", "dist"),
-  path.join(__dirname, "..", "Frontend", "dist"),
-  path.join(__dirname, "..", "..", "Frontend", "dist"),
-  path.join(__dirname, "..", "..", "..", "Frontend", "dist"),
-  path.join(__dirname, "dist"),
-  path.join(__dirname, "..", "dist"),
-  path.join(__dirname, "build"),
-  path.join(__dirname, "..", "build"),
-];
-
-const frontendBuildPath = potentialFrontendBuildPaths.find((buildPath) => {
-  return fs.existsSync(buildPath) && fs.existsSync(path.join(buildPath, "index.html"));
-});
-
-const frontendPublicPath = path.join(__dirname, "..", "Frontend", "public");
-
-const faviconCandidates = [
-  path.join(frontendPublicPath, "favicon.ico"),
-  path.join(frontendPublicPath, "images", "favicon.ico"),
-  frontendBuildPath ? path.join(frontendBuildPath, "favicon.ico") : null,
-].filter(Boolean);
-
-app.get("/favicon.ico", (req, res) => {
-  try {
-    const faviconPath = faviconCandidates.find((candidate) => fs.existsSync(candidate));
-    if (!faviconPath) {
-      return res.status(404).json({ success: false, message: "favicon.ico not found" });
-    }
-    return res.sendFile(faviconPath);
-  } catch (error) {
-    console.error("Favicon Error:", error);
-    return res.status(500).json({ success: false, message: "Error serving favicon" });
-  }
-});
-
-if (frontendBuildPath) {
-  app.use(express.static(frontendBuildPath));
-  app.get(["/", "/index.html"], (req, res) => {
-    return res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
-  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (req, res) => {
-    return res.sendFile(path.join(frontendBuildPath, "index.html"));
-  });
-} else {
-  console.warn("Frontend build directory not found. Backend will run in API-only mode.");
-}
-
-if (fs.existsSync(frontendPublicPath)) {
-  app.use(express.static(frontendPublicPath));
-}
-
-// Global Context Middleware for tracking created_by / updated_by
-app.use((req, res, next) => {
-  let user = null;
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    try {
-      user = jwt.verify(token, process.env.JWT_SECRET || 'supersecretkey');
-    } catch (err) {
-      // Ignore token errors here, just proceed without user context
-    }
-  }
-
-  als.run(new Map([['user', user]]), next);
-});
 
 async function startServer() {
   try {
