@@ -176,7 +176,7 @@ const Login = () => {
 
       {/* Right Form Panel */}
       <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
-        <div className="w-full max-w-[480px] bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col max-h-full overflow-y-auto">
+        <div className="w-full max-w-[600px] bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col max-h-full overflow-y-auto">
           
           {/* Floral decorations Top Right */}
           <svg className="absolute top-0 right-0 text-[#d9b882] w-32 h-32 opacity-30 rounded-tr-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
