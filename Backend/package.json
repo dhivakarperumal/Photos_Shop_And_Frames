@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node index.js",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "init-db": "node initDB.js",
+    "seed": "node seed.js"
   },
   "keywords": [],
   "author": "",
