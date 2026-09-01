@@ -164,11 +164,11 @@ const Register = () => {
       </div>
 
       {/* Right Form Panel */}
-      <div className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-2 relative overflow-hidden">
-        <div className="w-full max-w-[600px] bg-white p-5 md:p-6 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative z-20 flex flex-col max-h-full overflow-hidden">
+      <div className="w-full lg:w-1/2 h-full flex flex-col items-center justify-center p-4 lg:p-8 relative overflow-hidden">
+        <div className="w-full max-w-[600px] bg-white p-8 md:p-10 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative z-20 flex flex-col overflow-hidden">
           
           {/* Floral decorations Top Right */}
-          <svg className="absolute top-0 right-0 text-[#d9b882] w-24 h-24 opacity-40 rounded-tr-[1.5rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="absolute top-0 right-0 text-[#d9b882] w-28 h-28 opacity-40 rounded-tr-[1.5rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
              <path d="M70 0 Q60 30 80 50 T100 30" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M90 0 Q80 40 100 60" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M50 0 Q40 20 60 40 T90 20" stroke="currentColor" strokeWidth="0.75" fill="none"/>
@@ -177,30 +177,30 @@ const Register = () => {
              <circle cx="95" cy="40" r="1" fill="currentColor"/>
           </svg>
 
-          <div className="flex flex-col items-center mb-3 relative z-10 mt-1">
-            <div className="w-12 h-12 rounded-full bg-[#1f3b31] flex items-center justify-center mb-2 shadow-md">
-               <div className="relative w-6 h-6">
-                  <span className="text-[#d9b882] font-serif text-base absolute top-0 left-0.5">P</span>
-                  <span className="text-[#d9b882] font-serif text-base absolute bottom-0 right-0.5">F</span>
+          <div className="flex flex-col items-center mb-5 relative z-10 mt-1">
+            <div className="w-14 h-14 rounded-full bg-[#1f3b31] flex items-center justify-center mb-3 shadow-md">
+               <div className="relative w-7 h-7">
+                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">P</span>
+                  <span className="text-[#d9b882] font-serif text-lg absolute bottom-0 right-1">F</span>
                </div>
             </div>
-            <h2 className="text-[22px] font-serif font-bold text-[#1a3029] mb-0.5 tracking-tight">Create Your Account</h2>
-            <p className="text-gray-500 text-[11px] mb-2">Please fill in the details below to get started</p>
+            <h2 className="text-[24px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Create Your Account</h2>
+            <p className="text-gray-500 text-[12px] mb-2">Please fill in the details below to get started</p>
             
-            <div className="flex items-center gap-2 opacity-30 mb-1">
-               <div className="h-[1px] bg-[#1a3029] w-8"></div>
-               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1a3029" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-               <div className="h-[1px] bg-[#1a3029] w-8"></div>
+            <div className="flex items-center gap-2 opacity-30">
+               <div className="h-[1px] bg-[#1a3029] w-10"></div>
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1a3029" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+               <div className="h-[1px] bg-[#1a3029] w-10"></div>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-2.5 relative z-10">
-            {/* Name fields */}
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 relative z-10">
+            {/* Name */}
             <div>
-              <label className="block text-[12px] font-medium text-gray-800 mb-1.5">Full Name</label>
+              <label className="block text-[13px] font-medium text-gray-800 mb-1.5">Full Name</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <User size={15} strokeWidth={1.5} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <User size={16} strokeWidth={1.5} />
                 </div>
                 <input
                   type="text"
@@ -208,7 +208,7 @@ const Register = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder="Enter your full name"
-                  className={`w-full bg-white text-gray-800 text-[13px] border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-lg py-2 pl-9 pr-3 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  className={`w-full bg-white text-gray-800 text-sm border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-4 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
                 />
               </div>
               {errors.firstName && <p className="text-red-500 text-[10px] mt-1">{errors.firstName}</p>}
@@ -216,10 +216,10 @@ const Register = () => {
 
             {/* Email */}
             <div>
-              <label className="block text-[12px] font-medium text-gray-800 mb-1.5">Email Address</label>
+              <label className="block text-[13px] font-medium text-gray-800 mb-1.5">Email Address</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Mail size={15} strokeWidth={1.5} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Mail size={16} strokeWidth={1.5} />
                 </div>
                 <input
                   type="email"
@@ -227,7 +227,7 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email address"
-                  className={`w-full bg-white text-gray-800 text-[13px] border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg py-2 pl-9 pr-3 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  className={`w-full bg-white text-gray-800 text-sm border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-4 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
                 />
               </div>
               {errors.email && <p className="text-red-500 text-[10px] mt-1">{errors.email}</p>}
@@ -235,10 +235,10 @@ const Register = () => {
 
             {/* Phone */}
             <div>
-              <label className="block text-[12px] font-medium text-gray-800 mb-1.5">Phone Number</label>
+              <label className="block text-[13px] font-medium text-gray-800 mb-1.5">Phone Number</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Phone size={15} strokeWidth={1.5} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Phone size={16} strokeWidth={1.5} />
                 </div>
                 <input
                   type="tel"
@@ -246,88 +246,83 @@ const Register = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="Enter your phone number"
-                  className={`w-full bg-white text-gray-800 text-[13px] border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg py-2 pl-9 pr-3 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  className={`w-full bg-white text-gray-800 text-sm border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-4 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
                 />
               </div>
               {errors.phone && <p className="text-red-500 text-[10px] mt-1">{errors.phone}</p>}
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-[12px] font-medium text-gray-800 mb-1.5">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={15} strokeWidth={1.5} />
+            {/* Password & Confirm Password */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[13px] font-medium text-gray-800 mb-1.5">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <Lock size={16} strokeWidth={1.5} />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Create a password"
+                    className={`w-full bg-white text-gray-800 text-sm border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-10 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+                  </button>
                 </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Create a password"
-                  className={`w-full bg-white text-gray-800 text-[13px] border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg py-2 pl-9 pr-9 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
-                </button>
+                {errors.password && <p className="text-red-500 text-[10px] mt-1">{errors.password}</p>}
               </div>
-              {errors.password && <p className="text-red-500 text-[10px] mt-1">{errors.password}</p>}
-            </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-[12px] font-medium text-gray-800 mb-1.5">Confirm Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={15} strokeWidth={1.5} />
+              <div>
+                <label className="block text-[13px] font-medium text-gray-800 mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <Lock size={16} strokeWidth={1.5} />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Confirm your password"
+                    className={`w-full bg-white text-gray-800 text-sm border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-10 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+                  </button>
                 </div>
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm your password"
-                  className={`w-full bg-white text-gray-800 text-[13px] border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg py-2 pl-9 pr-9 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff size={15} strokeWidth={1.5} /> : <Eye size={15} strokeWidth={1.5} />}
-                </button>
+                {errors.confirmPassword && <p className="text-red-500 text-[10px] mt-1">{errors.confirmPassword}</p>}
               </div>
-              {errors.confirmPassword && <p className="text-red-500 text-[10px] mt-1">{errors.confirmPassword}</p>}
             </div>
-
-
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-[#1f3b31] hover:bg-[#162a23] text-white text-[14px] font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-md disabled:opacity-70 mt-1"
+              className="w-full bg-[#1f3b31] hover:bg-[#162a23] text-white text-[15px] font-medium py-3 rounded-lg flex items-center justify-center gap-2.5 transition-colors shadow-md disabled:opacity-70 mt-2"
             >
-              <UserPlus size={16} strokeWidth={2} />
+              <UserPlus size={17} strokeWidth={2} />
               {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
 
             {serverError && <p className="text-red-500 text-[11px] text-center mt-1">{serverError}</p>}
             {submitted && <p className="text-green-500 text-[11px] text-center mt-1">✅ Registration successful!</p>}
 
-
-
             <p className="text-center text-[13px] text-gray-600 mt-2">
               Already have an account? <Link to="/login" className="text-[#b48353] hover:text-[#9a6f44] font-semibold transition-colors">Login</Link>
             </p>
           </form>
         </div>
-
-       
       </div>
     </div>
   );
