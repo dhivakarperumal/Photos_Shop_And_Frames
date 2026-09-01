@@ -175,11 +175,11 @@ const Login = () => {
       </div>
 
       {/* Right Form Panel */}
-      <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
-        <div className="w-full max-w-[600px] bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col max-h-full overflow-y-auto">
-          
+      <div className="w-full lg:w-1/2 h-full flex items-center justify-center p-4 lg:p-6 relative overflow-hidden">
+        <div className="w-full max-w-[600px] bg-white p-7 md:p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 flex flex-col overflow-hidden">
+
           {/* Floral decorations Top Right */}
-          <svg className="absolute top-0 right-0 text-[#d9b882] w-32 h-32 opacity-30 rounded-tr-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="absolute top-0 right-0 text-[#d9b882] w-28 h-28 opacity-30 rounded-tr-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
              <path d="M70 0 Q60 30 80 50 T100 30" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M90 0 Q80 40 100 60" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M50 0 Q40 20 60 40 T90 20" stroke="currentColor" strokeWidth="0.75" fill="none"/>
@@ -189,7 +189,7 @@ const Login = () => {
           </svg>
 
           {/* Floral decorations Bottom Left */}
-          <svg className="absolute bottom-0 left-0 text-[#d9b882] w-24 h-24 opacity-30 rounded-bl-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="absolute bottom-0 left-0 text-[#d9b882] w-20 h-20 opacity-30 rounded-bl-[2rem] pointer-events-none" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
              <path d="M0 100 Q30 90 50 70 T100 100" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M0 80 Q40 70 60 90" stroke="currentColor" strokeWidth="1" fill="none"/>
              <path d="M0 60 Q20 50 40 70 T70 90" stroke="currentColor" strokeWidth="0.75" fill="none"/>
@@ -197,26 +197,24 @@ const Login = () => {
              <circle cx="40" cy="95" r="1" fill="currentColor"/>
           </svg>
 
-          <div className="flex flex-col items-center mb-6 relative z-10">
-            <div className="w-16 h-16 rounded-full bg-[#1f3b31] flex items-center justify-center mb-4 shadow-lg">
-               <div className="relative w-8 h-8">
-                  <span className="text-[#d9b882] font-serif text-xl absolute top-0 left-1.5">P</span>
-                  <span className="text-[#d9b882] font-serif text-xl absolute bottom-0 right-1.5">F</span>
+          <div className="flex flex-col items-center mb-5 relative z-10">
+            <div className="w-14 h-14 rounded-full bg-[#1f3b31] flex items-center justify-center mb-3 shadow-lg">
+               <div className="relative w-7 h-7">
+                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">P</span>
+                  <span className="text-[#d9b882] font-serif text-lg absolute bottom-0 right-1">F</span>
                </div>
             </div>
-            <h2 className="text-[28px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Login to PixelFrame</h2>
+            <h2 className="text-[26px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Login to PixelFrame</h2>
             <p className="text-gray-500 text-[13px]">Please enter your details to access your account</p>
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 relative z-10">
-            {/* Identifier */}
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Mail size={18} strokeWidth={1.5} />
+                  <Mail size={17} strokeWidth={1.5} />
                 </div>
                 <input
                   type="email"
@@ -225,18 +223,18 @@ const Login = () => {
                   onChange={handleChange}
                   placeholder="Enter your email"
                   autoComplete="username"
-                  className={`w-full bg-white text-gray-800 text-sm border ${errors.username ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3.5 pl-11 pr-4 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  className={`w-full bg-white text-gray-800 text-sm border ${errors.username ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-4 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
                 />
               </div>
-              {errors.username && <p className="text-red-500 text-xs mt-1.5">{errors.username}</p>}
+              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-800 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-800 mb-1.5">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={18} strokeWidth={1.5} />
+                  <Lock size={17} strokeWidth={1.5} />
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -244,21 +242,22 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter your password"
-                  className={`w-full bg-white text-gray-800 text-sm border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3.5 pl-11 pr-11 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
+                  className={`w-full bg-white text-gray-800 text-sm border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg py-3 pl-11 pr-11 focus:outline-none focus:border-[#1a3029] focus:ring-1 focus:ring-[#1a3029] transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} strokeWidth={1.5} /> : <Eye size={18} strokeWidth={1.5} />}
+                  {showPassword ? <EyeOff size={17} strokeWidth={1.5} /> : <Eye size={17} strokeWidth={1.5} />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1.5">{errors.password}</p>}
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
 
-            <div className="flex items-center justify-between mt-1 mb-2">
-              <label className="flex items-center gap-2.5 cursor-pointer group">
+            {/* Remember & Forgot */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <div className="relative flex items-center justify-center">
                   <input
                     type="checkbox"
@@ -284,17 +283,17 @@ const Login = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-[#1f3b31] hover:bg-[#162a23] text-white text-[15px] font-medium py-3.5 rounded-lg flex items-center justify-center gap-2.5 transition-colors shadow-md disabled:opacity-70 mt-1"
+              className="w-full bg-[#1f3b31] hover:bg-[#162a23] text-white text-[15px] font-medium py-3 rounded-lg flex items-center justify-center gap-2.5 transition-colors shadow-md disabled:opacity-70"
             >
               <Lock size={16} strokeWidth={2} />
               {isSubmitting ? "Logging in..." : "Login"}
             </button>
 
-            {serverError && <p className="text-red-500 text-sm text-center mt-1">{serverError}</p>}
-            {submitted && <p className="text-green-500 text-sm text-center mt-1">✅ Login successful!</p>}
+            {serverError && <p className="text-red-500 text-sm text-center -mt-1">{serverError}</p>}
+            {submitted && <p className="text-green-500 text-sm text-center -mt-1">✅ Login successful!</p>}
 
             {/* Divider */}
-            <div className="relative flex items-center py-3">
+            <div className="relative flex items-center">
                <div className="flex-grow border-t border-gray-200"></div>
                <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-medium">OR</span>
                <div className="flex-grow border-t border-gray-200"></div>
@@ -314,16 +313,15 @@ const Login = () => {
               Login with Google
             </button>
 
-            <p className="text-center text-[14px] text-gray-500 mt-4 mb-2">
+            <p className="text-center text-[14px] text-gray-500">
               Don't have an account? <Link to="/register" className="text-[#b48353] hover:text-[#9a6f44] font-semibold transition-colors">Sign Up</Link>
             </p>
           </form>
         </div>
-
-       
       </div>
     </div>
   );
 };
 
 export default Login;
+

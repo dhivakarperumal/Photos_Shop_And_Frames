@@ -1,27 +1,22 @@
-const express = require('express');
+const express = require("express");
+const userController = require("../controllers/userController");
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Users router is running',
-    data: [],
-  });
-});
+/**
+ * User Routes
+ */
 
-router.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Users service healthy',
-  });
-});
+// Public routes
+router.post("/register", userController.registerUser);
+router.post("/login", userController.loginUser);
 
-router.post('/login', (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: 'Authentication endpoint not implemented yet',
-  });
-});
+// Protected routes (require authentication)
+router.get("/profile/:userId", userController.getUserProfile);
+router.put("/profile/:userId", userController.updateUserProfile);
+
+// Admin routes
+router.get("/", userController.getAllUsers);
+router.delete("/:userId", userController.deleteUser);
 
 module.exports = router;
