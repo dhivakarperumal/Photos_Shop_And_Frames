@@ -1,0 +1,19 @@
+const normalizeRole = (role) => String(role || "").trim().toLowerCase();
+
+export const getRoleHome = (role) => {
+  const normalizedRole = normalizeRole(role);
+
+  if (["super admin", "admin"].includes(normalizedRole)) return "/admin";
+  if (["trainee", "intern"].includes(normalizedRole)) return "/trainee";
+  if (["manager", "staff", "employee"].includes(normalizedRole)) return "/employee";
+  return "/";
+};
+
+export const isAdminRole = (role) =>
+  ["super admin", "admin"].includes(normalizeRole(role));
+
+export const isEmployeeRole = (role) =>
+  ["manager", "staff", "employee", "trainee", "intern"].includes(normalizeRole(role));
+
+export const isCustomerRole = (role) =>
+  ["customer", "user", ""].includes(normalizeRole(role));

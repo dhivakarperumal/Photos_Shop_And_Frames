@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Build output
+dist/
+build/
+out/
+coverage/
+**/dist/
+**/build/
+**/coverage/
+
+# Local/dev files
+*.local
+*.pid
+*.seed
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+._*
