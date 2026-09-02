@@ -141,8 +141,6 @@ const AdminProducts = () => {
     },
   ];
 
-  const navigate = useNavigate();
-
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -369,13 +367,8 @@ const AdminProducts = () => {
                               <button
                                 type="button"
                                 onClick={() => setSelectedProductView(product)}
-                               
-                            type="button"
-                            onClick={() => navigate('/admin/products/stock-details')}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
-                               
-                            aria-label="View product"
-                          
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+                                aria-label="View product"
                                 title="View product details & frame layout"
                               >
                                 <Eye className="h-4 w-4" />
