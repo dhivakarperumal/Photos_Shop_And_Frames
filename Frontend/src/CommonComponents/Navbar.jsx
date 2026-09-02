@@ -50,9 +50,14 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout, userProfile } = useAuth();
 
+  const isLoggedIn = Boolean(user || userProfile);
+  const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
+  const userInitial = userDisplayName.charAt(0).toUpperCase();
+
   const handleConfirmLogout = () => {
     logout();
     setShowLogoutConfirm(false);
+    setProfileDropdown(false);
     navigate("/", { replace: true });
   };
 
@@ -230,9 +235,77 @@ const Navbar = () => {
                   <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">2</span>
                 </button>
 
-                <Link to="/login" className="rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]">
-                  Login
-                </Link>
+                {isLoggedIn ? (
+                  <div ref={profileRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setProfileDropdown((prev) => !prev)}
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1b1a18] text-sm font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]"
+                      aria-label="Open profile menu"
+                    >
+                      {userInitial}
+                    </button>
+
+                    {profileDropdown && (
+                      <div className="absolute right-0 top-[calc(100%+12px)] w-64 overflow-hidden rounded-2xl border border-[#ede5da] bg-white shadow-[0_20px_40px_rgba(15,23,42,0.12)]">
+                        <div className="border-b border-[#f0e8df] bg-[#faf6f2] px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b8b8b]">Profile</div>
+                          <div className="mt-2 flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1b1a18] text-sm font-bold text-white">
+                              {userInitial}
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold text-[#1d1d1d]">{userDisplayName}</div>
+                              <div className="text-[11px] text-[#777]">{user?.email || "premium customer"}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-2">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                            onClick={() => setProfileDropdown(false)}
+                          >
+                            <span>Profile</span>
+                            <FiUser className="text-base text-[#7a7a7a]" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                            onClick={() => setProfileDropdown(false)}
+                          >
+                            <span>My Account</span>
+                            <FiUser className="text-base text-[#7a7a7a]" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                            onClick={() => setProfileDropdown(false)}
+                          >
+                            <span>My Order</span>
+                            <FiShoppingCart className="text-base text-[#7a7a7a]" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleConfirmLogout}
+                            className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#d94d4d] transition hover:bg-[#fff1f1]"
+                          >
+                            <span>Logout</span>
+                            <FiLogOut className="text-base" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link to="/login" className="rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]">
+                    Login
+                  </Link>
+                )}
               </div>
             </div>
           </PageContainer>

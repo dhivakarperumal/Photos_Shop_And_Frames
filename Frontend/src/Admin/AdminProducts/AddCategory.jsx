@@ -38,6 +38,12 @@ const formatDate = (date) =>
     minute: '2-digit',
   }).format(date);
 
+const normalizeImageUrl = (value) => {
+  if (!value) return '';
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
 const getInitialCategoryId = () => 'CAT001';
 
 const AddCategory = () => {
@@ -130,6 +136,7 @@ const AddCategory = () => {
     }
 
     setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
 
     const formData = new FormData();
     formData.append('folder', 'categories');
@@ -138,8 +145,8 @@ const AddCategory = () => {
     try {
       const response = await api.post('/upload', formData);
       const imageUrl = response?.data?.url || response?.data?.urls?.[0] || '';
-      setUploadedImageUrl(imageUrl);
-      setPreviewUrl(imageUrl);
+      const normalizedUrl = normalizeImageUrl(imageUrl);
+      setUploadedImageUrl(normalizedUrl);
     } catch (error) {
       console.error('Upload failed:', error);
       alert(error?.response?.data?.message || 'Image upload failed. Please try again.');
@@ -182,7 +189,7 @@ const AddCategory = () => {
       category_name: formData.categoryName,
       sub_categories: formData.subCategories,
       description: formData.description,
-      category_image: uploadedImageUrl || previewUrl || null,
+      category_image: normalizeImageUrl(uploadedImageUrl || previewUrl || ''),
       sort_order: formData.sortOrder,
       status: formData.status ? 'Active' : 'Inactive',
       created_by: formData.createdBy,
