@@ -189,7 +189,7 @@ const Coupons = () => {
 
         <button
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center justify-center gap-2 bg-[#3a8b28] hover:bg-[#317a22] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 bg-[#1a3c36] hover:bg-[#214a42] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
         >
           <FiPlus className="w-4 h-4" /> Add New Coupon
         </button>
@@ -245,20 +245,20 @@ const Coupons = () => {
           <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-xl">
             <button
               onClick={() => setViewMode("table")}
-              className={`p-2.5 rounded-lg transition ${viewMode === "table" ? "bg-white text-[#3a8b28] shadow-sm font-bold" : "text-gray-500 hover:text-gray-700"}`}
+              className={`p-2.5 rounded-lg transition ${viewMode === "table" ? "bg-white text-[#1a3c36] shadow-sm font-bold" : "text-gray-500 hover:text-[#1a3c36]"}`}
               title="Table View"
             >
               <FiList className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode("card")}
-              className={`p-2.5 rounded-lg transition ${viewMode === "card" ? "bg-white text-[#3a8b28] shadow-sm font-bold" : "text-gray-500 hover:text-gray-700"}`}
+              className={`p-2.5 rounded-lg transition ${viewMode === "card" ? "bg-white text-[#1a3c36] shadow-sm font-bold" : "text-gray-500 hover:text-[#1a3c36]"}`}
               title="Card View"
             >
               <FiGrid className="w-4 h-4" />
             </button>
           </div>
-          <button onClick={fetchCoupons} className="p-3 bg-white border border-gray-200 text-gray-500 hover:text-[#3a8b28] rounded-xl transition shadow-sm hover:bg-green-50" title="Refresh">
+          <button onClick={fetchCoupons} className="p-3 bg-white border border-gray-200 text-gray-500 hover:text-[#1a3c36] rounded-xl transition shadow-sm hover:bg-[#eef6f3]" title="Refresh">
             <FiRefreshCw className="w-5 h-5" />
           </button>
         </div>
@@ -270,15 +270,15 @@ const Coupons = () => {
         <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#1b7f29]">
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Code</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Discount</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Validity</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Usage</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Scope</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                <th className="px-6 py-4 text-xs font-bold ">Code</th>
+                <th className="px-6 py-4 text-xs font-bold ">Name</th>
+                <th className="px-6 py-4 text-xs font-bold ">Discount</th>
+                <th className="px-6 py-4 text-xs font-bold ">Validity</th>
+                <th className="px-6 py-4 text-xs font-bold ">Usage</th>
+                <th className="px-6 py-4 text-xs font-bold ">Scope</th>
+                <th className="px-6 py-4 text-xs font-bold  text-center">Status</th>
+                <th className="px-6 py-4 text-xs font-bold  text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -323,7 +323,7 @@ const Coupons = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleOpenModal(coupon)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition mr-2">
+                      <button onClick={() => handleOpenModal(coupon)} className="p-2 text-[#1a3c36] hover:bg-[#eef6f3] rounded-xl transition mr-2">
                         <FiEdit className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(coupon.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition">
@@ -381,7 +381,7 @@ const Coupons = () => {
                 </div>
 
                 <div className="flex justify-end gap-2 mt-auto pt-2">
-                  <button onClick={() => handleOpenModal(coupon)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition">
+                  <button onClick={() => handleOpenModal(coupon)} className="p-2 text-[#1a3c36] hover:bg-[#eef6f3] rounded-xl transition">
                     <FiEdit className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(coupon.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition">
@@ -531,7 +531,7 @@ const Coupons = () => {
             
             <div className="p-8 flex justify-end gap-3 bg-white">
               <button type="button" onClick={handleCloseModal} className="px-8 py-3.5 rounded-2xl font-[900] text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all uppercase tracking-widest text-xs">Cancel</button>
-              <button form="couponForm" type="submit" className="px-8 py-3.5 rounded-2xl font-[900] text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all uppercase tracking-widest text-xs flex items-center gap-2">Save Coupon</button>
+              <button form="couponForm" type="submit" className="px-8 py-3.5 rounded-2xl font-[900] text-white bg-[#1a3c36] hover:bg-[#214a42] shadow-xl shadow-emerald-900/20 transition-all uppercase tracking-widest text-xs flex items-center gap-2">Save Coupon</button>
             </div>
           </div>
         </div>,
