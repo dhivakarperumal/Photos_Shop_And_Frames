@@ -469,26 +469,7 @@ const AdminReviews = () => {
   return (
     <div className="min-h-screen bg-[#f3f4f6] p-3 md:p-6 text-gray-800 font-sans">
       <div className="mx-auto max-w-[1540px]">
-        {/* ================= HEADER ================= */}
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Product Reviews & Ratings</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Select products to manage customer testimonials, star ratings, and review photos.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleOpenCreateModal()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
-            >
-              <Plus className="h-4 w-4" />
-              Add Review
-            </button>
-          </div>
-        </div>
+     
 
         {/* ================= TOP STATS CARDS (DASHBOARD DESIGN WITH BOTTOM WAVES) ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
@@ -590,7 +571,16 @@ const AdminReviews = () => {
                 <button type="button" onClick={() => setViewMode("card")} title="Card view" className={`flex h-11 w-11 items-center justify-center ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#666] hover:bg-white"}`}><LayoutGrid className="h-4 w-4" /></button>
               </div>
 
-             
+              <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleOpenCreateModal()}
+              className="inline-flex items-center gap-2 rounded-md bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-6 w-6" />
+              Add Review
+            </button>
+          </div>
             </div>
           </div>
 
@@ -635,25 +625,26 @@ const AdminReviews = () => {
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#f0e6d2] text-left text-xs font-bold capitalize tracking-wider text-[#3d3d3d]">
-                    <th className="px-4 py-3.5 rounded-l-xl">ID & Product</th>
-                    <th className="px-4 py-3.5">Reviewer</th>
-                    <th className="px-4 py-3.5">Rating</th>
-                    <th className="px-4 py-3.5">Review Comment</th>
-                    <th className="px-4 py-3.5">Customer Photo</th>
-                    <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5 rounded-r-xl">Actions</th>
+                    <th className="rounded-tl-md px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">ID & Product</th>
+                    <th className="px-4 py-4">Reviewer</th>
+                    <th className="px-4 py-4">Rating</th>
+                    <th className="px-4 py-4">Review Comment</th>
+                    <th className="px-4 py-4">Customer Photo</th>
+                    <th className="px-4 py-4">Status</th>
+                    <th className="rounded-tr-md px-4 py-4">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredReviews.map((rev) => {
-                    const displayUserId = rev.created_by || "system";
-
+                  {filteredReviews.map((rev, index) => {
                     return (
                       <tr
                         key={rev.id}
                         className="border-t border-[#f0ebe6] transition hover:bg-[#fffdfa]"
                       >
+                        <td className="px-4 py-3.5 align-middle text-[#777]">{index + 1}</td>
+
                         {/* ID & PRODUCT */}
                         <td className="px-4 py-3.5 align-middle">
                           <div className="flex items-center gap-3">
