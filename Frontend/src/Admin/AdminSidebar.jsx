@@ -229,13 +229,13 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       >
         {/* ========== LOGO ========== */}
         <div className={`flex items-center gap-3 border-b border-[#1f3228] shrink-0 ${collapsed ? "px-3 py-5 justify-center" : "px-5 py-5"}`}>
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 p-1 border border-[#d4a843]/30 bg-[#1f3228]">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 p-1 border border-[#d4a843]/30 bg-white">
             <img src={Logo} alt="Logo" className="w-full h-full object-cover drop-shadow-lg" />
           </div>
 
           {!collapsed && (
             <div className="overflow-hidden flex-1">
-              <h1 className="text-base font-bold text-white tracking-wide font-serif">PixelFrame</h1>
+              <h1 className="text-base font-bold text-white tracking-wide font-serif">QFrames</h1>
               <p className="text-[10px] text-white tracking-[0.2em] uppercase">
                 Frame Your Memories
               </p>
