@@ -69,7 +69,13 @@ const AddAlbum = () => {
       try {
         const response = await api.get('/albums/next-id');
         const nextId = response?.data?.data || 'ALB001';
-        setFormData((prev) => ({ ...prev, productId: nextId }));
+        const nextCode = nextId.includes('-') ? nextId : nextId.replace('ALB', 'ALB-');
+
+        setFormData((prev) => ({
+          ...prev,
+          productId: nextId,
+          productCode: nextCode,
+        }));
       } catch (error) {
         console.error('Failed to get next album ID:', error);
       }
