@@ -168,6 +168,7 @@ const deleteCategory = async (categoryId) => {
 };
 
 module.exports = {
+  getNextCategoryId,
   createCategory,
   getAllCategories,
   getCategoryById,

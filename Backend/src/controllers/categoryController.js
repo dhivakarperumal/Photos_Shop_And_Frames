@@ -25,12 +25,9 @@ const createCategory = async (req, res) => {
     }
 
     const nextCategoryId = await categoryModule.getNextCategoryId();
-    const resolvedCategoryId = category_id && category_id !== 'CAT001'
-      ? category_id
-      : nextCategoryId;
 
     const payload = {
-      category_id: resolvedCategoryId,
+      category_id: nextCategoryId,
       category_type,
       category_name,
       sub_categories: Array.isArray(sub_categories) ? sub_categories : [],
