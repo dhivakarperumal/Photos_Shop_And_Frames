@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 
 const albumProduct = {
@@ -59,6 +59,11 @@ const fieldStyle = 'w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 
 
 const AddAlbum = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const editAlbumId = queryParams.get('edit');
+  const viewAlbumId = queryParams.get('view');
+  const mode = viewAlbumId ? 'view' : editAlbumId ? 'edit' : 'create';
   const [formData, setFormData] = useState(albumProduct);
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -66,6 +71,71 @@ const AddAlbum = () => {
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
   useEffect(() => {
+    const fetchAlbumForEdit = async (albumId) => {
+      try {
+        const response = await api.get(`/albums/${albumId}`);
+        const album = response?.data?.data || {};
+
+        const productImages = Array.isArray(album.product_images)
+          ? album.product_images
+          : typeof album.product_images === 'string'
+            ? JSON.parse(album.product_images || '[]')
+            : [];
+
+        setFormData({
+          ...albumProduct,
+          productId: album.product_id || album.productId || 'ALB001',
+          productName: album.product_name || album.productName || '',
+          productCode: album.product_code || album.productCode || '',
+          category: album.category || 'Albums',
+          subCategory: album.sub_category || album.subCategory || '',
+          brand: album.brand || '',
+          albumType: album.album_type || album.albumType || '',
+          occasion: album.occasion || '',
+          theme: album.theme || '',
+          size: album.size || '',
+          width: album.width || '',
+          height: album.height || '',
+          orientation: album.orientation || 'Landscape',
+          totalPages: album.total_pages ?? album.totalPages ?? 0,
+          sheetCount: album.sheet_count ?? album.sheetCount ?? 0,
+          pageMaterial: album.page_material || album.pageMaterial || '',
+          pageThickness: album.page_thickness || album.pageThickness || '',
+          coverType: album.cover_type || album.coverType || '',
+          coverMaterial: album.cover_material || album.coverMaterial || '',
+          coverFinish: album.cover_finish || album.coverFinish || '',
+          coverColor: album.cover_color || album.coverColor || '',
+          printingType: album.printing_type || album.printingType || '',
+          printQuality: album.print_quality || album.printQuality || '',
+          printingSides: album.printing_sides || album.printingSides || '',
+          bindingType: album.binding_type || album.bindingType || '',
+          thumbnailImage: album.thumbnail_image || album.thumbnailImage || '',
+          productImages: Array.isArray(productImages) ? productImages : [],
+          costPrice: album.cost_price ?? album.costPrice ?? 0,
+          sellingPrice: album.selling_price ?? album.sellingPrice ?? 0,
+          discountPrice: album.discount_price ?? album.discountPrice ?? 0,
+          discountPercentage: album.discount_percentage ?? album.discountPercentage ?? 0,
+          stockQuantity: album.stock_quantity ?? album.stockQuantity ?? 0,
+          minimumStock: album.minimum_stock ?? album.minimumStock ?? 0,
+          stockStatus: album.stock_status || album.stockStatus || 'In Stock',
+          shortDescription: album.short_description || album.shortDescription || '',
+          description: album.description || '',
+          customizationAvailable: Boolean(album.customization_available ?? album.customizationAvailable ?? false),
+          customerNamePrinting: Boolean(album.customer_name_printing ?? album.customerNamePrinting ?? false),
+          photoUploadRequired: Boolean(album.photo_upload_required ?? album.photoUploadRequired ?? false),
+          customCoverDesign: Boolean(album.custom_cover_design ?? album.customCoverDesign ?? false),
+          estimatedDeliveryDays: album.estimated_delivery_days ?? album.estimatedDeliveryDays ?? 0,
+          status: album.status || 'Active',
+          featuredProduct: Boolean(album.featured_product ?? album.featuredProduct ?? false),
+          metaTitle: album.meta_title || album.metaTitle || '',
+          metaDescription: album.meta_description || album.metaDescription || '',
+          keywords: Array.isArray(album.keywords) ? album.keywords : [],
+        });
+      } catch (error) {
+        console.error('Failed to load album for edit:', error);
+      }
+    };
+
     const fetchNextProductId = async () => {
       try {
         const response = await api.get('/albums/next-id');
@@ -105,9 +175,19 @@ const AddAlbum = () => {
       }
     };
 
-    fetchNextProductId();
+    if (mode === 'create') {
+      fetchNextProductId();
+    }
+
+    if (mode === 'edit' || mode === 'view') {
+      const albumId = editAlbumId || viewAlbumId;
+      if (albumId) {
+        fetchAlbumForEdit(albumId);
+      }
+    }
+
     fetchCategories();
-  }, []);
+  }, [editAlbumId, viewAlbumId, mode]);
 
   const selectedCategory = categories.find((category) => category.category_name === formData.category) || categories[0] || null;
   const subCategoryOptions = Array.isArray(selectedCategory?.sub_categories) ? selectedCategory.sub_categories : [];
@@ -246,7 +326,12 @@ const AddAlbum = () => {
         updated_by: 'Admin',
       };
 
-      await api.post('/albums', payload);
+      if (mode === 'edit' && editAlbumId) {
+        await api.put(`/albums/${editAlbumId}`, payload);
+      } else {
+        await api.post('/albums', payload);
+      }
+
       navigate('/admin/albums');
     } catch (error) {
       console.error(error);
@@ -261,7 +346,9 @@ const AddAlbum = () => {
       <div className="mx-auto max-w-[1500px]">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1d1b]">Add New Album</h1>
+            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1d1b]">
+              {mode === 'view' ? 'View Album' : mode === 'edit' ? 'Edit Album' : 'Add New Album'}
+            </h1>
             <p className="mt-2 text-[13px] text-[#646464]">
               Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">Albums</span> <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">Add New Album</span>
             </p>
@@ -563,9 +650,11 @@ const AddAlbum = () => {
             <button type="button" onClick={() => navigate('/admin/albums')} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium text-[#2d2d2d]">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] disabled:opacity-70">
-              {saving ? 'Saving...' : 'Save Album'}
-            </button>
+            {mode !== 'view' && (
+              <button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] disabled:opacity-70">
+                {saving ? 'Saving...' : mode === 'edit' ? 'Update Album' : 'Save Album'}
+              </button>
+            )}
           </div>
         </form>
       </div>

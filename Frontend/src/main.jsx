@@ -19,6 +19,7 @@ import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
 import AdminAlbums from './Admin/AdminAlbums.jsx'
 import AddAlbum from './Admin/AddAlbum.jsx'
+import AlbumDetails from './Admin/AlbumDetails.jsx'
 import BannerManagement from './Admin/Marketting/BannerManagement.jsx'
 import VideoManagement from './Admin/Marketting/VideoManagement.jsx'
 import GalleryManagement from './Admin/Marketting/GalleryManagement.jsx'
@@ -114,6 +115,10 @@ const router = createHashRouter([
           {
             path: 'albums',
             element: <AdminAlbums />,
+          },
+          {
+            path: 'albums/:albumId',
+            element: <AlbumDetails />,
           },
           {
             path: 'albums/add',

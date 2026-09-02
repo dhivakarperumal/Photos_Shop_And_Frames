@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -69,7 +70,7 @@ const normalizeAlbum = (album) => {
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
 
   return {
-    id: album.id || album.product_id,
+    id: album.product_id || album.id,
     name: album.product_name || 'Untitled Album',
     code: album.product_code || album.product_id || 'N/A',
     category: album.category || album.sub_category || 'General',
@@ -194,6 +195,29 @@ const AdminAlbums = () => {
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [albums, search, category, status]);
+
+  const handleViewAlbum = (album) => {
+    navigate(`/admin/albums/${album.id}`);
+  };
+
+  const handleEditAlbum = (album) => {
+    navigate(`/admin/albums/add?edit=${album.id}`);
+  };
+
+  const handleDeleteAlbum = async (albumId) => {
+    if (!window.confirm('Are you sure you want to delete this album?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/albums/${albumId}`);
+      setAlbums((prev) => prev.filter((album) => String(album.id) !== String(albumId)));
+      toast.success('Album deleted successfully');
+    } catch (error) {
+      console.error('Delete album error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete album');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -379,13 +403,28 @@ const AdminAlbums = () => {
                       <td className="px-4 py-4 text-[#1f1f1f] font-medium">{album.views.toLocaleString()}</td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="View album">
+                          <button
+                            type="button"
+                            onClick={() => handleViewAlbum(album)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]"
+                            aria-label="View album"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="Edit album">
+                          <button
+                            type="button"
+                            onClick={() => handleEditAlbum(album)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]"
+                            aria-label="Edit album"
+                          >
                             <Pencil className="h-4 w-4" />
                           </button>
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]" aria-label="Delete album">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAlbum(album.id)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]"
+                            aria-label="Delete album"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
