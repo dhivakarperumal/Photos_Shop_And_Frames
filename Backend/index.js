@@ -17,6 +17,8 @@ const { initDB } = require("./src/config/db");
 const { upload } = require("./src/config/multerConfig");
 const usersRouter = require("./src/routers/usersRouter");
 const categoryRouter = require("./src/routers/categoryRouter");
+const frameRouter = require("./src/routers/frameRouter");
+const productRouter = require("./src/routers/productRouter");
 const bannerRouter = require("./src/routers/bannerRouter");
 const galleryRouter = require("./src/routers/galleryRouter");
 const videoRouter = require("./src/routers/videoRouter");
@@ -91,6 +93,8 @@ app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_
 
 app.use("/api/users", usersRouter);
 app.use("/api/categories", categoryRouter);
+app.use("/api/frames", frameRouter);
+app.use("/api/products", productRouter);
 app.use("/api/banners", bannerRouter);
 app.use("/api/gallery", galleryRouter);
 app.use("/api/videos", videoRouter);

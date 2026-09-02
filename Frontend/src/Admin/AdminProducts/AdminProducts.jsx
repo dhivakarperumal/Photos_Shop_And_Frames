@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowDownUp,
   ArrowUpRight,
@@ -9,6 +9,9 @@ import {
   Download,
   Eye,
   Filter,
+  Frame,
+  Layers,
+  Package,
   PackageCheck,
   Pencil,
   Plus,
@@ -17,116 +20,133 @@ import {
   Star,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
-
-const products = [
-  {
-    name: 'Classic Wooden Frame',
-    code: 'PF-WD-001',
-    category: 'Photo Frames',
-    price: '₹899',
-    oldPrice: '₹1,299',
-    stock: 52,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1245,
-    image: 'linear-gradient(135deg, #d3b495, #f2e4d2)',
-  },
-  {
-    name: 'Black Matt Frame',
-    code: 'PF-BK-002',
-    category: 'Photo Frames',
-    price: '₹699',
-    oldPrice: '₹999',
-    stock: 18,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 978,
-    image: 'linear-gradient(135deg, #d8d8d8, #b0b0b0)',
-  },
-  {
-    name: 'Canvas Wall Print',
-    code: 'PF-CV-001',
-    category: 'Photo Printing',
-    price: '₹1,299',
-    oldPrice: '₹1,799',
-    stock: 35,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 2156,
-    image: 'linear-gradient(135deg, #a9c7d9, #e9d6c8)',
-  },
-  {
-    name: 'LED Light Frame',
-    code: 'PF-LED-001',
-    category: 'Custom Frames',
-    price: '₹1,599',
-    oldPrice: '₹2,199',
-    stock: 12,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 856,
-    image: 'linear-gradient(135deg, #d6bf9a, #f3e1c1)',
-  },
-  {
-    name: 'Personalized Photo Mug',
-    code: 'PF-GE-001',
-    category: 'Gifts',
-    price: '₹399',
-    oldPrice: '₹599',
-    stock: 80,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1789,
-    image: 'linear-gradient(135deg, #d6c4ae, #ebdfd0)',
-  },
-];
-
-const statCards = [
-  {
-    title: 'Total Products',
-    value: '896',
-    trend: '+ 10.7%',
-    trendText: 'from last month',
-    accent: 'bg-[#d9ead9]',
-    iconColor: 'text-[#2a5e3d]',
-    icon: <PackageCheck className="h-7 w-7" />, 
-  },
-  {
-    title: 'Active Products',
-    value: '742',
-    trend: '+ 82.8%',
-    trendText: 'of total',
-    accent: 'bg-[#f1e7f7]',
-    iconColor: 'text-[#7d5a93]',
-    icon: <ShoppingBag className="h-7 w-7" />, 
-  },
-  {
-    title: 'Total Views',
-    value: '12,580',
-    trend: '+ 12.5%',
-    trendText: 'from last month',
-    accent: 'bg-[#e8eefb]',
-    iconColor: 'text-[#7a5fc4]',
-    icon: <Eye className="h-7 w-7" />, 
-  },
-  {
-    title: 'Low Stock',
-    value: '34',
-    trend: 'Products low on stock',
-    trendText: '',
-    accent: 'bg-[#dfeff8]',
-    iconColor: 'text-[#4f88b2]',
-    icon: <Star className="h-7 w-7" />, 
-  },
-];
+import api from '../../api';
+import toast from 'react-hot-toast';
 
 const AdminProducts = () => {
+  const navigate = useNavigate();
+  const [productsList, setProductsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProductView, setSelectedProductView] = useState(null);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/products');
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        // Map database products
+        const mapped = res.data.data.map((p) => {
+          const firstVariant = p.size_variants?.[0] || {};
+          const totalStock = (p.size_variants || []).reduce(
+            (acc, curr) => acc + (Number(curr.stock) || 0),
+            0
+          );
+          const minOfferPrice = firstVariant.offer_price ? `₹${firstVariant.offer_price}` : '₹--';
+          const minMrp = firstVariant.mrp ? `₹${firstVariant.mrp}` : '';
+
+          // Prefer composite image (product_images[0]), then frame image
+          const primaryImg = p.product_images?.[0] || p.frame_data?.frame_image || '';
+
+          return {
+            id: p.id,
+            uuid: p.uuid,
+            name: p.product_name,
+            code: p.product_id,
+            category: p.category,
+            price: minOfferPrice,
+            oldPrice: minMrp,
+            stock: totalStock,
+            stockLabel: totalStock <= 15 ? 'Low Stock' : 'In Stock',
+            status: p.status || 'Active',
+            views: 0,
+            image: primaryImg,
+            rawData: p,
+            isDbProduct: true,
+          };
+        });
+        setProductsList(mapped);
+      } else {
+        setProductsList([]);
+      }
+    } catch (err) {
+      console.warn('Could not fetch products from database:', err);
+      setProductsList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      await api.delete(`/products/${id}`);
+      toast.success('Product deleted successfully');
+      fetchProducts();
+    } catch (err) {
+      toast.error('Failed to delete product');
+    }
+  };
+
+  const filteredProducts = productsList.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const statCards = [
+    {
+      title: 'Total Products',
+      value: String(productsList.length),
+      trend: productsList.length > 0 ? '+ 100%' : '0%',
+      trendText: 'in catalog',
+      accent: 'bg-[#d9ead9]',
+      iconColor: 'text-[#2a5e3d]',
+      icon: <PackageCheck className="h-7 w-7" />,
+    },
+    {
+      title: 'Active Products',
+      value: String(productsList.filter((p) => p.status === 'Active').length),
+      trend: productsList.length > 0 ? '100%' : '0%',
+      trendText: 'of total',
+      accent: 'bg-[#f1e7f7]',
+      iconColor: 'text-[#7d5a93]',
+      icon: <ShoppingBag className="h-7 w-7" />,
+    },
+    {
+      title: 'Total Views',
+      value: String(productsList.reduce((acc, p) => acc + (p.views || 0), 0)),
+      trend: '0%',
+      trendText: 'this month',
+      accent: 'bg-[#e8eefb]',
+      iconColor: 'text-[#7a5fc4]',
+      icon: <Eye className="h-7 w-7" />,
+    },
+    {
+      title: 'Low Stock',
+      value: String(productsList.filter((p) => p.stock <= 18 && p.stock > 0).length),
+      trend: 'Low stock items',
+      trendText: '',
+      accent: 'bg-[#dfeff8]',
+      iconColor: 'text-[#4f88b2]',
+      icon: <Star className="h-7 w-7" />,
+    },
+  ];
+
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
+        {/* ================= TOP TOOLBAR ================= */}
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1d1b]">Products</h1>
@@ -135,22 +155,42 @@ const AdminProducts = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
             </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Upload className="h-4 w-4" />
-              Import
-            </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
+
+            {/* VIEW FRAMES BUTTON */}
+            <Link
+              to="/admin/frames"
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
+            >
+              <Eye className="h-4 w-4 text-[#d4a843]" />
+              View Frames
+            </Link>
+
+            {/* ADD FRAME SETUP BUTTON */}
+            <Link
+              to="/admin/products/frame-setup"
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#9b6b2d] shadow-sm transition hover:bg-[#fff5e0]"
+            >
+              <Layers className="h-4 w-4 text-[#d4a843]" />
+              Add Frame Setup
+            </Link>
+
+            {/* ADD NEW PRODUCT BUTTON */}
+            <Link
+              to="/admin/products/add"
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
               <Plus className="h-4 w-4" />
               Add New Product
-            </button>
+            </Link>
           </div>
         </div>
 
+        {/* ================= STAT CARDS ================= */}
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {statCards.map((card, index) => (
             <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
@@ -177,14 +217,17 @@ const AdminProducts = () => {
           ))}
         </div>
 
-        <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
+        {/* ================= TABLE CARD ================= */}
+        <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search products by name or code..."
                   className="h-[46px] w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-10 pr-3 text-[14px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
@@ -217,120 +260,231 @@ const AdminProducts = () => {
                 </button>
                 <button className="flex h-[46px] w-[46px] items-center justify-center text-[#4d4d4d]">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-                    <rect x="14" y="3" width="7" height="4" rx="1.5"/>
-                    <rect x="14" y="11" width="7" height="10" rx="1.5"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
+                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
                   </svg>
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                  <th className="px-4 py-4">Product</th>
-                  <th className="px-4 py-4">Category</th>
-                  <th className="px-4 py-4">Price</th>
-                  <th className="px-4 py-4">Stock</th>
-                  <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4">Views</th>
-                  <th className="px-4 py-4">Actions</th>
-                </tr>
-              </thead>
+          {loading ? (
+            <div className="py-16 text-center text-sm text-[#777]">
+              Loading products...
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-[#e6ddd1] bg-[#faf9f8] py-16 text-center">
+              <div className="mb-3 text-5xl">📦</div>
+              <h3 className="text-base font-bold text-[#333]">No Products Found</h3>
+              <p className="mx-auto mt-1 max-w-sm text-xs text-[#888]">
+                {searchTerm
+                  ? 'No products match your search keyword.'
+                  : 'No products are currently in your store. Click "Add New Product" to create your first product.'}
+              </p>
+              <Link
+                to="/admin/products/add"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Product
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-0">
+                  <thead>
+                    <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                      <th className="px-4 py-4">Product</th>
+                      <th className="px-4 py-4">Category</th>
+                      <th className="px-4 py-4">Price</th>
+                      <th className="px-4 py-4">Stock</th>
+                      <th className="px-4 py-4">Status</th>
+                      <th className="px-4 py-4">Views</th>
+                      <th className="px-4 py-4">Actions</th>
+                    </tr>
+                  </thead>
 
-              <tbody>
-                {products.map((product, index) => {
-                  const lowStock = product.stock <= 18;
-                  const stockClass = lowStock ? 'bg-[#fff0f0] text-[#d04d4d]' : 'bg-[#eaf7ee] text-[#2d7b5a]';
+                  <tbody>
+                    {filteredProducts.map((product, index) => {
+                      const lowStock = product.stock <= 18;
+                      const stockClass = lowStock ? 'bg-[#fff0f0] text-[#d04d4d]' : 'bg-[#eaf7ee] text-[#2d7b5a]';
 
-                  return (
-                    <tr key={index} className="border-t border-[#f0ebe6] align-middle">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
-                            <div className="h-11 w-11 rounded-lg border border-[#d9c5a7] shadow-inner" style={{ background: product.image }} />
-                          </div>
-                          <div>
-                            <div className="text-lg font-semibold text-[#1f1f1f]">{product.name}</div>
-                            <div className="text-sm text-[#7a7a7a]">{product.code}</div>
-                          </div>
-                        </div>
-                      </td>
+                      return (
+                        <tr key={product.id || index} className="border-t border-[#f0ebe6] align-middle">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
+                                {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+                                  <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : (
+                                  <div
+                                    className="h-11 w-11 rounded-lg border border-[#d9c5a7] shadow-inner"
+                                    style={{ background: product.image || '#eee' }}
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-lg font-semibold text-[#1f1f1f]">{product.name}</div>
+                                <div className="text-sm font-mono text-[#7a7a7a]">{product.code}</div>
+                              </div>
+                            </div>
+                          </td>
 
-                      <td className="px-4 py-4 text-sm text-[#4d4d4d]">{product.category}</td>
+                          <td className="px-4 py-4 text-sm text-[#4d4d4d]">{product.category}</td>
 
-                      <td className="px-4 py-4">
-                        <div className="text-lg font-bold text-[#1e1e1e]">{product.price}</div>
-                        <div className="text-xs text-[#8a8a8a] line-through">{product.oldPrice}</div>
-                      </td>
+                          <td className="px-4 py-4">
+                            <div className="text-lg font-bold text-[#1e1e1e]">{product.price}</div>
+                            {product.oldPrice && (
+                              <div className="text-xs text-[#8a8a8a] line-through">{product.oldPrice}</div>
+                            )}
+                          </td>
 
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm font-medium text-[#333]">{product.stock}</div>
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stockClass}`}>
-                            {product.stockLabel}
-                          </span>
-                        </div>
-                      </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-[#333]">{product.stock}</div>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stockClass}`}>
+                                {product.stockLabel}
+                              </span>
+                            </div>
+                          </td>
 
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
-                          <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
-                          {product.status}
-                        </span>
-                      </td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
+                              <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
+                              {product.status}
+                            </span>
+                          </td>
 
-                      <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
+                          <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
 
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" aria-label="Edit product">
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedProductView(product)}
+                               
                             type="button"
                             onClick={() => navigate('/admin/products/stock-details')}
                             className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+                               
                             aria-label="View product"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]" aria-label="Delete product">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          
+                                title="View product details & frame layout"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
+                                aria-label="Delete product"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-          <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
-            <span>Showing 1 to 10 of 896 products</span>
+              <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
+                <span>Showing {filteredProducts.length} of {productsList.length} products</span>
 
-            <div className="flex items-center gap-2">
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
-                <ChevronLeft className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#173b35] text-white">
+                    1
+                  </button>
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ================= PRODUCT PREVIEW MODAL ================= */}
+        {selectedProductView && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+              <button
+                type="button"
+                onClick={() => setSelectedProductView(null)}
+                className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-[#f4f0eb] text-[#444] hover:bg-[#e8e2d8]"
+              >
+                <X className="h-4 w-4" />
               </button>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].slice(0, 5).map((page) => (
+
+              <div className="flex items-center gap-3 border-b border-[#f0ebe3] pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f3ef] text-[#1a3c36]">
+                  <Frame className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#202020]">
+                    {selectedProductView.name}
+                  </h2>
+                  <p className="text-xs font-mono text-[#888]">
+                    {selectedProductView.code} • {selectedProductView.category}
+                  </p>
+                </div>
+              </div>
+
+              {/* PRODUCT IMAGE & FRAME COMPOSITE */}
+              <div className="my-5 flex items-center justify-center rounded-2xl border border-[#e8dfd2] bg-[#f7f4ee] p-4">
+                {selectedProductView.image && (selectedProductView.image.startsWith('http') || selectedProductView.image.startsWith('/')) ? (
+                  <img
+                    src={selectedProductView.image}
+                    alt={selectedProductView.name}
+                    className="max-h-[340px] rounded-lg object-contain shadow-md"
+                  />
+                ) : (
+                  <div className="h-48 w-48 rounded-xl" style={{ background: selectedProductView.image }} />
+                )}
+              </div>
+
+              {/* SIZE VARIANTS */}
+              {selectedProductView.rawData?.size_variants && (
+                <div className="mb-4">
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#666]">
+                    Available Sizes & Pricing
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {selectedProductView.rawData.size_variants.map((v, i) => (
+                      <div key={i} className="rounded-xl border border-[#e8e2d8] bg-[#faf8f5] p-2.5 text-xs">
+                        <p className="font-bold text-[#222]">{v.size}</p>
+                        <p className="mt-1 font-bold text-[#1a3c36]">₹{v.offer_price} <span className="font-normal text-[#888] line-through">₹{v.mrp}</span></p>
+                        <p className="text-[10px] text-[#666]">Stock: {v.stock}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end">
                 <button
-                  key={page}
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${page === 1 ? 'bg-[#173b35] text-white' : 'border border-[#e3dbd2] bg-white text-[#4d4d4d]'}`}
+                  type="button"
+                  onClick={() => setSelectedProductView(null)}
+                  className="rounded-xl bg-[#1a3c36] px-6 py-2 text-xs font-bold text-white hover:bg-[#235048]"
                 >
-                  {page}
+                  Close
                 </button>
-              ))}
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
