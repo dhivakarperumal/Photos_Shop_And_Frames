@@ -16,6 +16,7 @@ console.table({
 const { initDB } = require("./src/config/db");
 const { upload } = require("./src/config/multerConfig");
 const usersRouter = require("./src/routers/usersRouter");
+const categoryRouter = require("./src/routers/categoryRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -83,6 +84,7 @@ app.post("/api/upload", upload.any(), (req, res) => {
 app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_ENV || 'development' }));
 
 app.use("/api/users", usersRouter);
+app.use("/api/categories", categoryRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

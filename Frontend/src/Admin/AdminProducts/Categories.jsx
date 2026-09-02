@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -13,10 +13,10 @@ import {
   Plus,
   Search,
   ShoppingBag,
-  Star,
   Trash2,
   Upload,
 } from 'lucide-react';
+import api from '../../api';
 
 const categoryCards = [
   { name: 'Photo Frames', products: 245, description: 'Beautiful photo frames in various sizes, styles and materials.', active: true, iconBg: 'bg-[#f4e4d1]', iconColor: 'text-[#a05c2a]' },
@@ -47,6 +47,61 @@ const statCards = [
 ];
 
 const AdminCategories = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/categories');
+        const items = response?.data?.data || [];
+        setCategories(items);
+        setError('');
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+        setError(err?.response?.data?.message || 'Unable to load categories right now.');
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const listData = useMemo(() => {
+    if (categories.length) {
+      return categories.map((item, index) => ({
+        id: item.category_id || `CAT${index + 1}`,
+        name: item.category_name || 'Untitled Category',
+        description: item.description || 'No description added yet.',
+        products: item.products || 0,
+        status: item.status === 'Inactive' ? 'Inactive' : 'Active',
+        sortOrder: item.sort_order || index + 1,
+        createdAt: item.created_date ? new Date(item.created_date).toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) : '—',
+        image: item.category_image || '',
+      }));
+    }
+
+    return tableData;
+  }, [categories]);
+
+  const activeCount = listData.filter((item) => item.status === 'Active').length;
+  const statValues = [
+    { title: 'Total Categories', value: String(listData.length), sub: 'All product categories', icon: <Grid2x2 className="h-7 w-7" />, box: 'bg-[#dfece2]', color: 'text-[#2c6847]' },
+    { title: 'Active Categories', value: String(activeCount), sub: 'Currently active', icon: <PackageCheck className="h-7 w-7" />, box: 'bg-[#ede0f5]', color: 'text-[#6d4f87]' },
+    { title: 'Total Products', value: String(listData.reduce((sum, item) => sum + Number(item.products || 0), 0)), sub: 'Across all categories', icon: <ShoppingBag className="h-7 w-7" />, box: 'bg-[#e8edf7]', color: 'text-[#526aa8]' },
+    { title: 'Total Views', value: '12,580', sub: 'Category page views', icon: <Eye className="h-7 w-7" />, box: 'bg-[#f7ebd9]', color: 'text-[#b28741]' },
+  ];
+
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -79,7 +134,7 @@ const AdminCategories = () => {
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {statCards.map((card, index) => (
+          {statValues.map((card, index) => (
             <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
               <div className="flex items-center justify-between gap-3">
                 <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.box} ${card.color}`}>
@@ -154,94 +209,112 @@ const AdminCategories = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {categoryCards.map((category, index) => (
-              <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)] transition hover:-translate-y-0.5 hover:shadow-md">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${category.iconBg}`}>
-                    <ImageIcon className={`h-5 w-5 ${category.iconColor}`} />
-                  </div>
-
-                  <button className="text-[#7c7c7c] hover:text-[#222]" aria-label="More options">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                      <circle cx="12" cy="5" r="1.5" />
-                      <circle cx="12" cy="12" r="1.5" />
-                      <circle cx="12" cy="19" r="1.5" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="text-[16px] font-semibold text-[#1e1e1e]">{category.name}</div>
-                <div className="mt-1 text-[13px] text-[#646464]">{category.products} Products</div>
-
-                <div className="mt-3 flex items-center gap-2 text-[12px] text-[#2f7a4a]">
-                  <span className="h-2 w-2 rounded-full bg-[#2f7a4a]" />
-                  {category.active ? 'Active' : 'Inactive'}
-                </div>
-
-                <p className="mt-3 text-[12px] leading-5 text-[#676767]">{category.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 overflow-hidden rounded-[16px] border border-[#e8e4df]">
-            <table className="w-full min-w-[760px] border-collapse bg-white text-left">
-              <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
-                <tr>
-                  <th className="px-4 py-4">Category</th>
-                  <th className="px-4 py-4">Description</th>
-                  <th className="px-4 py-4">Products</th>
-                  <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4">Sort Order</th>
-                  <th className="px-4 py-4">Created At</th>
-                  <th className="px-4 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableData.map((item, idx) => (
-                  <tr key={idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-[32px] w-[32px] items-center justify-center rounded-lg bg-[#f5efe5] text-[#a05c2a]">
-                          <ImageIcon className="h-4 w-4" />
-                        </div>
-                        <span className="font-medium text-[#202020]">{item.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
-                    <td className="px-4 py-4">{item.products}</td>
-                    <td className="px-4 py-4">
-                      <span className="inline-flex items-center rounded-full bg-[#eaf7ef] px-2.5 py-1 text-[11px] font-medium text-[#2b7a4b]">
-                        <span className="mr-1.5 h-2 w-2 rounded-full bg-[#2b7a4b]" />
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">{item.sortOrder}</td>
-                    <td className="px-4 py-4">{item.createdAt}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between text-[12px] text-[#666]">
-            <span>Showing 1 to 10 of 10 categories</span>
-            <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&lt;</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1d3d36] text-white">1</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&gt;</button>
+          {error && (
+            <div className="mb-4 rounded-xl border border-[#f2d7d7] bg-[#fff5f5] px-4 py-3 text-sm text-[#a23939]">
+              {error}
             </div>
-          </div>
+          )}
+
+          {!loading && !listData.length && !error ? (
+            <div className="rounded-2xl border border-dashed border-[#e7e0d8] bg-[#faf8f5] p-10 text-center text-[#666]">
+              No categories found yet.
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                {listData.slice(0, 5).map((category, index) => (
+                  <div key={category.id || index} className="rounded-[18px] border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)] transition hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${index % 2 === 0 ? 'bg-[#f4e4d1] text-[#a05c2a]' : 'bg-[#dfeaf8] text-[#3f7db8]'}`}>
+                        <ImageIcon className="h-5 w-5" />
+                      </div>
+
+                      <button className="text-[#7c7c7c] hover:text-[#222]" aria-label="More options">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                          <circle cx="12" cy="5" r="1.5" />
+                          <circle cx="12" cy="12" r="1.5" />
+                          <circle cx="12" cy="19" r="1.5" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="text-[16px] font-semibold text-[#1e1e1e]">{category.name}</div>
+                    <div className="mt-1 text-[13px] text-[#646464]">{category.products} Products</div>
+
+                    <div className="mt-3 flex items-center gap-2 text-[12px] text-[#2f7a4a]">
+                      <span className="h-2 w-2 rounded-full bg-[#2f7a4a]" />
+                      {category.status}
+                    </div>
+
+                    <p className="mt-3 text-[12px] leading-5 text-[#676767]">{category.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-[16px] border border-[#e8e4df]">
+                <table className="w-full min-w-[760px] border-collapse bg-white text-left">
+                  <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
+                    <tr>
+                      <th className="px-4 py-4">Category</th>
+                      <th className="px-4 py-4">Description</th>
+                      <th className="px-4 py-4">Products</th>
+                      <th className="px-4 py-4">Status</th>
+                      <th className="px-4 py-4">Sort Order</th>
+                      <th className="px-4 py-4">Created At</th>
+                      <th className="px-4 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listData.map((item, idx) => (
+                      <tr key={item.id || idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-[32px] w-[32px] items-center justify-center rounded-lg bg-[#f5efe5] text-[#a05c2a]">
+                              {item.image ? (
+                                <img src={item.image} alt={item.name} className="h-full w-full rounded-lg object-cover" />
+                              ) : (
+                                <ImageIcon className="h-4 w-4" />
+                              )}
+                            </div>
+                            <span className="font-medium text-[#202020]">{item.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
+                        <td className="px-4 py-4">{item.products}</td>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${item.status === 'Active' ? 'bg-[#eaf7ef] text-[#2b7a4b]' : 'bg-[#fdf1f1] text-[#b85c5c]'}`}>
+                            <span className={`mr-1.5 h-2 w-2 rounded-full ${item.status === 'Active' ? 'bg-[#2b7a4b]' : 'bg-[#b85c5c]'}`} />
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">{item.sortOrder}</td>
+                        <td className="px-4 py-4">{item.createdAt}</td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-[12px] text-[#666]">
+                <span>{loading ? 'Loading categories...' : `Showing 1 to ${listData.length} of ${listData.length} categories`}</span>
+                <div className="flex items-center gap-2">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&lt;</button>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1d3d36] text-white">1</button>
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&gt;</button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

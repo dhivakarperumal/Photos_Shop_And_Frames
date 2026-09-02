@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react';
+import api from '../../api';
 import { useAuth } from '../../PrivateRouter/AuthContext';
 
 const categoryTypes = ['Frame', 'Gift', 'Albums'];
@@ -37,12 +38,7 @@ const formatDate = (date) =>
     minute: '2-digit',
   }).format(date);
 
-const getNextCategoryId = () => {
-  const lastSaved = Number(localStorage.getItem('pixelframe_last_category_id') || '0');
-  const nextNumber = lastSaved + 1;
-  localStorage.setItem('pixelframe_last_category_id', String(nextNumber));
-  return `CAT${String(nextNumber).padStart(3, '0')}`;
-};
+const getInitialCategoryId = () => 'CAT001';
 
 const AddCategory = () => {
   const navigate = useNavigate();
@@ -50,7 +46,7 @@ const AddCategory = () => {
   const { profileName } = useAuth();
 
   const [formData, setFormData] = useState({
-    categoryId: getNextCategoryId(),
+    categoryId: getInitialCategoryId(),
     categoryType: 'Frame',
     categoryName: 'Photo Frames',
     subCategories: ['Wooden Frames', 'Collage Frames'],
@@ -62,8 +58,26 @@ const AddCategory = () => {
     createdDate: formatDate(new Date()),
     updatedDate: formatDate(new Date()),
   });
+
+  const fetchNextCategoryId = async () => {
+    try {
+      const response = await api.get('/categories/next-id');
+      const nextId = response?.data?.data || 'CAT001';
+      setFormData((current) => ({
+        ...current,
+        categoryId: nextId,
+      }));
+    } catch (error) {
+      console.warn('Unable to fetch next category ID.', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNextCategoryId();
+  }, []);
   const [newSubCategory, setNewSubCategory] = useState('');
   const [imageFile, setImageFile] = useState(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [isDragging, setIsDragging] = useState(false);
 
@@ -106,7 +120,7 @@ const AddCategory = () => {
     setNewSubCategory('');
   };
 
-  const handleFileSelection = (file) => {
+  const handleFileSelection = async (file) => {
     if (!file) return;
 
     const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
@@ -116,9 +130,20 @@ const AddCategory = () => {
     }
 
     setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setPreviewUrl(reader.result);
-    reader.readAsDataURL(file);
+
+    const formData = new FormData();
+    formData.append('folder', 'categories');
+    formData.append('file', file);
+
+    try {
+      const response = await api.post('/upload', formData);
+      const imageUrl = response?.data?.url || response?.data?.urls?.[0] || '';
+      setUploadedImageUrl(imageUrl);
+      setPreviewUrl(imageUrl);
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert(error?.response?.data?.message || 'Image upload failed. Please try again.');
+    }
   };
 
   const handleDrop = (event) => {
@@ -128,10 +153,10 @@ const AddCategory = () => {
     handleFileSelection(file);
   };
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    await fetchNextCategoryId();
     setFormData((current) => ({
       ...current,
-      categoryId: getNextCategoryId(),
       categoryType: 'Frame',
       categoryName: '',
       subCategories: [],
@@ -144,27 +169,42 @@ const AddCategory = () => {
       updatedDate: formatDate(new Date()),
     }));
     setImageFile(null);
+    setUploadedImageUrl('');
     setPreviewUrl('');
   };
 
-  const onSubmit = (event, mode = 'save') => {
+  const onSubmit = async (event, mode = 'save') => {
     event.preventDefault();
 
     const payload = {
-      ...formData,
-      imageName: imageFile?.name || 'category-image',
-      imagePreview: previewUrl || null,
-      updatedDate: formatDate(new Date()),
+      category_id: formData.categoryId,
+      category_type: formData.categoryType,
+      category_name: formData.categoryName,
+      sub_categories: formData.subCategories,
+      description: formData.description,
+      category_image: uploadedImageUrl || previewUrl || null,
+      sort_order: formData.sortOrder,
+      status: formData.status ? 'Active' : 'Inactive',
+      created_by: formData.createdBy,
+      updated_by: formData.updatedBy,
+      created_date: formData.createdDate,
+      updated_date: formatDate(new Date()),
     };
 
-    console.log('Category saved:', payload);
+    try {
+      const response = await api.post('/categories', payload);
+      console.log('Category saved:', response.data);
 
-    if (mode === 'add-another') {
-      resetForm();
-      return;
+      if (mode === 'add-another') {
+        await resetForm();
+        return;
+      }
+
+      navigate('/admin/products/categories');
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      alert(error?.response?.data?.message || 'Failed to save category. Please try again.');
     }
-
-    navigate('/admin/products/categories');
   };
 
   return (
@@ -331,8 +371,8 @@ const AddCategory = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Category Image</label>
+                <div className="space-y-3">
+                  <label className="block text-[13px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Category Image</label>
                   <div
                     onDragOver={(event) => {
                       event.preventDefault();
@@ -340,8 +380,8 @@ const AddCategory = () => {
                     }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={handleDrop}
-                    className={`relative overflow-hidden rounded-[22px] border-2 border-dashed p-6 text-center transition ${
-                      isDragging ? 'border-[#d8a44a] bg-[#fffaf0]' : 'border-[#e7dcc8] bg-[#fffdfb]'
+                    className={`relative overflow-hidden rounded-[22px] border border-dashed border-[#d8d0c5] bg-[#f2efe9] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3)] transition ${
+                      isDragging ? 'border-[#d8a44a] bg-[#fffaf0]' : 'border-[#d8d0c5] bg-[#f4f1ee]'
                     }`}
                   >
                     <input
@@ -353,50 +393,65 @@ const AddCategory = () => {
                     />
 
                     {previewUrl ? (
-                      <div className="space-y-4">
-                        <div className="mx-auto flex h-56 max-w-md items-center justify-center overflow-hidden rounded-2xl border border-[#efe6d6] bg-[#f8f5f1]">
+                      <>
+                        <div className="mx-auto flex h-[220px] max-w-[100%] items-center justify-center overflow-hidden rounded-[18px] border border-[#e4ddd1] bg-[#f4f0eb]">
                           <img src={previewUrl} alt="Category preview" className="h-full w-full object-cover" />
                         </div>
-                        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                        <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-4 py-2.5 text-[14px] font-semibold text-white hover:bg-[#24483f]"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#153d38] px-5 py-3 text-[18px] font-semibold text-white shadow-[0_8px_20px_rgba(21,61,56,0.12)] transition hover:bg-[#1b4d46]"
                           >
-                            <ImagePlus className="h-4 w-4" />
+                            <ImagePlus className="h-5 w-5" />
                             Change Image
                           </button>
                           <button
                             type="button"
                             onClick={() => {
                               setImageFile(null);
+                              setUploadedImageUrl('');
                               setPreviewUrl('');
                             }}
-                            className="inline-flex items-center gap-2 rounded-xl border border-[#e8e1d9] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#333] hover:bg-[#faf7f3]"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d3c8bc] bg-white px-5 py-3 text-[18px] font-semibold text-[#1f1f1f] shadow-[0_2px_8px_rgba(31,41,55,0.04)] transition hover:bg-[#faf7f3]"
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5" />
                             Remove
                           </button>
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="space-y-4">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#fff2d6] text-[#b77d2f]">
-                          <UploadCloud className="h-9 w-9" />
+                      <div className="flex flex-col items-center justify-center gap-4 px-3 py-8">
+                        <div className="flex h-[54px] w-[54px] items-center justify-center rounded-xl border border-[#d7d0c7] bg-[#eef1ee] text-[#5a6e63] shadow-sm">
+                          <UploadCloud className="h-8 w-8" />
                         </div>
-                        <div>
-                          <p className="text-[18px] font-semibold text-[#1f1f1f]">Drag & drop category image</p>
-                          <p className="mt-2 text-[13px] text-[#6e6e6e]">or click to browse files</p>
+
+                        <div className="text-center">
+                          <p className="text-[24px] font-semibold tracking-[-0.04em] text-[#2a2a2a]">Category preview</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex items-center gap-2 rounded-xl border border-[#e8e1d9] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#2c2c2c] shadow-sm hover:bg-[#faf7f3]"
-                        >
-                          <ImagePlus className="h-4 w-4" />
-                          Upload Image
-                        </button>
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-[#8d8d8d]">Accepted: JPG, PNG, WEBP</p>
+
+                        <div className="mt-2 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#153d38] px-5 py-3 text-[18px] font-semibold text-white shadow-[0_8px_20px_rgba(21,61,56,0.12)] transition hover:bg-[#1b4d46]"
+                          >
+                            <ImagePlus className="h-5 w-5" />
+                            Change Image
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageFile(null);
+                              setUploadedImageUrl('');
+                              setPreviewUrl('');
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#d3c8bc] bg-white px-5 py-3 text-[18px] font-semibold text-[#1f1f1f] shadow-[0_2px_8px_rgba(31,41,55,0.04)] transition hover:bg-[#faf7f3]"
+                          >
+                            <X className="h-5 w-5" />
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

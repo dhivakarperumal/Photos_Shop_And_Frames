@@ -22,7 +22,7 @@ async function initializeDatabase() {
     console.log("✅ Connected to database");
 
     // Create users table
-    const createTableQuery = `
+    const createUsersTableQuery = `
       CREATE TABLE IF NOT EXISTS users (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL UNIQUE,
@@ -42,8 +42,33 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
-    await connection.query(createTableQuery);
+    await connection.query(createUsersTableQuery);
     console.log("✅ Users table created successfully!");
+
+    // Create categories table
+    const createCategoriesTableQuery = `
+      CREATE TABLE IF NOT EXISTS categories (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        category_id VARCHAR(255) NOT NULL UNIQUE,
+        category_type VARCHAR(100) NOT NULL,
+        category_name VARCHAR(255) NOT NULL,
+        sub_categories JSON,
+        description TEXT,
+        category_image VARCHAR(255),
+        sort_order INT DEFAULT 1,
+        status VARCHAR(50) DEFAULT 'Active',
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
+        created_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_category_id (category_id),
+        KEY idx_category_type (category_type),
+        KEY idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await connection.query(createCategoriesTableQuery);
+    console.log("✅ Categories table created successfully!");
 
     await connection.end();
     console.log("✅ Database initialization complete!");

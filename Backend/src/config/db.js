@@ -11,6 +11,9 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  charset: 'utf8mb4',
+  supportBigNumbers: true,
+  bigNumberStrings: true,
 };
 
 let pool;
