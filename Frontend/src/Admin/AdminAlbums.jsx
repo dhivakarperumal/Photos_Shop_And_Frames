@@ -353,17 +353,17 @@ const AdminAlbums = () => {
             ) : (
               <table className="min-w-full text-left">
                 <thead>
-                  <tr className="border-b border-[#ece9e5] text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6c6c6c]">
-                    <th className="px-4 py-3">S.No</th>
-                    <th className="px-4 py-3">Album</th>
-                    <th className="px-4 py-3">Product Code</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Size</th>
-                    <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Stock</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Views</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                  <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                    <th className="rounded-tl-md px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">Album</th>
+                    <th className="px-4 py-4">Product Code</th>
+                    <th className="px-4 py-4">Category</th>
+                    <th className="px-4 py-4">Size</th>
+                    <th className="px-4 py-4">Price</th>
+                    <th className="px-4 py-4">Stock</th>
+                    <th className="px-4 py-4">Status</th>
+                  
+                    <th className="rounded-tr-md px-4 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
 
@@ -410,17 +410,13 @@ const AdminAlbums = () => {
                       <td className="px-4 py-4">
                         <div className="font-semibold text-[#1f1f1f]">{album.stock}</div>
                       </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStockClasses(album.stockLabel)}`}>
-                          {album.stockLabel}
-                        </span>
-                      </td>
+                     
                       <td className="px-4 py-4">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(album.status)}`}>
                           {album.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-[#1f1f1f] font-medium">{album.views.toLocaleString()}</td>
+                     
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button

@@ -545,13 +545,13 @@ const AdminCustomers = () => {
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                    <th className="rounded-tl-xl px-4 py-4">S No</th>
+                    <th className="rounded-tl-md px-4 py-4">S No</th>
                     <th className="px-4 py-4">Customer</th>
                     <th className="px-4 py-4">Email</th>
                     <th className="px-4 py-4">Role</th>
                     <th className="px-4 py-4">Status</th>
                     <th className="px-4 py-4">Joined</th>
-                    <th className="rounded-tr-xl px-4 py-4">Actions</th>
+                    <th className="rounded-tr-md px-4 py-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
