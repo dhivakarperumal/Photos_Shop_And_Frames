@@ -9,7 +9,9 @@ import Register from './Componets/Auth/Register.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
 
 import AdminDashboard from './Admin/AdminDashboard.jsx'
-import AdminProducts from './Admin/AdminProducts.jsx'
+import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
+import AdminCategories from './Admin/AdminProducts/Categories.jsx'
+import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
 
@@ -55,6 +57,14 @@ const router = createHashRouter([
           {
             path: 'products',
             element: <AdminProducts />,
+          },
+          {
+            path: 'products/categories',
+            element: <AdminCategories />,
+          },
+          {
+            path: 'products/stock-details',
+            element: <StockDetails />,
           },
         ],
       },

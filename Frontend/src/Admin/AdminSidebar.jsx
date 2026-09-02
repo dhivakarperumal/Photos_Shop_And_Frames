@@ -64,9 +64,13 @@ const navItems = [
 
   /* ---- PRODUCTS ---- */
   {
-    path: "/admin/products",
     label: "Products",
     icon: Package,
+    children: [
+      { path: "/admin/products", label: "All Products", icon: Package },
+      { path: "/admin/products/categories", label: "Category", icon: Layers },
+      { path: "/admin/products/stock-details", label: "Stock Details", icon: ClipboardList },
+    ],
   },
 
   {
@@ -103,8 +107,8 @@ const navItems = [
     label: "Orders",
     icon: ShoppingCart,
     children: [
-      { path: "/admin/orders/new", label: "New Order", icon: PlusSquare },
       { path: "/admin/orders", label: "All Orders", icon: List },
+      { path: "/admin/orders/new", label: "New Order", icon: PlusSquare },
       { path: "/admin/orders/delivery", label: "Delivery Orders", icon: Package },
       { path: "/admin/orders/cancelled", label: "Cancelled Orders", icon: XCircle },
     ],
