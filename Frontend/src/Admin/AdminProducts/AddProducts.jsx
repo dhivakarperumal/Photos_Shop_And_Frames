@@ -18,6 +18,7 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Eye,
 } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";

@@ -11,6 +11,7 @@ import {
   Filter,
   Frame,
   Layers,
+  Package,
   PackageCheck,
   Pencil,
   Plus,
@@ -24,48 +25,6 @@ import {
 import api from '../../api';
 import toast from 'react-hot-toast';
 
-const initialMockProducts = [
-  {
-    id: 'mock-1',
-    name: 'Classic Wooden Frame',
-    code: 'PF-WD-001',
-    category: 'Photo Frames',
-    price: '₹899',
-    oldPrice: '₹1,299',
-    stock: 52,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1245,
-    image: 'linear-gradient(135deg, #d3b495, #f2e4d2)',
-  },
-  {
-    id: 'mock-2',
-    name: 'Black Matt Frame',
-    code: 'PF-BK-002',
-    category: 'Photo Frames',
-    price: '₹699',
-    oldPrice: '₹999',
-    stock: 18,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 978,
-    image: 'linear-gradient(135deg, #d8d8d8, #b0b0b0)',
-  },
-  {
-    id: 'mock-3',
-    name: 'Canvas Wall Print',
-    code: 'PF-CV-001',
-    category: 'Photo Printing',
-    price: '₹1,299',
-    oldPrice: '₹1,799',
-    stock: 35,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 2156,
-    image: 'linear-gradient(135deg, #a9c7d9, #e9d6c8)',
-  },
-];
-
 const AdminProducts = () => {
   const navigate = useNavigate();
   const [productsList, setProductsList] = useState([]);
@@ -77,7 +36,7 @@ const AdminProducts = () => {
     try {
       setLoading(true);
       const res = await api.get('/products');
-      if (res.data?.data && res.data.data.length > 0) {
+      if (res.data?.data && Array.isArray(res.data.data)) {
         // Map database products
         const mapped = res.data.data.map((p) => {
           const firstVariant = p.size_variants?.[0] || {};
@@ -110,11 +69,11 @@ const AdminProducts = () => {
         });
         setProductsList(mapped);
       } else {
-        setProductsList(initialMockProducts);
+        setProductsList([]);
       }
     } catch (err) {
-      console.warn('Could not fetch products from database, using mock items:', err);
-      setProductsList(initialMockProducts);
+      console.warn('Could not fetch products from database:', err);
+      setProductsList([]);
     } finally {
       setLoading(false);
     }
@@ -124,20 +83,15 @@ const AdminProducts = () => {
     fetchProducts();
   }, []);
 
-  const handleDeleteProduct = async (id, isDb) => {
+  const handleDeleteProduct = async (id) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
 
-    if (isDb) {
-      try {
-        await api.delete(`/products/${id}`);
-        toast.success('Product deleted successfully');
-        fetchProducts();
-      } catch (err) {
-        toast.error('Failed to delete product');
-      }
-    } else {
-      setProductsList((prev) => prev.filter((p) => p.id !== id));
-      toast.success('Mock product removed');
+    try {
+      await api.delete(`/products/${id}`);
+      toast.success('Product deleted successfully');
+      fetchProducts();
+    } catch (err) {
+      toast.error('Failed to delete product');
     }
   };
 
@@ -152,8 +106,8 @@ const AdminProducts = () => {
     {
       title: 'Total Products',
       value: String(productsList.length),
-      trend: '+ 10.7%',
-      trendText: 'from last month',
+      trend: productsList.length > 0 ? '+ 100%' : '0%',
+      trendText: 'in catalog',
       accent: 'bg-[#d9ead9]',
       iconColor: 'text-[#2a5e3d]',
       icon: <PackageCheck className="h-7 w-7" />,
@@ -161,7 +115,7 @@ const AdminProducts = () => {
     {
       title: 'Active Products',
       value: String(productsList.filter((p) => p.status === 'Active').length),
-      trend: '+ 82.8%',
+      trend: productsList.length > 0 ? '100%' : '0%',
       trendText: 'of total',
       accent: 'bg-[#f1e7f7]',
       iconColor: 'text-[#7d5a93]',
@@ -169,17 +123,17 @@ const AdminProducts = () => {
     },
     {
       title: 'Total Views',
-      value: '12,580',
-      trend: '+ 12.5%',
-      trendText: 'from last month',
+      value: String(productsList.reduce((acc, p) => acc + (p.views || 0), 0)),
+      trend: '0%',
+      trendText: 'this month',
       accent: 'bg-[#e8eefb]',
       iconColor: 'text-[#7a5fc4]',
       icon: <Eye className="h-7 w-7" />,
     },
     {
       title: 'Low Stock',
-      value: String(productsList.filter((p) => p.stock <= 18).length),
-      trend: 'Products low on stock',
+      value: String(productsList.filter((p) => p.stock <= 18 && p.stock > 0).length),
+      trend: 'Low stock items',
       trendText: '',
       accent: 'bg-[#dfeff8]',
       iconColor: 'text-[#4f88b2]',
@@ -262,7 +216,7 @@ const AdminProducts = () => {
         </div>
 
         {/* ================= TABLE CARD ================= */}
-        <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
+        <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
@@ -314,120 +268,145 @@ const AdminProducts = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                  <th className="px-4 py-4">Product</th>
-                  <th className="px-4 py-4">Category</th>
-                  <th className="px-4 py-4">Price</th>
-                  <th className="px-4 py-4">Stock</th>
-                  <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4">Views</th>
-                  <th className="px-4 py-4">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredProducts.map((product, index) => {
-                  const lowStock = product.stock <= 18;
-                  const stockClass = lowStock ? 'bg-[#fff0f0] text-[#d04d4d]' : 'bg-[#eaf7ee] text-[#2d7b5a]';
-
-                  return (
-                    <tr key={product.id || index} className="border-t border-[#f0ebe6] align-middle">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
-                            {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="h-full w-full object-contain"
-                              />
-                            ) : (
-                              <div
-                                className="h-11 w-11 rounded-lg border border-[#d9c5a7] shadow-inner"
-                                style={{ background: product.image || '#eee' }}
-                              />
-                            )}
-                          </div>
-                          <div>
-                            <div className="text-lg font-semibold text-[#1f1f1f]">{product.name}</div>
-                            <div className="text-sm font-mono text-[#7a7a7a]">{product.code}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm text-[#4d4d4d]">{product.category}</td>
-
-                      <td className="px-4 py-4">
-                        <div className="text-lg font-bold text-[#1e1e1e]">{product.price}</div>
-                        {product.oldPrice && (
-                          <div className="text-xs text-[#8a8a8a] line-through">{product.oldPrice}</div>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm font-medium text-[#333]">{product.stock}</div>
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stockClass}`}>
-                            {product.stockLabel}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
-                          <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
-                          {product.status}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedProductView(product)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
-                            aria-label="View product"
-                            title="View product details & frame layout"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProduct(product.id, product.isDbProduct)}
-                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
-                            aria-label="Delete product"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
-            <span>Showing {filteredProducts.length} of {productsList.length} products</span>
-
-            <div className="flex items-center gap-2">
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#173b35] text-white">
-                1
-              </button>
-              <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          {loading ? (
+            <div className="py-16 text-center text-sm text-[#777]">
+              Loading products...
             </div>
-          </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-[#e6ddd1] bg-[#faf9f8] py-16 text-center">
+              <div className="mb-3 text-5xl">📦</div>
+              <h3 className="text-base font-bold text-[#333]">No Products Found</h3>
+              <p className="mx-auto mt-1 max-w-sm text-xs text-[#888]">
+                {searchTerm
+                  ? 'No products match your search keyword.'
+                  : 'No products are currently in your store. Click "Add New Product" to create your first product.'}
+              </p>
+              <Link
+                to="/admin/products/add"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Product
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-0">
+                  <thead>
+                    <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                      <th className="px-4 py-4">Product</th>
+                      <th className="px-4 py-4">Category</th>
+                      <th className="px-4 py-4">Price</th>
+                      <th className="px-4 py-4">Stock</th>
+                      <th className="px-4 py-4">Status</th>
+                      <th className="px-4 py-4">Views</th>
+                      <th className="px-4 py-4">Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredProducts.map((product, index) => {
+                      const lowStock = product.stock <= 18;
+                      const stockClass = lowStock ? 'bg-[#fff0f0] text-[#d04d4d]' : 'bg-[#eaf7ee] text-[#2d7b5a]';
+
+                      return (
+                        <tr key={product.id || index} className="border-t border-[#f0ebe6] align-middle">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
+                                {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+                                  <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : (
+                                  <div
+                                    className="h-11 w-11 rounded-lg border border-[#d9c5a7] shadow-inner"
+                                    style={{ background: product.image || '#eee' }}
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-lg font-semibold text-[#1f1f1f]">{product.name}</div>
+                                <div className="text-sm font-mono text-[#7a7a7a]">{product.code}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4 text-sm text-[#4d4d4d]">{product.category}</td>
+
+                          <td className="px-4 py-4">
+                            <div className="text-lg font-bold text-[#1e1e1e]">{product.price}</div>
+                            {product.oldPrice && (
+                              <div className="text-xs text-[#8a8a8a] line-through">{product.oldPrice}</div>
+                            )}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-medium text-[#333]">{product.stock}</div>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${stockClass}`}>
+                                {product.stockLabel}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center gap-2 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
+                              <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
+                              {product.status}
+                            </span>
+                          </td>
+
+                          <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
+
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedProductView(product)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+                                aria-label="View product"
+                                title="View product details & frame layout"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(product.id)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
+                                aria-label="Delete product"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
+                <span>Showing {filteredProducts.length} of {productsList.length} products</span>
+
+                <div className="flex items-center gap-2">
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#173b35] text-white">
+                    1
+                  </button>
+                  <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* ================= PRODUCT PREVIEW MODAL ================= */}
