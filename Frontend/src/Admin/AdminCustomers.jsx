@@ -436,9 +436,9 @@ const AdminCustomers = () => {
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
 
           {/* ── TOOLBAR ── */}
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between">
             {/* Left: search + filters */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
               {/* Search */}
               <div className="relative w-full max-w-[300px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
@@ -477,7 +477,7 @@ const AdminCustomers = () => {
             </div>
 
             {/* Right: page size + view toggle */}
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {/* Page size */}
               <div className="flex items-center gap-2 text-[13px] text-[#6a6a6a]">
                 <span>Show</span>
