@@ -13,6 +13,7 @@ const Coupons = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCoupon, setCurrentCoupon] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("table");
 
   const [formData, setFormData] = useState({
@@ -167,10 +168,12 @@ const Coupons = () => {
     const q = String(searchTerm || "").toLowerCase();
     const code = String(c?.code || "").toLowerCase();
     const name = String(c?.name || "").toLowerCase();
-    return code.includes(q) || name.includes(q);
+    const matchesSearch = code.includes(q) || name.includes(q);
+    const matchesStatus = statusFilter === "all" || c?.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  if (loading) return <Loader />;
+
 
   const totalCount = coupons.length;
   const activeCount = coupons.filter(c => c.status === 'active').length;
@@ -189,9 +192,9 @@ const Coupons = () => {
 
         <button
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center justify-center gap-2 bg-[#1a3c36] hover:bg-[#214a42] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 bg-[#1a3c36] hover:bg-[#214a42] text-white px-5 py-2.5 rounded-md font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
         >
-          <FiPlus className="w-4 h-4" /> Add New Coupon
+          <FiPlus className="w-6 h-6" /> Add New Coupon
         </button>
       </div>
 
@@ -237,11 +240,21 @@ const Coupons = () => {
             placeholder="Search coupons by code or name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium text-gray-900 text-sm focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all placeholder:text-gray-400"
+            className="w-1/2 pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium text-gray-900 text-sm focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all placeholder:text-gray-400"
           />
         </div>
 
         <div className="flex items-center gap-3 self-end xl:self-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter coupons by status"
+            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 outline-none focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
           <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-xl">
             <button
               onClick={() => setViewMode("table")}
@@ -258,9 +271,7 @@ const Coupons = () => {
               <FiGrid className="w-4 h-4" />
             </button>
           </div>
-          <button onClick={fetchCoupons} className="p-3 bg-white border border-gray-200 text-gray-500 hover:text-[#1a3c36] rounded-xl transition shadow-sm hover:bg-[#eef6f3]" title="Refresh">
-            <FiRefreshCw className="w-5 h-5" />
-          </button>
+         
         </div>
       </div>
 
@@ -271,26 +282,28 @@ const Coupons = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                <th className="px-6 py-4 text-xs font-bold ">Code</th>
-                <th className="px-6 py-4 text-xs font-bold ">Name</th>
-                <th className="px-6 py-4 text-xs font-bold ">Discount</th>
-                <th className="px-6 py-4 text-xs font-bold ">Validity</th>
-                <th className="px-6 py-4 text-xs font-bold ">Usage</th>
-                <th className="px-6 py-4 text-xs font-bold ">Scope</th>
-                <th className="px-6 py-4 text-xs font-bold  text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-bold  text-right">Actions</th>
+                <th className="px-4 py-4 text-xs font-bold">S No</th>
+                <th className="px-4 py-4 text-xs font-bold ">Code</th>
+                <th className="px-4 py-4 text-xs font-bold ">Name</th>
+                <th className="px-4 py-4 text-xs font-bold ">Discount</th>
+                <th className="px-4 py-4 text-xs font-bold ">Validity</th>
+                <th className="px-4 py-4 text-xs font-bold ">Usage</th>
+                <th className="px-4 py-4 text-xs font-bold ">Scope</th>
+                <th className="px-4 py-4 text-xs font-bold  text-center">Status</th>
+                <th className="px-4 py-4 text-xs font-bold  text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCoupons.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-500 font-semibold">
+                  <td colSpan="8" className="p-8 text-center text-slate-500 font-semibold">
                     No coupons found. Create one to get started.
                   </td>
                 </tr>
               ) : (
-                filteredCoupons.map((coupon) => (
+                filteredCoupons.map((coupon, index) => (
                   <tr key={coupon.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{index + 1}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex px-3 py-1 bg-gray-100 text-gray-800 font-bold text-xs rounded-lg border border-gray-200">
                         {coupon.code}
