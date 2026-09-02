@@ -89,6 +89,9 @@ const AdminCategories = () => {
         name: item.category_name || 'Untitled Category',
         description: item.description || 'No description added yet.',
         products: item.products || 0,
+        subCategories: Array.isArray(item.sub_categories)
+          ? item.sub_categories.join(', ')
+          : item.sub_categories || '—',
         status: item.status === 'Inactive' ? 'Inactive' : 'Active',
         sortOrder: item.sort_order || index + 1,
         createdAt: item.created_date ? new Date(item.created_date).toLocaleString('en-GB', {
@@ -259,13 +262,24 @@ const AdminCategories = () => {
                           )}
                         </div>
 
-                        <button className="text-[#7c7c7c] hover:text-[#222]" aria-label="More options">
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                            <circle cx="12" cy="5" r="1.5" />
-                            <circle cx="12" cy="12" r="1.5" />
-                            <circle cx="12" cy="19" r="1.5" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditCategory(category)}
+                            className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
+                            aria-label={`Edit ${category.name}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]"
+                            aria-label={`Delete ${category.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="text-[16px] font-semibold text-[#1e1e1e]">{category.name}</div>
@@ -285,6 +299,7 @@ const AdminCategories = () => {
                   <table className="w-full min-w-[760px] border-collapse bg-white text-left">
                     <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
                       <tr>
+                        <th className="px-4 py-4">S.No</th>
                         <th className="px-4 py-4">Category</th>
                         <th className="px-4 py-4">Description</th>
                         <th className="px-4 py-4">Products</th>
@@ -297,6 +312,7 @@ const AdminCategories = () => {
                     <tbody>
                       {listData.map((item, idx) => (
                         <tr key={item.id || idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
+                          <td className="px-4 py-4 font-medium text-[#2d2d2d]">{idx + 1}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-[32px] w-[32px] items-center justify-center rounded-lg bg-[#f5efe5] text-[#a05c2a]">
