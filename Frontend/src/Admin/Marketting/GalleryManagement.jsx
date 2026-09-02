@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   ChevronDown,
@@ -18,136 +18,121 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import api, { API_URL } from "../../api";
+import toast from "react-hot-toast";
 
-/* ============================================================
-   MOCK DATA
-   ============================================================ */
-const albumsData = [
-  {
-    id: 1,
-    title: "Living Room Frames",
-    subtitle: "Beautiful frames for living room decor",
-    category: "Photo Frames",
-    photos: 28,
-    views: "1,245",
-    status: "Active",
-    createdAt: "02 Sep 2024",
-    timeAt: "10:30 AM",
-    image: "linear-gradient(135deg, #d3b495, #f2e4d2)",
-  },
-  {
-    id: 2,
-    title: "Family Collage Frames",
-    subtitle: "Collage frames for family memories",
-    category: "Collage Frames",
-    photos: 32,
-    views: "2,156",
-    status: "Active",
-    createdAt: "02 Sep 2024",
-    timeAt: "09:15 AM",
-    image: "linear-gradient(135deg, #a9c7d9, #e9d6c8)",
-  },
-  {
-    id: 3,
-    title: "Wedding Frames",
-    subtitle: "Elegant frames for wedding photos",
-    category: "Photo Frames",
-    photos: 25,
-    views: "1,890",
-    status: "Active",
-    createdAt: "01 Sep 2024",
-    timeAt: "04:45 PM",
-    image: "linear-gradient(135deg, #e8d5c4, #fff)",
-  },
-  {
-    id: 4,
-    title: "Baby Photos Collection",
-    subtitle: "Cute baby photo frames",
-    category: "Photo Frames",
-    photos: 18,
-    views: "856",
-    status: "Active",
-    createdAt: "01 Sep 2024",
-    timeAt: "03:20 PM",
-    image: "linear-gradient(135deg, #f3e1c1, #fff)",
-  },
-  {
-    id: 5,
-    title: "Nature & Landscape",
-    subtitle: "Beautiful nature and landscape photos",
-    category: "Photo Prints",
-    photos: 45,
-    views: "3,120",
-    status: "Active",
-    createdAt: "31 Aug 2024",
-    timeAt: "11:00 AM",
-    image: "linear-gradient(135deg, #2d7b5a, #a0d8c0)",
-  },
-  {
-    id: 6,
-    title: "Abstract Art Prints",
-    subtitle: "Modern abstract art prints collection",
-    category: "Canvas Prints",
-    photos: 22,
-    views: "1,102",
-    status: "Inactive",
-    createdAt: "31 Aug 2024",
-    timeAt: "09:30 AM",
-    image: "linear-gradient(135deg, #d8d8d8, #b0b0b0)",
-  },
-];
-
-const statCards = [
-  {
-    title: "Total Albums",
-    value: "24",
-    subtext: "All gallery albums",
-    icon: <Package className="h-6 w-6" />,
-    accent: "bg-[#eaf5f0]",
-    iconColor: "text-[#2d7b5a]",
-  },
-  {
-    title: "Total Photos",
-    value: "358",
-    subtext: "Across all albums",
-    icon: <ImageIcon className="h-6 w-6" />,
-    accent: "bg-[#e8f1f8]",
-    iconColor: "text-[#4f88b2]",
-  },
-  {
-    title: "Total Views",
-    value: "12,580",
-    subtext: "Album & photo views",
-    icon: <MonitorPlay className="h-6 w-6" />,
-    accent: "bg-[#f1e7f7]",
-    iconColor: "text-[#7d5a93]",
-  },
-  {
-    title: "Active Albums",
-    value: "21",
-    subtext: "Currently active",
-    icon: <Users className="h-6 w-6" />,
-    accent: "bg-[#fdf3e7]",
-    iconColor: "text-[#d4a843]",
-  },
-  {
-    title: "Inactive Albums",
-    value: "3",
-    subtext: "Currently inactive",
-    icon: <Star className="h-6 w-6" />,
-    accent: "bg-[#fff0f0]",
-    iconColor: "text-[#d04d4d]",
-  },
-];
-
-/* ============================================================
-   COMPONENT
-   ============================================================ */
 const GalleryManagement = () => {
   const [activeTab, setActiveTab] = useState("albums");
   const [viewMode, setViewMode] = useState("table");
+  
+  const [albums, setAlbums] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+
+  const fetchAlbums = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/gallery");
+      if (data.success) {
+        setAlbums(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching gallery albums:", error);
+      toast.error("Failed to load gallery albums");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlbums();
+  }, []);
+
+  // Filter Albums
+  const filteredAlbums = useMemo(() => {
+    return albums.filter(album => {
+      const matchSearch = !search || album.title?.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = categoryFilter === "All Categories" || album.category === categoryFilter;
+      const matchStatus = statusFilter === "All Status" || album.status === statusFilter;
+      return matchSearch && matchCategory && matchStatus;
+    });
+  }, [albums, search, categoryFilter, statusFilter]);
+
+  // Derived Stats
+  const totalAlbums = albums.length;
+  const totalPhotos = albums.reduce((acc, curr) => acc + (curr.photo_count || 0), 0);
+  const activeAlbums = albums.filter(a => a.status === 'Active').length;
+  const inactiveAlbums = albums.filter(a => a.status === 'Inactive').length;
+
+  const statCards = [
+    {
+      title: "Total Albums",
+      value: totalAlbums,
+      subtext: "All gallery albums",
+      icon: <Package className="h-6 w-6" />,
+      accent: "bg-[#eaf5f0]",
+      iconColor: "text-[#2d7b5a]",
+    },
+    {
+      title: "Total Photos",
+      value: totalPhotos,
+      subtext: "Across all albums",
+      icon: <ImageIcon className="h-6 w-6" />,
+      accent: "bg-[#e8f1f8]",
+      iconColor: "text-[#4f88b2]",
+    },
+    {
+      title: "Total Views",
+      value: "0", // Views not tracked yet
+      subtext: "Album & photo views",
+      icon: <MonitorPlay className="h-6 w-6" />,
+      accent: "bg-[#f1e7f7]",
+      iconColor: "text-[#7d5a93]",
+    },
+    {
+      title: "Active Albums",
+      value: activeAlbums,
+      subtext: "Currently active",
+      icon: <Users className="h-6 w-6" />,
+      accent: "bg-[#fdf3e7]",
+      iconColor: "text-[#d4a843]",
+    },
+    {
+      title: "Inactive Albums",
+      value: inactiveAlbums,
+      subtext: "Currently inactive",
+      icon: <Star className="h-6 w-6" />,
+      accent: "bg-[#fff0f0]",
+      iconColor: "text-[#d04d4d]",
+    },
+  ];
+
+  const getImageUrl = (path) => {
+    if (!path) return "linear-gradient(135deg, #f3f4f6, #e5e7eb)";
+    if (path.startsWith("http") || path.startsWith("data:")) return `url(${path})`;
+    const baseUrl = API_URL.replace("/api", "");
+    return `url(${baseUrl}${path})`;
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return { date: "—", time: "—" };
+    const d = new Date(dateStr);
+    return {
+      date: d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+    };
+  };
+
+  const handleDelete = async (album_id) => {
+    if (!window.confirm("Are you sure you want to delete this album?")) return;
+    // API logic for delete would go here (e.g., api.delete(`/gallery/${album_id}`))
+    toast.error("Delete endpoint not implemented yet.");
+  };
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -179,7 +164,7 @@ const GalleryManagement = () => {
               className="inline-flex h-[42px] items-center gap-2 rounded-xl bg-[#162420] px-4 text-[14px] font-semibold text-white shadow-md transition hover:bg-[#1a3c36]"
             >
               <Plus className="h-4 w-4" />
-              Add New Gallery 
+              Add New Album
             </Link>
           </div>
         </div>
@@ -223,28 +208,37 @@ const GalleryManagement = () => {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
-                  placeholder="Search albums or photos..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search albums..."
                   className="h-[42px] w-full rounded-xl border border-[#dfe2e5] bg-white pl-9 pr-3 text-[13px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
 
               <div className="relative">
-                <select className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a] cursor-pointer">
-                  <option>All Categories</option>
+                <select 
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a] cursor-pointer"
+                >
+                  <option value="All Categories">All Categories</option>
+                  <option value="Photo Frames">Photo Frames</option>
+                  <option value="Collage Frames">Collage Frames</option>
+                  <option value="Photo Prints">Photo Prints</option>
+                  <option value="Canvas Prints">Canvas Prints</option>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
               </div>
 
               <div className="relative">
-                <select className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a] cursor-pointer">
-                  <option>All Status</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
-              </div>
-
-              <div className="relative">
-                <select className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a] cursor-pointer">
-                  <option>All Albums</option>
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a] cursor-pointer"
+                >
+                  <option value="All Status">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
               </div>
@@ -257,6 +251,13 @@ const GalleryManagement = () => {
 
             {/* Sort & View Toggles */}
             <div className="flex items-center gap-3">
+              <button 
+                onClick={fetchAlbums}
+                className="flex h-[40px] w-[40px] items-center justify-center rounded-xl border border-[#dfe2e5] bg-white text-[#6a6a6a] hover:bg-[#faf9f8]"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              
               <div className="relative">
                 <select className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer">
                   <option>Sort by: Latest</option>
@@ -293,7 +294,7 @@ const GalleryManagement = () => {
                 activeTab === "albums" ? "text-[#1a3c36]" : "text-[#7a7a7a] hover:text-[#1a3c36]"
               }`}
             >
-              Albums (24)
+              Albums ({totalAlbums})
               {activeTab === "albums" && (
                 <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#1a3c36] rounded-t-full" />
               )}
@@ -304,7 +305,7 @@ const GalleryManagement = () => {
                 activeTab === "photos" ? "text-[#1a3c36]" : "text-[#7a7a7a] hover:text-[#1a3c36]"
               }`}
             >
-              Photos (358)
+              Photos ({totalPhotos})
               {activeTab === "photos" && (
                 <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#1a3c36] rounded-t-full" />
               )}
@@ -326,97 +327,118 @@ const GalleryManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {albumsData.map((album) => {
-                  const isActive = album.status === "Active";
-                  return (
-                    <tr
-                      key={album.id}
-                      className="border-b border-[#f0ebe6] align-middle transition-colors hover:bg-[#faf9f8]"
-                    >
-                      {/* Album Info */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-12 w-[72px] shrink-0 rounded-lg bg-cover bg-center border border-[#e7e0d8] shadow-inner"
-                            style={{ background: album.image }}
-                          />
-                          <div>
-                            <div className="text-[14px] font-bold text-[#1f1f1f]">
-                              {album.title}
-                            </div>
-                            <div className="text-[12px] text-[#7a7a7a]">
-                              {album.subtitle}
+                {loading ? (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-10 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#d4a843] mx-auto mb-2" />
+                      <p className="text-[#6a6a6a] text-sm">Loading albums...</p>
+                    </td>
+                  </tr>
+                ) : filteredAlbums.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-10 text-center">
+                      <p className="text-[#6a6a6a] text-sm">No albums found.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAlbums.map((album) => {
+                    const isActive = album.status === "Active";
+                    const { date, time } = formatDate(album.created_at);
+                    return (
+                      <tr
+                        key={album.album_id}
+                        className="border-b border-[#f0ebe6] align-middle transition-colors hover:bg-[#faf9f8]"
+                      >
+                        {/* Album Info */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="h-12 w-[72px] shrink-0 rounded-lg bg-cover bg-center border border-[#e7e0d8] shadow-inner"
+                              style={{ backgroundImage: getImageUrl(album.cover_image) }}
+                            />
+                            <div>
+                              <div className="text-[14px] font-bold text-[#1f1f1f]">
+                                {album.title}
+                              </div>
+                              <div className="text-[12px] text-[#7a7a7a] line-clamp-1 max-w-[200px]">
+                                {album.short_description || "—"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Category */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
-                        {album.category}
-                      </td>
+                        {/* Category */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
+                          {album.category || "—"}
+                        </td>
 
-                      {/* Photos */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
-                        <div className="flex items-center gap-2">
-                          <ImageIcon className="h-4 w-4 text-[#8a8a8a]" />
-                          {album.photos}
-                        </div>
-                      </td>
+                        {/* Photos */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="h-4 w-4 text-[#8a8a8a]" />
+                            {album.photo_count || 0}
+                          </div>
+                        </td>
 
-                      {/* Views */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
-                        {album.views}
-                      </td>
+                        {/* Views */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
+                          0
+                        </td>
 
-                      {/* Status */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3">
-                        <span
-                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                            isActive
-                              ? "bg-[#edf7f1] text-[#2d7b5a]"
-                              : "bg-[#fff0f0] text-[#d04d4d]"
-                          }`}
-                        >
+                        {/* Status */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3">
                           <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              isActive ? "bg-[#2d7b5a]" : "bg-[#d04d4d]"
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                              isActive
+                                ? "bg-[#edf7f1] text-[#2d7b5a]"
+                                : "bg-[#fff0f0] text-[#d04d4d]"
                             }`}
-                          />
-                          {album.status}
-                        </span>
-                      </td>
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                isActive ? "bg-[#2d7b5a]" : "bg-[#d04d4d]"
+                              }`}
+                            />
+                            {album.status}
+                          </span>
+                        </td>
 
-                      {/* Created At */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3 text-[12px] text-[#4d4d4d]">
-                        <div>{album.createdAt}</div>
-                        <div className="text-[#8a8a8a]">{album.timeAt}</div>
-                      </td>
+                        {/* Created At */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[12px] text-[#4d4d4d]">
+                          <div>{date}</div>
+                          <div className="text-[#8a8a8a]">{time}</div>
+                        </td>
 
-                      {/* Actions */}
-                      <td className="border-t border-[#f0ebe6] px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {/* Actions */}
+                        <td className="border-t border-[#f0ebe6] px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(album.album_id)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
 
           {/* PAGINATION */}
           <div className="flex flex-col gap-3 p-4 text-[13px] text-[#6a6a6a] md:flex-row md:items-center md:justify-between border-t border-[#f0ebe6]">
-            <span>Showing 1 to 6 of 24 albums</span>
+            <span>
+              Showing {filteredAlbums.length > 0 ? 1 : 0} to {filteredAlbums.length} of {albums.length} albums
+            </span>
 
             <div className="flex items-center gap-2">
               <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">
@@ -425,15 +447,6 @@ const GalleryManagement = () => {
               
               <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#162420] text-white font-medium">
                 1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#4d4d4d] hover:bg-[#faf9f8] font-medium">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#4d4d4d] hover:bg-[#faf9f8] font-medium">
-                3
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#4d4d4d] hover:bg-[#faf9f8] font-medium">
-                4
               </button>
               
               <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e3dbd2] bg-white text-[#7d7d7d]">

@@ -31,6 +31,13 @@ const formatCurrency = (value) => {
   }).format(numeric);
 };
 
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return '';
+  if (/^https?:\/\//i.test(imagePath)) return imagePath;
+  if (imagePath.startsWith('/')) return `http://localhost:5000${imagePath}`;
+  return imagePath;
+};
+
 const normalizeAlbum = (album) => {
   const productImages = (() => {
     if (Array.isArray(album.product_images)) return album.product_images;
@@ -45,7 +52,7 @@ const normalizeAlbum = (album) => {
     return [];
   })();
 
-  const thumbnail = album.thumbnail_image || productImages[0] || '';
+  const thumbnail = getImageUrl(album.thumbnail_image || productImages[0] || '');
   const stock = Number(album.stock_quantity || 0);
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
 
@@ -61,7 +68,7 @@ const normalizeAlbum = (album) => {
     stockLabel,
     status: album.status || 'Active',
     views: album.views || 0,
-    image: thumbnail ? `url(${thumbnail})` : 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
+    image: thumbnail || 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
   };
 };
 
@@ -313,8 +320,10 @@ const AdminAlbums = () => {
                           <div
                             className="h-14 w-14 rounded-xl border border-[#eaeaea] bg-cover bg-center shadow-sm"
                             style={{
-                              backgroundImage: album.image.startsWith('url(') ? album.image : undefined,
-                              background: album.image.startsWith('url(') ? undefined : album.image,
+                              backgroundImage: album.image && !album.image.startsWith('linear-gradient') ? `url(${album.image})` : undefined,
+                              background: album.image && album.image.startsWith('linear-gradient') ? album.image : undefined,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
                             }}
                           />
                           <div>
