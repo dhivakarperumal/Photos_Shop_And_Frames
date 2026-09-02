@@ -410,7 +410,7 @@ const Coupons = () => {
       {isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-[3rem] w-full max-w-[95vw] md:max-w-[90vw] lg:max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl relative z-[10000] animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
-            <div className="bg-blue-600 p-8 text-white relative flex-shrink-0">
+            <div className="bg-[#1a3c36] p-8 text-white relative flex-shrink-0">
               <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
               <div className="relative flex items-center justify-between">
                 <div>
