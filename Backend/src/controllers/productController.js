@@ -37,6 +37,8 @@ const createProduct = async (req, res) => {
       updated_by,
     } = req.body;
 
+    const activeUserId = req.user?.userId || req.user?.id || req.user?.user_id || created_by || updated_by || null;
+
     if (!product_name || !product_name.trim()) {
       return res.status(400).json({
         success: false,
@@ -68,8 +70,8 @@ const createProduct = async (req, res) => {
       slot_photos: slot_photos || {},
       product_images: Array.isArray(product_images) ? product_images : [],
       status: status || "Active",
-      created_by: created_by || null,
-      updated_by: updated_by || created_by || null,
+      created_by: created_by || activeUserId || null,
+      updated_by: updated_by || created_by || activeUserId || null,
     };
 
     const result = await productModule.createProduct(payload);
@@ -142,7 +144,17 @@ const getProductById = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await productModule.updateProduct(id, req.body);
+    const payload = {
+      ...req.body,
+      updated_by:
+        req.body.updated_by ||
+        req.body.created_by ||
+        req.user?.userId ||
+        req.user?.id ||
+        req.user?.user_id ||
+        null,
+    };
+    const result = await productModule.updateProduct(id, payload);
 
     res.status(200).json({
       success: true,

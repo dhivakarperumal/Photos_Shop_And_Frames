@@ -82,16 +82,10 @@ const FramesList = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/admin/products"
-              className="inline-flex items-center gap-2 rounded-xl border border-[#e6ddd1] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#2a2a2a] shadow-sm transition hover:bg-[#faf7f3]"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Products
-            </Link>
+  
 
             <Link
-              to="/admin/products/frame-setup"
+              to="add"
               className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
             >
               <Plus className="h-4 w-4" />

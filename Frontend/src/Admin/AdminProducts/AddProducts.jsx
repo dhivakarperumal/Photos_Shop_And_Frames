@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import api from "../../api";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 
 const generateUuid = () => {
@@ -180,6 +181,13 @@ const AddProducts = () => {
   const navigate = useNavigate();
   const { id: editProductId } = useParams();
   const isEditMode = Boolean(editProductId);
+  const { user, userProfile } = useAuth();
+  const currentUserId =
+    userProfile?.user_id ||
+    userProfile?.id ||
+    user?.user_id ||
+    user?.id ||
+    null;
 
   const [searchParams] = useSearchParams();
   const preSelectedFrameId = searchParams.get("frameId");
@@ -524,6 +532,8 @@ const AddProducts = () => {
         slot_photos: slotPhotosMap,
         product_images: [finalProductImage, selectedFrame.frame_image],
         status: "Active",
+        created_by: currentUserId,
+        updated_by: currentUserId,
       };
 
       let response;
@@ -595,7 +605,7 @@ const AddProducts = () => {
             </Link>
 
             <Link
-              to="/admin/products/frame-setup"
+              to="/admin/frames/add"
               className="inline-flex items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffaf0] px-4 py-2.5 text-[14px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
             >
               <Layers className="h-4 w-4" />
@@ -635,20 +645,10 @@ const AddProducts = () => {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   {/* UUID */}
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      UUID
-                    </label>
-                    <input
-                      type="text"
-                      value={uuid}
-                      readOnly
-                      className="h-11 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-xs text-[#666] outline-none"
-                    />
-                  </div>
+                  
 
                   {/* AUTO PRODUCT CODE */}
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
                       Product ID
                     </label>

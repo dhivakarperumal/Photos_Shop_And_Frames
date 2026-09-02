@@ -205,22 +205,22 @@ const AdminProducts = () => {
             </button>
 
             {/* VIEW FRAMES BUTTON */}
-            <Link
+            {/* <Link
               to="/admin/frames"
               className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
             >
               <Eye className="h-4 w-4 text-[#d4a843]" />
               View Frames
-            </Link>
+            </Link> */}
 
             {/* ADD FRAME SETUP BUTTON */}
-            <Link
+            {/* <Link
               to="/admin/products/frame-setup"
               className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#9b6b2d] shadow-sm transition hover:bg-[#fff5e0]"
             >
               <Layers className="h-4 w-4 text-[#d4a843]" />
               Add Frame Setup
-            </Link>
+            </Link> */}
 
             {/* ADD NEW PRODUCT BUTTON */}
             <Link
