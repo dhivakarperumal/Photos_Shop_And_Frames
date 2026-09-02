@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft,
   CloudUpload,
@@ -24,6 +24,7 @@ const AddGalleryAlbum = () => {
   const [loading, setLoading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -41,6 +42,27 @@ const AddGalleryAlbum = () => {
 
   const coverInputRef = useRef(null);
   const photosInputRef = useRef(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        const categoryList = Array.isArray(response?.data?.data) ? response.data.data : [];
+        setCategories(categoryList);
+
+        if (categoryList.length && !formData.category) {
+          setFormData((prev) => ({
+            ...prev,
+            category: categoryList[0].category_name,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -199,10 +221,20 @@ const AddGalleryAlbum = () => {
                     className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2.5 text-[14px] text-[#111827] outline-none focus:border-[#d4a843] focus:ring-1 focus:ring-[#d4a843] appearance-none"
                   >
                     <option value="">Select category</option>
-                    <option value="Photo Frames">Photo Frames</option>
-                    <option value="Collage Frames">Collage Frames</option>
-                    <option value="Photo Prints">Photo Prints</option>
-                    <option value="Canvas Prints">Canvas Prints</option>
+                    {categories.length ? (
+                      categories.map((category) => (
+                        <option key={category.category_id || category.category_name} value={category.category_name}>
+                          {category.category_name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Photo Frames">Photo Frames</option>
+                        <option value="Collage Frames">Collage Frames</option>
+                        <option value="Photo Prints">Photo Prints</option>
+                        <option value="Canvas Prints">Canvas Prints</option>
+                      </>
+                    )}
                   </select>
                   <p className="mt-1.5 text-[12px] text-[#6b7280]">
                     Choose the most suitable category for this album
