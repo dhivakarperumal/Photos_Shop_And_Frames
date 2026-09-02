@@ -7,11 +7,13 @@ import {
   Filter,
   Frame,
   Layers,
+  LayoutGrid,
   Pencil,
   Plus,
   RotateCw,
   Search,
   Sparkles,
+  Table2,
   Trash2,
 } from "lucide-react";
 import api from "../../api";
@@ -24,6 +26,7 @@ const FramesList = () => {
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [previewFrame, setPreviewFrame] = useState(null);
+  const [viewMode, setViewMode] = useState("card");
 
   const fetchFrames = async () => {
     try {

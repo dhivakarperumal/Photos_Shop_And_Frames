@@ -6,11 +6,13 @@ import {
   Filter,
   Grid2x2,
   ImageIcon,
+  LayoutGrid,
   PackageCheck,
   Pencil,
   Plus,
   Search,
   ShoppingBag,
+  Table2,
   Trash2,
   TrendingUp,
   Upload,
@@ -121,14 +123,14 @@ const AdminCategories = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
+            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
             </button>
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Upload className="h-4 w-4" />
               Import
-            </button>
+            </button> */}
             <Link
               to="/admin/products/categories/add"
               className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"

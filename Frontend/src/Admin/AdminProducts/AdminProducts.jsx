@@ -12,6 +12,7 @@ import {
   Frame,
   IndianRupee,
   Layers,
+  LayoutGrid,
   Package,
   PackageCheck,
   Pencil,
@@ -19,6 +20,7 @@ import {
   Search,
   ShoppingBag,
   Star,
+  Table2,
   TrendingUp,
   Trash2,
   Upload,
@@ -37,6 +39,7 @@ const AdminProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [sortBy, setSortBy] = useState('latest');
+  const [viewMode, setViewMode] = useState('table');
   const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
@@ -211,10 +214,10 @@ const AdminProducts = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
+            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
-            </button>
+            </button> */}
 
             {/* VIEW FRAMES BUTTON */}
             {/* <Link

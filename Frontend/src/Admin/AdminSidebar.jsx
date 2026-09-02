@@ -62,6 +62,12 @@ const navItems = [
     exact: true,
   },
 
+  {
+    path: "/admin/frames",
+    label: "Frames",
+    icon: Layers,
+  },
+
   /* ---- PRODUCTS ---- */
   {
     label: "Products",
@@ -71,12 +77,6 @@ const navItems = [
       { path: "/admin/products/categories", label: "Category", icon: Layers },
       { path: "/admin/products/stock-details", label: "Stock Details", icon: ClipboardList },
     ],
-  },
-
-  {
-    path: "/admin/frames",
-    label: "Frames",
-    icon: Layers,
   },
 
   {
