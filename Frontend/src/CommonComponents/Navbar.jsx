@@ -179,7 +179,7 @@ const Navbar = () => {
                   />
                 </div>
                 <div className="leading-none">
-                  <div className="text-[26px] font-black tracking-[-0.06em] text-[#1c1c1c]">Q Frame</div>
+                  <div className="text-[26px] font-black tracking-[-0.06em] text-[#1c1c1c]">Frame</div>
                   <div className="mt-1 text-[9px] font-semibold tracking-[0.28em] text-[#6a5a49]">PHOTO STUDIO &amp; FRAME SHOP</div>
                 </div>
               </Link>
@@ -218,6 +218,11 @@ const Navbar = () => {
               <div className="flex items-center gap-3">
                 <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Search">
                   <FiSearch className="text-lg" />
+                </button>
+
+                <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Favorites">
+                  <FiHeart className="text-lg" />
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">3</span>
                 </button>
 
                 <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Cart">
