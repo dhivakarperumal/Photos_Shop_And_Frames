@@ -10,6 +10,7 @@ import {
   Eye,
   Filter,
   Frame,
+  IndianRupee,
   Layers,
   Package,
   PackageCheck,
@@ -18,8 +19,10 @@ import {
   Search,
   ShoppingBag,
   Star,
+  TrendingUp,
   Trash2,
   Upload,
+  Users,
   X,
 } from 'lucide-react';
 import api from '../../api';
@@ -147,42 +150,51 @@ const AdminProducts = () => {
       return 0;
     });
 
+  const activeProducts = productsList.filter((p) => (p.status || 'Active') === 'Active').length;
+  const totalUnitsInStock = productsList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  const totalProductAmount = productsList.reduce((sum, p) => {
+    const variants = Array.isArray(p.rawData?.size_variants) ? p.rawData.size_variants : [];
+    const value = variants.reduce((variantSum, variant) => {
+      const offerPrice = Number(variant.offer_price || 0);
+      const stock = Number(variant.stock || 0);
+      return variantSum + (offerPrice * stock);
+    }, 0);
+
+    return sum + value;
+  }, 0);
+
   const statCards = [
     {
-      title: 'Total Orders',
+      title: 'No of Products',
       value: String(productsList.length || 0),
-      trend: productsList.length > 0 ? '18.6%' : '0%',
-      trendText: 'from last month',
-      accent: 'bg-[#dbeee1]',
-      iconColor: 'text-[#2f7a4a]',
-      icon: <PackageCheck className="h-7 w-7" />,
+      inc: productsList.length > 0 ? '18.6%' : '0%',
+      icon: <PackageCheck className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#22c55e]',
+      waveColor: '#22c55e',
     },
     {
-      title: 'Total Revenue',
-      value: `₹${(productsList.reduce((acc, p) => acc + (Number(p.rawData?.size_variants?.[0]?.offer_price || 0) * Math.max(1, Number(p.stock || 0))) , 0)).toLocaleString('en-IN')}`,
-      trend: productsList.length > 0 ? '22.4%' : '0%',
-      trendText: 'from last month',
-      accent: 'bg-[#f9e6c8]',
-      iconColor: 'text-[#c6802a]',
-      icon: <ShoppingBag className="h-7 w-7" />,
+      title: 'Active Products',
+      value: String(activeProducts),
+      inc: productsList.length > 0 ? '12.4%' : '0%',
+      icon: <ShoppingBag className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#f59e0b]',
+      waveColor: '#f59e0b',
     },
     {
-      title: 'Total Customers',
-      value: String(Math.max(2, Math.round(productsList.length * 2.3))),
-      trend: productsList.length > 0 ? '15.3%' : '0%',
-      trendText: 'from last month',
-      accent: 'bg-[#dfeefb]',
-      iconColor: 'text-[#0f9abb]',
-      icon: <Eye className="h-7 w-7" />,
+      title: 'Total Orders',
+      value: String(Math.max(totalUnitsInStock, productsList.length || 0)),
+      inc: productsList.length > 0 ? '15.3%' : '0%',
+      icon: <Users className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#06b6d4]',
+      waveColor: '#06b6d4',
     },
     {
-      title: 'Total Products',
-      value: String(productsList.length),
-      trend: productsList.length > 0 ? '10.7%' : '0%',
-      trendText: 'from last month',
-      accent: 'bg-[#f0e7ff]',
-      iconColor: 'text-[#8d5ec8]',
-      icon: <Package className="h-7 w-7" />,
+      title: 'Total Amount',
+      value: `₹${totalProductAmount.toLocaleString('en-IN')}`,
+      inc: productsList.length > 0 ? '10.7%' : '0%',
+      icon: <IndianRupee className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#a855f7]',
+      waveColor: '#a855f7',
     },
   ];
 
@@ -234,27 +246,42 @@ const AdminProducts = () => {
         </div>
 
         {/* ================= STAT CARDS ================= */}
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {statCards.map((card, index) => (
-            <div key={index} className="rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.04)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-full ${card.accent} ${card.iconColor}`}>
-                  {card.icon}
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((stat, index) => (
+            <div
+              key={index}
+              className="relative flex h-full min-h-[170px] flex-col overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-1 items-start gap-4">
+                <div
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${stat.iconBg}`}
+                >
+                  {stat.icon}
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {card.trend}
+
+                <div className="flex flex-col">
+                  <p className="mb-1 text-xs font-medium text-gray-600">{stat.title}</p>
+                  <h3 className="mb-3 text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <div className="flex flex-col">
+                    <div className="mb-1 flex items-center text-xs font-medium text-emerald-600">
+                      <TrendingUp size={12} className="mr-1" />
+                      <span>{stat.inc}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">from last month</p>
                   </div>
-                  {card.trendText && (
-                    <div className="text-[10px] text-[#7c7c7c]">{card.trendText}</div>
-                  )}
                 </div>
               </div>
 
-              <div className="mt-5">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
+              <div className="pointer-events-none absolute bottom-0 left-0 h-8 w-full overflow-hidden">
+                <svg
+                  viewBox="0 0 100 20"
+                  preserveAspectRatio="none"
+                  className="h-full w-full opacity-40"
+                  style={{ color: stat.waveColor }}
+                  fill="currentColor"
+                >
+                  <path d="M0,10 C30,25 70,0 100,10 L100,20 L0,20 Z" />
+                </svg>
               </div>
             </div>
           ))}
