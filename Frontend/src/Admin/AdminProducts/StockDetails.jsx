@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ChevronDown,
   Download,
+  Eye,
   LayoutGrid,
   Pencil,
   Package,
@@ -17,7 +17,6 @@ import api from '../../api';
 import toast from 'react-hot-toast';
 
 const StockDetails = () => {
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -251,9 +250,14 @@ const StockDetails = () => {
                     <span className="font-bold text-[#1e1e1e]">Stock: {item.currentStock}</span>
                     <span className="text-[#666]">{item.category}</span>
                   </div>
-                  <span className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'In Stock' ? 'bg-[#edf7f1] text-[#2d7b5a]' : item.status === 'Low Stock' ? 'bg-[#fff2df] text-[#c77f11]' : 'bg-[#fde7e7] text-[#d94d4d]'}`}>
-                    <span className="h-2 w-2 rounded-full bg-current" />{item.status}
-                  </span>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'In Stock' ? 'bg-[#edf7f1] text-[#2d7b5a]' : item.status === 'Low Stock' ? 'bg-[#fff2df] text-[#c77f11]' : 'bg-[#fde7e7] text-[#d94d4d]'}`}>
+                      <span className="h-2 w-2 rounded-full bg-current" />{item.status}
+                    </span>
+                    <button type="button" onClick={() => openStockEditor(item)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] hover:border-[#d0b997] hover:text-[#1a1a1a]" aria-label={`Edit stock for ${item.product}`} title="Edit stock">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -315,18 +319,8 @@ const StockDetails = () => {
                     <td className="px-4 py-4 whitespace-pre-line text-[#5b5b5b]">{item.lastUpdated}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => navigate('/admin/products/stock-details')}
-                          className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
+                        <button type="button" onClick={() => openStockEditor(item)} className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]" aria-label={`Edit stock for ${item.product}`} title="Edit stock">
                           <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]">
-                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -351,6 +345,51 @@ const StockDetails = () => {
           </div>
         </div>
       </div>
+
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <form onSubmit={saveStock} className="w-full max-w-lg rounded-2xl border border-[#e7e0d8] bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4 border-b border-[#f0ebe3] pb-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-[#777]">Update stock</p>
+                <h2 className="mt-1 text-xl font-bold text-[#202020]">{editingProduct.product}</h2>
+                <p className="mt-1 font-mono text-xs text-[#888]">{editingProduct.sku}</p>
+              </div>
+              <button type="button" onClick={() => setEditingProduct(null)} className="text-2xl leading-none text-[#777] hover:text-[#222]" aria-label="Close stock editor">&times;</button>
+            </div>
+
+            {stockValues.length === 0 ? (
+              <p className="rounded-xl bg-[#faf9f8] p-4 text-sm text-[#666]">No size variants are available for this product.</p>
+            ) : (
+              <div className="space-y-3">
+                {stockValues.map((variant, index) => (
+                  <label key={index} className="flex items-center justify-between gap-4 rounded-xl border border-[#e7e0d8] bg-[#faf9f8] p-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-[#222]">{variant.size || `Size ${index + 1}`}</span>
+                      <span className="text-xs text-[#777]">Current stock: {variant.stock}</span>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={variant.stock}
+                      onChange={(event) => updateStockValue(index, event.target.value)}
+                      className="h-10 w-24 rounded-lg border border-[#dfe2e5] bg-white px-3 text-right text-sm font-semibold outline-none focus:border-[#1a3c36]"
+                      aria-label={`Stock for ${variant.size || `size ${index + 1}`}`}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setEditingProduct(null)} className="rounded-xl border border-[#dfe2e5] bg-white px-4 py-2 text-sm font-semibold text-[#555] hover:bg-[#faf9f8]">Cancel</button>
+              <button type="submit" disabled={savingStock || stockValues.length === 0} className="rounded-xl bg-[#1a3c36] px-5 py-2 text-sm font-semibold text-white hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-60">
+                {savingStock ? 'Updating...' : 'Update Stock'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
