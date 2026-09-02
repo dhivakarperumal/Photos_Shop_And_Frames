@@ -138,16 +138,7 @@ const navItems = [
     ],
   },
 
-  /* ---- SETTINGS ---- */
-  {
-    label: "Settings",
-    icon: Settings,
-    children: [
-      { path: "/admin/users", label: "Users", icon: Users },
-      { path: "/admin/roles", label: "Roles & Permissions", icon: Lock },
-      { path: "/admin/settings", label: "Settings", icon: Settings },
-    ],
-  },
+
 ];
 
 /* ================= SIDEBAR ================= */
