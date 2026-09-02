@@ -175,16 +175,22 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
     const fetchPendingCount = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/trainee-intern?limit=1&status=Pending`);
+
+        if (response.status === 404) {
+          setPendingCount(0);
+          return;
+        }
+
         const data = await response.json();
         if (data.success && data.pagination) {
           setPendingCount(data.pagination.total || 0);
         }
       } catch (err) {
-        console.warn('Failed to fetch pending count:', err);
+        setPendingCount(0);
       }
     };
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000); // Refresh every 30s
+    const interval = setInterval(fetchPendingCount, 30000);
     return () => clearInterval(interval);
   }, []);
 

@@ -175,7 +175,7 @@ const GalleryManagement = () => {
             </button>
             <button className="inline-flex h-[42px] items-center gap-2 rounded-xl bg-[#162420] px-4 text-[14px] font-semibold text-white shadow-md transition hover:bg-[#1a3c36]">
               <Plus className="h-4 w-4" />
-              Add New Album
+              Add New Gallery
             </button>
           </div>
         </div>

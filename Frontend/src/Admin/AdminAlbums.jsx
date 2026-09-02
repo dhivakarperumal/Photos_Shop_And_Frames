@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -191,6 +192,7 @@ const getStockClasses = (stockLabel) => {
 };
 
 const AdminAlbums = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All Categories');
   const [status, setStatus] = useState('All Status');
@@ -224,7 +226,11 @@ const AdminAlbums = () => {
               <Upload className="h-4 w-4" />
               Import
             </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/albums/add')}
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
               <Plus className="h-4 w-4" />
               Add New Album
             </button>

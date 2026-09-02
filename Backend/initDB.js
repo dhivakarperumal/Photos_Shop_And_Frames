@@ -70,6 +70,68 @@ async function initializeDatabase() {
     await connection.query(createCategoriesTableQuery);
     console.log("✅ Categories table created successfully!");
 
+    const createAlbumsTableQuery = `
+      CREATE TABLE IF NOT EXISTS albums (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        product_id VARCHAR(255) NOT NULL UNIQUE,
+        product_name VARCHAR(255) NOT NULL,
+        product_code VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        sub_category VARCHAR(255),
+        brand VARCHAR(255),
+        album_type VARCHAR(255),
+        occasion VARCHAR(255),
+        theme VARCHAR(255),
+        size VARCHAR(255),
+        width VARCHAR(255),
+        height VARCHAR(255),
+        orientation VARCHAR(50),
+        total_pages INT DEFAULT 0,
+        sheet_count INT DEFAULT 0,
+        page_material VARCHAR(255),
+        page_thickness VARCHAR(255),
+        cover_type VARCHAR(255),
+        cover_material VARCHAR(255),
+        cover_finish VARCHAR(255),
+        cover_color VARCHAR(255),
+        printing_type VARCHAR(255),
+        print_quality VARCHAR(255),
+        printing_sides VARCHAR(255),
+        binding_type VARCHAR(255),
+        thumbnail_image VARCHAR(255),
+        product_images JSON,
+        cost_price DECIMAL(10,2) DEFAULT 0,
+        selling_price DECIMAL(10,2) DEFAULT 0,
+        discount_price DECIMAL(10,2) DEFAULT 0,
+        discount_percentage DECIMAL(5,2) DEFAULT 0,
+        stock_quantity INT DEFAULT 0,
+        minimum_stock INT DEFAULT 0,
+        stock_status VARCHAR(50) DEFAULT 'In Stock',
+        short_description TEXT,
+        description TEXT,
+        customization_available BOOLEAN DEFAULT FALSE,
+        customer_name_printing BOOLEAN DEFAULT FALSE,
+        photo_upload_required BOOLEAN DEFAULT FALSE,
+        custom_cover_design BOOLEAN DEFAULT FALSE,
+        estimated_delivery_days INT DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Active',
+        featured_product BOOLEAN DEFAULT FALSE,
+        meta_title VARCHAR(255),
+        meta_description TEXT,
+        keywords JSON,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_product_id (product_id),
+        KEY idx_category (category),
+        KEY idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await connection.query(createAlbumsTableQuery);
+    console.log("✅ Albums table created successfully!");
+
     await connection.end();
     console.log("✅ Database initialization complete!");
     process.exit(0);
