@@ -402,6 +402,25 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           })}
         </nav>
 
+        {/* ========== BACK HOME ========== */}
+        <NavLink
+          to="/"
+          title={collapsed ? "Back Home" : ""}
+          onClick={() => isOpen && onClose()}
+          className={`
+            mx-3 mb-3 flex items-center gap-3 px-3 py-3 rounded-xl text-sm
+            transition-all duration-200
+            ${isRouteActive("/")
+              ? "bg-[#d4a843] text-[#162420] font-semibold shadow-md"
+              : "text-white hover:text-white hover:bg-[#1f3228]/70"
+            }
+            ${collapsed ? "justify-center" : ""}
+          `}
+        >
+          <Home className={`w-[17px] h-[17px] shrink-0 ${isRouteActive("/") ? "text-[#162420]" : "text-white"}`} />
+          {!collapsed && <span className={`font-medium truncate ${isRouteActive("/") ? "text-[#162420]" : "text-white"}`}>Back Home</span>}
+        </NavLink>
+
         {/* ========== COLLAPSE BUTTON ========== */}
         <button
           onClick={onToggleCollapse}
