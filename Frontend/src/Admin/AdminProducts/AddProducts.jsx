@@ -237,7 +237,15 @@ const AddProducts = () => {
       try {
         const catRes = await api.get("/categories");
         if (catRes.data?.data && Array.isArray(catRes.data.data)) {
-          setCategoriesList(catRes.data.data);
+          const categoryRows = catRes.data.data.filter(
+            (cat) => cat && (cat.category_name || cat.name)
+          );
+          setCategoriesList(categoryRows);
+
+          const firstCategoryName = categoryRows[0]?.category_name || categoryRows[0]?.name || "";
+          if (firstCategoryName && (!category || !categoryRows.some((cat) => (cat.category_name || cat.name) === category))) {
+            setCategory(firstCategoryName);
+          }
         }
       } catch (err) {
         console.warn("Could not fetch categories:", err);
@@ -686,16 +694,10 @@ const AddProducts = () => {
                       onChange={(e) => setCategory(e.target.value)}
                       className="h-11 w-full rounded-xl border border-[#e8e1d9] bg-white px-3 text-sm text-[#222] shadow-sm outline-none transition focus:border-[#d4a553]"
                     >
-                      <option value="Photo Frames">Photo Frames</option>
-                      <option value="Wall Frames">Wall Frames</option>
-                      <option value="Table Frames">Table Frames</option>
-                      <option value="Collage Frames">Collage Frames</option>
-                      <option value="Wedding Frames">Wedding Frames</option>
-                      <option value="Photo Printing">Photo Printing</option>
-                      <option value="Custom Gifts">Custom Gifts</option>
+                      {!categoriesList.length && <option value="">Select a category</option>}
                       {categoriesList.map((cat) => (
-                        <option key={cat.category_id || cat.id} value={cat.category_name}>
-                          {cat.category_name}
+                        <option key={cat.category_id || cat.id} value={cat.category_name || cat.name}>
+                          {cat.category_name || cat.name}
                         </option>
                       ))}
                     </select>
