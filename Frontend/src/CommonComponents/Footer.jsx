@@ -20,11 +20,15 @@ const Footer = () => {
         <div className="grid gap-8 py-8 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
           <div className="pr-4">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#d79d4a] bg-[#3b3a38] text-lg font-black text-[#f5d39d]">
-                P
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-[#d79d4a] bg-white shadow-inner">
+                <img
+                  src="/images/logo.png"
+                  alt="Q Frame logo"
+                  className="h-full w-full object-contain"
+                />
               </div>
               <div className="leading-none">
-                <div className="text-[28px] font-black tracking-[-0.06em] text-[#f6f0e8]">PixelFrame</div>
+                <div className="text-[28px] font-black tracking-[-0.06em] text-[#f6f0e8]">Frames</div>
                 <div className="mt-1 text-[8px] font-semibold tracking-[0.28em] text-[#dcb77e]">PHOTO STUDIO &amp; FRAME SHOP</div>
               </div>
             </div>

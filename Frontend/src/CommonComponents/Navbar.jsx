@@ -167,15 +167,15 @@ const Navbar = () => {
           </PageContainer>
         </div>
 
-        <div className="border-b border-[#d79d4a]/40 bg-[#f7f4ef] shadow-[0_4px_18px_rgba(0,0,0,0.08)]">
+        <div className="border-b border-[#d79d4a]/40 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.08)]">
           <PageContainer>
-            <div className="flex h-[88px] items-center justify-between gap-4">
+            <div className="flex h-[88px] items-center justify-between gap-4 bg-white">
               <Link to="/" className="flex items-center gap-3">
-                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-[#d79d4a]/50 bg-[#f1ece1] shadow-inner">
+                <div className="flex h-14 w-14 bg-white items-center justify-center overflow-hidden rounded-xl border border-[#d79d4a]/50  shadow-inner">
                   <img
                     src="/images/logo.png"
                     alt="Q Frame logo"
-                    className="h-full w-full object-contain"
+                    className="h-full bg-white w-full object-contain"
                   />
                 </div>
                 <div className="leading-none">
