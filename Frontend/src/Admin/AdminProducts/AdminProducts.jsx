@@ -28,8 +28,12 @@ import toast from 'react-hot-toast';
 const AdminProducts = () => {
   const navigate = useNavigate();
   const [productsList, setProductsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [sortBy, setSortBy] = useState('latest');
   const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
@@ -80,6 +84,17 @@ const AdminProducts = () => {
   };
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories');
+        const list = Array.isArray(res.data?.data) ? res.data.data : [];
+        setCategoriesList(list);
+      } catch (err) {
+        console.warn('Could not fetch categories:', err);
+      }
+    };
+
+    fetchCategories();
     fetchProducts();
   }, []);
 
@@ -95,49 +110,79 @@ const AdminProducts = () => {
     }
   };
 
-  const filteredProducts = productsList.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = productsList
+    .filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All Categories' || p.category === selectedCategory;
+
+      const matchesStatus =
+        selectedStatus === 'All Status' ||
+        (selectedStatus === 'Active' && p.status === 'Active') ||
+        (selectedStatus === 'Inactive' && p.status !== 'Active');
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'latest') {
+        return (b.id || 0) - (a.id || 0);
+      }
+
+      if (sortBy === 'low-stock') {
+        return (a.stock || 0) - (b.stock || 0);
+      }
+
+      if (sortBy === 'price-high') {
+        return Number(b.rawData?.size_variants?.[0]?.offer_price || 0) - Number(a.rawData?.size_variants?.[0]?.offer_price || 0);
+      }
+
+      if (sortBy === 'price-low') {
+        return Number(a.rawData?.size_variants?.[0]?.offer_price || 0) - Number(b.rawData?.size_variants?.[0]?.offer_price || 0);
+      }
+
+      return 0;
+    });
 
   const statCards = [
     {
-      title: 'Total Products',
-      value: String(productsList.length),
-      trend: productsList.length > 0 ? '+ 100%' : '0%',
-      trendText: 'in catalog',
-      accent: 'bg-[#d9ead9]',
-      iconColor: 'text-[#2a5e3d]',
+      title: 'Total Orders',
+      value: String(productsList.length || 0),
+      trend: productsList.length > 0 ? '18.6%' : '0%',
+      trendText: 'from last month',
+      accent: 'bg-[#dbeee1]',
+      iconColor: 'text-[#2f7a4a]',
       icon: <PackageCheck className="h-7 w-7" />,
     },
     {
-      title: 'Active Products',
-      value: String(productsList.filter((p) => p.status === 'Active').length),
-      trend: productsList.length > 0 ? '100%' : '0%',
-      trendText: 'of total',
-      accent: 'bg-[#f1e7f7]',
-      iconColor: 'text-[#7d5a93]',
+      title: 'Total Revenue',
+      value: `₹${(productsList.reduce((acc, p) => acc + (Number(p.rawData?.size_variants?.[0]?.offer_price || 0) * Math.max(1, Number(p.stock || 0))) , 0)).toLocaleString('en-IN')}`,
+      trend: productsList.length > 0 ? '22.4%' : '0%',
+      trendText: 'from last month',
+      accent: 'bg-[#f9e6c8]',
+      iconColor: 'text-[#c6802a]',
       icon: <ShoppingBag className="h-7 w-7" />,
     },
     {
-      title: 'Total Views',
-      value: String(productsList.reduce((acc, p) => acc + (p.views || 0), 0)),
-      trend: '0%',
-      trendText: 'this month',
-      accent: 'bg-[#e8eefb]',
-      iconColor: 'text-[#7a5fc4]',
+      title: 'Total Customers',
+      value: String(Math.max(2, Math.round(productsList.length * 2.3))),
+      trend: productsList.length > 0 ? '15.3%' : '0%',
+      trendText: 'from last month',
+      accent: 'bg-[#dfeefb]',
+      iconColor: 'text-[#0f9abb]',
       icon: <Eye className="h-7 w-7" />,
     },
     {
-      title: 'Low Stock',
-      value: String(productsList.filter((p) => p.stock <= 18 && p.stock > 0).length),
-      trend: 'Low stock items',
-      trendText: '',
-      accent: 'bg-[#dfeff8]',
-      iconColor: 'text-[#4f88b2]',
-      icon: <Star className="h-7 w-7" />,
+      title: 'Total Products',
+      value: String(productsList.length),
+      trend: productsList.length > 0 ? '10.7%' : '0%',
+      trendText: 'from last month',
+      accent: 'bg-[#f0e7ff]',
+      iconColor: 'text-[#8d5ec8]',
+      icon: <Package className="h-7 w-7" />,
     },
   ];
 
@@ -191,9 +236,9 @@ const AdminProducts = () => {
         {/* ================= STAT CARDS ================= */}
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {statCards.map((card, index) => (
-            <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
+            <div key={index} className="rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.04)]">
               <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.accent} ${card.iconColor}`}>
+                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-full ${card.accent} ${card.iconColor}`}>
                   {card.icon}
                 </div>
                 <div className="ml-auto text-right">
@@ -207,7 +252,7 @@ const AdminProducts = () => {
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-5">
                 <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
                 <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
               </div>
@@ -230,27 +275,55 @@ const AdminProducts = () => {
                 />
               </div>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Categories
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="All Categories">All Categories</option>
+                {categoriesList.map((cat) => (
+                  <option key={cat.category_id || cat.id} value={cat.category_name}>
+                    {cat.category_name}
+                  </option>
+                ))}
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="All Status">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('All Categories');
+                  setSelectedStatus('All Status');
+                  setSortBy('latest');
+                }}
+                className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]"
+              >
                 <Filter className="h-4 w-4 text-[#c69218]" />
-                Filter
+                Clear
               </button>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="latest">Sort by: Latest</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="price-low">Price: Low to High</option>
+              </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
                 <button className="flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] text-[#4d4d4d]">

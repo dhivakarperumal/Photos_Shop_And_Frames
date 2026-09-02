@@ -454,6 +454,11 @@ const AddProducts = () => {
       return;
     }
 
+    if (!Object.keys(slotPhotos).length) {
+      toast.error("Product photo is required. Please upload at least one photo before saving.");
+      return;
+    }
+
     setSaving(true);
     const toastId = toast.loading(
       isEditMode
