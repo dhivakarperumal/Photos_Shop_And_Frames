@@ -93,7 +93,7 @@ const getUserByIdentifier = async (identifier) => {
 
 // Get all users
 const getAllUsers = async () => {
-  const query = "SELECT id, user_id, username, email, role, status, created_at FROM users";
+  const query = "SELECT id, user_id, username, mobile_number, email, role, status, created_at FROM users";
   try {
     const pool = getDB();
     const [rows] = await pool.query(query);

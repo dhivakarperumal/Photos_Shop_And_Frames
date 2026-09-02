@@ -21,7 +21,6 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import api from "../api";
 import toast from "react-hot-toast";
 
@@ -171,18 +170,56 @@ const AddUserModal = ({ onClose, onCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between border-b border-[#ece9e5] pb-4"><div><h2 className="text-xl font-bold text-[#1f1d1b]">Add New User</h2><p className="mt-1 text-xs text-[#777]">Create a user or admin account</p></div><button type="button" onClick={onClose} aria-label="Close"><X className="h-5 w-5 text-[#777]" /></button></div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
-          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
-          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input required type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required placeholder="Enter username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input required type="email" placeholder="Enter email address" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input required type="tel" placeholder="Enter phone number" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
           <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Role</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]"><option value="user">User</option><option value="Admin">Admin</option></select></label>
-          <label className="space-y-2 sm:col-span-2"><span className="text-sm font-semibold text-[#333]">Password</span><input required minLength={6} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2 sm:col-span-2"><span className="text-sm font-semibold text-[#333]">Password</span><input required minLength={6} type="password" placeholder="Enter password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
         </div>
         {error && <p className="mt-4 text-sm text-[#c03939]">{error}</p>}
         <div className="mt-6 flex justify-end gap-3 border-t border-[#ece9e5] pt-5"><button type="button" onClick={onClose} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Creating..." : "Create User"}</button></div>
+      </form>
+    </div>
+  );
+};
+
+const CustomerModal = ({ customer, mode, onClose, onSaved }) => {
+  const isEditing = mode === "edit";
+  const [form, setForm] = useState({ username: customer.username || "", mobile_number: customer.mobile_number || "", role: customer.role || "user", status: customer.status || "Active" });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      await api.put(`/users/${customer.id}`, form);
+      toast.success("Customer updated successfully");
+      onSaved();
+      onClose();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update customer");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-[#ece9e5] pb-4"><div><h2 className="text-xl font-bold text-[#1f1d1b]">{isEditing ? "Edit Customer" : "Customer Details"}</h2><p className="mt-1 text-xs text-[#777]">{customer.user_id || customer.id}</p></div><button type="button" onClick={onClose} aria-label="Close"><X className="h-5 w-5 text-[#777]" /></button></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required disabled={!isEditing} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input disabled value={customer.email || ""} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input disabled={!isEditing} value={form.mobile_number} onChange={(event) => setForm({ ...form, mobile_number: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Role</span><select disabled={!isEditing} value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]"><option value="user">User</option><option value="Admin">Admin</option><option value="Super Admin">Super Admin</option></select></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Status</span><select disabled={!isEditing} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]"><option>Active</option><option>Inactive</option></select></label>
+          <div><span className="text-sm font-semibold text-[#333]">Joined</span><p className="mt-2 text-sm text-[#555]">{formatDate(customer.created_at)}</p></div>
+        </div>
+        {isEditing && <div className="mt-6 flex justify-end gap-3 border-t border-[#ece9e5] pt-5"><button type="button" onClick={onClose} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Saving..." : "Save Changes"}</button></div>}
       </form>
     </div>
   );
@@ -192,7 +229,6 @@ const AddUserModal = ({ onClose, onCreated }) => {
    MAIN COMPONENT
    ============================================================ */
 const AdminCustomers = () => {
-  const navigate = useNavigate();
   const [customers,    setCustomers]    = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -204,6 +240,7 @@ const AdminCustomers = () => {
   const [refreshKey,   setRefreshKey]   = useState(0);
   const [viewMode,     setViewMode]     = useState("table"); // "table" | "card"
   const [showAddUser,  setShowAddUser]  = useState(false);
+  const [customerModal, setCustomerModal] = useState(null);
 
   /* ---------- FETCH ---------- */
   const fetchCustomers = async () => {
@@ -221,8 +258,14 @@ const AdminCustomers = () => {
 
   useEffect(() => { fetchCustomers(); }, [refreshKey]);
 
-  const handleView = (userId) => navigate(`/admin/customers/${userId}`);
-  const handleEdit = (userId) => navigate(`/admin/customers/${userId}?edit=true`);
+  const handleView = (userId) => {
+    const customer = customers.find((item) => String(item.id) === String(userId));
+    if (customer) setCustomerModal({ customer, mode: "view" });
+  };
+  const handleEdit = (userId) => {
+    const customer = customers.find((item) => String(item.id) === String(userId));
+    if (customer) setCustomerModal({ customer, mode: "edit" });
+  };
   const handleDelete = async (userId) => {
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
     try {
@@ -515,7 +558,7 @@ const AdminCustomers = () => {
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                    <th className="rounded-tl-xl px-4 py-4">#</th>
+                    <th className="rounded-tl-xl px-4 py-4">S No</th>
                     <th className="px-4 py-4">Customer</th>
                     <th className="px-4 py-4">Email</th>
                     <th className="px-4 py-4">Role</th>
@@ -658,6 +701,7 @@ const AdminCustomers = () => {
         </div>
       </div>
       {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} onCreated={() => setRefreshKey((key) => key + 1)} />}
+      {customerModal && <CustomerModal customer={customerModal.customer} mode={customerModal.mode} onClose={() => setCustomerModal(null)} onSaved={() => setRefreshKey((key) => key + 1)} />}
     </div>
   );
 };
