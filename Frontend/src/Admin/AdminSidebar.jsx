@@ -73,23 +73,7 @@ const navItems = [
     ],
   },
 
-  {
-    path: "/admin/frames",
-    label: "Frames",
-    icon: Layers,
-  },
 
-  {
-    path: "/admin/photo-printing",
-    label: "Photo Printing",
-    icon: Printer,
-  },
-
-  {
-    path: "/admin/custom-frames",
-    label: "Custom Frames",
-    icon: Zap,
-  },
 
   {
     path: "/admin/gifts",

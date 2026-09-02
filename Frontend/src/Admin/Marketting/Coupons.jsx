@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FiPlus, FiEdit, FiTrash2, FiSearch, FiRefreshCw, FiTag, FiCheckCircle, FiXCircle, FiList, FiGrid } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import Select from "react-select";
 import api from "../../api";
-import Loader from "../../Components/CommenComponents/Loader";
+import Loader from "../../CommonComponents/Loader";
 
 const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -51,19 +50,22 @@ const Coupons = () => {
   const fetchOptions = async () => {
     try {
       const [prodRes, catRes] = await Promise.all([
-        api.get('/products').catch(() => ({ data: [] })),
-        api.get('/categories').catch(() => ({ data: [] }))
+        api.get('/albums').catch(() => ({ data: { data: [] } })),
+        api.get('/categories').catch(() => ({ data: { data: [] } }))
       ]);
 
-      const allFoods = Array.isArray(prodRes.data) ? prodRes.data : [];
-      const prodList = allFoods.map(p => ({ 
-        value: p.id, 
-        label: p.name || 'Product' 
+      const allProducts = Array.isArray(prodRes.data?.data) ? prodRes.data.data : [];
+      const prodList = allProducts.map((p) => ({
+        value: p.product_id || p.id,
+        label: p.product_name || p.name || 'Product',
       }));
       setProducts(prodList);
 
-      const allCategories = Array.isArray(catRes.data) ? catRes.data : [];
-      const catList = allCategories.map(c => ({ value: c.id, label: c.name || `Category ${c.id}` }));
+      const allCategories = Array.isArray(catRes.data?.data) ? catRes.data.data : [];
+      const catList = allCategories.map((c) => ({
+        value: c.category_id || c.id,
+        label: c.category_name || c.name || `Category ${c.category_id || c.id}`,
+      }));
       setCategories(catList);
     } catch (err) {
       console.error(err);
@@ -116,10 +118,11 @@ const Coupons = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (selectedOptions, field) => {
+  const handleSelectChange = (event, field) => {
+    const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
     setFormData(prev => ({
       ...prev,
-      [field]: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+      [field]: values,
     }));
   };
 
@@ -479,40 +482,46 @@ const Coupons = () => {
                     {formData.coupon_scope === 'specific_products' && (
                       <div className="mb-4 animate-in fade-in zoom-in-95 duration-300">
                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 mb-2 block">Select Products</label>
-                        <Select 
-                          isMulti 
-                          options={products} 
-                          value={products.filter(p => formData.applicable_product_ids.includes(p.value))}
-                          onChange={(opts) => handleSelectChange(opts, 'applicable_product_ids')}
-                          className="react-select-container text-black"
-                          classNamePrefix="react-select"
-                          placeholder="Search and select products..."
-                          styles={{
-                            option: (provided) => ({ ...provided, color: '#000' }),
-                            singleValue: (provided) => ({ ...provided, color: '#000' }),
-                            multiValueLabel: (provided) => ({ ...provided, color: '#000' })
-                          }}
-                        />
+                        <select
+                          multiple
+                          size={Math.min(products.length || 4, 8)}
+                          value={formData.applicable_product_ids}
+                          onChange={(event) => handleSelectChange(event, 'applicable_product_ids')}
+                          className="w-full min-h-[120px] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-black outline-none focus:border-blue-600"
+                        >
+                          {products.length ? (
+                            products.map((product) => (
+                              <option key={product.value} value={product.value}>
+                                {product.label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">No products available</option>
+                          )}
+                        </select>
                       </div>
                     )}
 
                     {formData.coupon_scope === 'specific_categories' && (
                       <div className="mb-4 animate-in fade-in zoom-in-95 duration-300">
                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 mb-2 block">Select Categories</label>
-                        <Select 
-                          isMulti 
-                          options={categories} 
-                          value={categories.filter(c => formData.applicable_category_ids.includes(c.value))}
-                          onChange={(opts) => handleSelectChange(opts, 'applicable_category_ids')}
-                          className="react-select-container text-black"
-                          classNamePrefix="react-select"
-                          placeholder="Search and select categories..."
-                          styles={{
-                            option: (provided) => ({ ...provided, color: '#000' }),
-                            singleValue: (provided) => ({ ...provided, color: '#000' }),
-                            multiValueLabel: (provided) => ({ ...provided, color: '#000' })
-                          }}
-                        />
+                        <select
+                          multiple
+                          size={Math.min(categories.length || 4, 8)}
+                          value={formData.applicable_category_ids}
+                          onChange={(event) => handleSelectChange(event, 'applicable_category_ids')}
+                          className="w-full min-h-[120px] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-black outline-none focus:border-blue-600"
+                        >
+                          {categories.length ? (
+                            categories.map((category) => (
+                              <option key={category.value} value={category.value}>
+                                {category.label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">No categories available</option>
+                          )}
+                        </select>
                       </div>
                     )}
                   </div>

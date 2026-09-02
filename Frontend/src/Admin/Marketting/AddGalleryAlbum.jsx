@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft,
   CloudUpload,
@@ -444,38 +444,7 @@ const AddGalleryAlbum = () => {
               )}
             </div>
 
-            {/* SEO Settings */}
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-              <h3 className="text-[16px] font-bold text-[#1f1d1b] mb-4">SEO Settings (Optional)</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Title</label>
-                  <input
-                    type="text"
-                    name="meta_title"
-                    value={formData.meta_title}
-                    onChange={handleChange}
-                    placeholder="Enter meta title (max 60 characters)"
-                    maxLength={60}
-                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
-                  />
-                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_title.length}/60</div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Description</label>
-                  <textarea
-                    name="meta_description"
-                    value={formData.meta_description}
-                    onChange={handleChange}
-                    placeholder="Enter meta description (max 160 characters)"
-                    rows="3"
-                    maxLength={160}
-                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
-                  />
-                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_description.length}/160</div>
-                </div>
-              </div>
-            </div>
+
 
             {/* Preview Card */}
             <div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
