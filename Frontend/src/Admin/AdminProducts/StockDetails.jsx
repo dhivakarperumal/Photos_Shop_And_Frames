@@ -4,20 +4,17 @@ import {
   AlertTriangle,
   ChevronDown,
   Download,
-  Eye,
-  Filter,
-  IndianRupee,
   LayoutGrid,
   Pencil,
   Package,
   Search,
   ShoppingBag,
   Table2,
-  Trash2,
   TrendingUp,
   Upload,
 } from 'lucide-react';
 import api from '../../api';
+import toast from 'react-hot-toast';
 
 const StockDetails = () => {
   const navigate = useNavigate();
@@ -28,6 +25,9 @@ const StockDetails = () => {
   const [selectedStatus, setSelectedStatus] = useState('All Stock Status');
   const [sortBy, setSortBy] = useState('latest');
   const [viewMode, setViewMode] = useState('table');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [stockValues, setStockValues] = useState([]);
+  const [savingStock, setSavingStock] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -65,6 +65,7 @@ const StockDetails = () => {
       status,
       lastUpdated: product.updated_at || product.created_at || '',
       image,
+      rawData: product,
     };
   }), [products]);
 
@@ -96,6 +97,43 @@ const StockDetails = () => {
     { title: 'Out of Stock', value: String(outOfStock), sub: 'Need attention', inc: '0%', icon: <Package className="h-7 w-7 text-white" />, iconBg: 'bg-[#f97316]', waveColor: '#f97316' },
   ];
 
+  const openStockEditor = (row) => {
+    const variants = Array.isArray(row.rawData?.size_variants) ? row.rawData.size_variants : [];
+    setEditingProduct(row);
+    setStockValues(variants.map((variant) => ({
+      ...variant,
+      stock: Number(variant.stock) || 0,
+    })));
+  };
+
+  const updateStockValue = (index, value) => {
+    setStockValues((current) => current.map((variant, variantIndex) => (
+      variantIndex === index ? { ...variant, stock: Math.max(0, Number(value) || 0) } : variant
+    )));
+  };
+
+  const saveStock = async (event) => {
+    event.preventDefault();
+    if (!editingProduct) return;
+
+    try {
+      setSavingStock(true);
+      await api.put(`/products/${editingProduct.id}`, {
+        ...editingProduct.rawData,
+        size_variants: stockValues,
+      });
+      toast.success('Stock updated successfully');
+      setEditingProduct(null);
+      const response = await api.get('/products');
+      setProducts(Array.isArray(response?.data?.data) ? response.data.data : []);
+    } catch (error) {
+      console.error('Failed to update stock:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update stock');
+    } finally {
+      setSavingStock(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -109,14 +147,14 @@ const StockDetails = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
+            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
             </button>
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Upload className="h-4 w-4" />
               Import
-            </button>
+            </button> */}
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
               <span className="text-lg">+</span>
               Stock Report
