@@ -19,6 +19,7 @@ const usersRouter = require("./src/routers/usersRouter");
 const categoryRouter = require("./src/routers/categoryRouter");
 const frameRouter = require("./src/routers/frameRouter");
 const productRouter = require("./src/routers/productRouter");
+const reviewRouter = require("./src/routers/reviewRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -88,6 +89,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/frames", frameRouter);
 app.use("/api/products", productRouter);
+app.use("/api/reviews", reviewRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

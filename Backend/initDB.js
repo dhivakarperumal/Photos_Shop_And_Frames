@@ -120,6 +120,37 @@ async function initializeDatabase() {
     await connection.query(createProductsTableQuery);
     console.log("✅ Products table created successfully!");
 
+    // Create reviews table
+    const createReviewsTableQuery = `
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(100) NOT NULL UNIQUE,
+        review_id VARCHAR(50) NOT NULL UNIQUE,
+        product_id INT(11) DEFAULT NULL,
+        product_code VARCHAR(50) NOT NULL,
+        product_name VARCHAR(255) NOT NULL,
+        product_image VARCHAR(255) DEFAULT NULL,
+        reviewer_name VARCHAR(255) NOT NULL,
+        reviewer_email VARCHAR(255) DEFAULT NULL,
+        rating INT(2) NOT NULL DEFAULT 5,
+        title VARCHAR(255) DEFAULT NULL,
+        comment TEXT NOT NULL,
+        review_photo VARCHAR(255) DEFAULT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'Published',
+        created_by VARCHAR(100) DEFAULT 'Admin',
+        updated_by VARCHAR(100) DEFAULT 'Admin',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_rev_product_id (product_id),
+        KEY idx_rev_product_code (product_code),
+        KEY idx_rev_rating (rating),
+        KEY idx_rev_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await connection.query(createReviewsTableQuery);
+    console.log("✅ Reviews table created successfully!");
+
     await connection.end();
     console.log("✅ Database initialization complete!");
     process.exit(0);
