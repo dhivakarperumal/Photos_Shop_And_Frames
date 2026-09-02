@@ -99,7 +99,7 @@ const FramesList = () => {
 
         {/* ================= FILTERS & SEARCH ================= */}
         <div className="mb-6 rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
             {/* SEARCH */}
             <div className="relative w-full max-w-[360px]">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
@@ -113,7 +113,7 @@ const FramesList = () => {
             </div>
 
             {/* ORIENTATION TABS */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 md:ml-auto">
               {["All", "Portrait", "Landscape", "Square"].map((tab) => (
                 <button
                   key={tab}
@@ -129,6 +129,26 @@ const FramesList = () => {
                   {tab}
                 </button>
               ))}
+              <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  className={`flex h-10 w-10 items-center justify-center border-r border-[#dfe2e5] ${viewMode === "table" ? "bg-[#1a3c36] text-white" : "text-[#4d4d4d] hover:bg-white"}`}
+                  aria-label="Table view"
+                  title="Table view"
+                >
+                  <Table2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("card")}
+                  className={`flex h-10 w-10 items-center justify-center ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#4d4d4d] hover:bg-white"}`}
+                  aria-label="Card view"
+                  title="Card view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -158,6 +178,44 @@ const FramesList = () => {
             </Link>
           </div>
         ) : (
+          {viewMode === "table" ? (
+            <div className="overflow-x-auto rounded-[16px] border border-[#e8e4df] bg-white">
+              <table className="w-full min-w-[700px] border-collapse text-left">
+                <thead className="bg-[#f7f4ef] text-xs font-semibold text-[#333]">
+                  <tr>
+                    <th className="px-4 py-4">Frame</th>
+                    <th className="px-4 py-4">Orientation</th>
+                    <th className="px-4 py-4">Photo Slots</th>
+                    <th className="px-4 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFrames.map((frame) => (
+                    <tr key={frame.id} className="border-t border-[#efefef] text-sm text-[#444]">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <img src={frame.frame_image} alt={frame.frame_name} className="h-12 w-12 rounded-lg bg-[#f6f2ec] object-contain" />
+                          <div>
+                            <div className="font-semibold text-[#202020]">{frame.frame_name}</div>
+                            <div className="font-mono text-[10px] text-[#888]">{frame.uuid?.slice(0, 16)}...</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">{frame.orientation}</td>
+                      <td className="px-4 py-4">{(frame.photo_slots || []).length}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => navigate(`/admin/products/add?frameId=${frame.id}`)} className="rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white" title="Use in product">Use</button>
+                          <button type="button" onClick={() => navigate(`/admin/frames/edit/${frame.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dcd4c8] bg-white" aria-label="Edit frame" title="Edit frame"><Pencil className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => handleDeleteFrame(frame.id, frame.frame_name)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600" aria-label="Delete frame" title="Delete frame"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {filteredFrames.map((frame) => {
               const slots = frame.photo_slots || [];
@@ -260,6 +318,7 @@ const FramesList = () => {
               );
             })}
           </div>
+          )}
         )}
       </div>
     </div>

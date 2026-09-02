@@ -292,8 +292,8 @@ const AdminProducts = () => {
 
         {/* ================= TABLE CARD ================= */}
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
@@ -305,6 +305,7 @@ const AdminProducts = () => {
                 />
               </div>
 
+              <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
@@ -328,7 +329,7 @@ const AdminProducts = () => {
                 <option value="Inactive">Inactive</option>
               </select>
 
-              <button
+              {/* <button
                 type="button"
                 onClick={() => {
                   setSearchTerm('');
@@ -340,10 +341,11 @@ const AdminProducts = () => {
               >
                 <Filter className="h-4 w-4 text-[#c69218]" />
                 Clear
-              </button>
+              </button> */}
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:shrink-0">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -356,16 +358,23 @@ const AdminProducts = () => {
               </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
-                <button className="flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] text-[#4d4d4d]">
-                  <ArrowDownUp className="h-4 w-4" />
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] ${viewMode === 'table' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}
+                  aria-label="Table view"
+                  title="Table view"
+                >
+                  <Table2 className="h-4 w-4" />
                 </button>
-                <button className="flex h-[46px] w-[46px] items-center justify-center text-[#4d4d4d]">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
-                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  className={`flex h-[46px] w-[46px] items-center justify-center ${viewMode === 'card' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}
+                  aria-label="Card view"
+                  title="Card view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -394,6 +403,37 @@ const AdminProducts = () => {
             </div>
           ) : (
             <>
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {filteredProducts.map((product, index) => (
+                    <div key={product.id || index} className="rounded-xl border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-sm">
+                      <div className="mb-4 flex h-40 items-center justify-center overflow-hidden rounded-lg bg-[#f5f1ec]">
+                        {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+                          <img src={product.image} alt={product.name} className="h-full w-full object-contain" />
+                        ) : (
+                          <div className="h-20 w-20 rounded-lg border border-[#d9c5a7]" style={{ background: product.image || '#eee' }} />
+                        )}
+                      </div>
+                      <h3 className="truncate text-base font-semibold text-[#1f1f1f]">{product.name}</h3>
+                      <p className="mt-1 font-mono text-xs text-[#7a7a7a]">{product.code}</p>
+                      <div className="mt-3 flex items-center justify-between text-sm">
+                        <span className="font-bold text-[#1e1e1e]">{product.price}</span>
+                        <span className="text-[#666]">Stock: {product.stock}</span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
+                          <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
+                          {product.status}
+                        </span>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => navigate(`/admin/products/edit/${product.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white" aria-label="Edit product" title="Edit product"><Pencil className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => handleDeleteProduct(product.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d]" aria-label="Delete product" title="Delete product"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-0">
                   <thead>
@@ -501,6 +541,7 @@ const AdminProducts = () => {
                   </tbody>
                 </table>
               </div>
+              )}
 
               <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
                 <span>Showing {filteredProducts.length} of {productsList.length} products</span>

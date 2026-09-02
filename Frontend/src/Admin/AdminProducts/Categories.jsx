@@ -179,8 +179,8 @@ const AdminCategories = () => {
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
@@ -190,6 +190,7 @@ const AdminCategories = () => {
                 />
               </div>
 
+              <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
               <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
                 All Status
                 <ChevronDown className="h-4 w-4 text-[#666]" />
@@ -200,13 +201,14 @@ const AdminCategories = () => {
                 <ChevronDown className="h-4 w-4 text-[#666]" />
               </button>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
+              {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
                 <Filter className="h-4 w-4 text-[#c69218]" />
                 Filter
-              </button>
+              </button> */}
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 lg:shrink-0">
               <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
                 Sort by: Latest
                 <ChevronDown className="h-4 w-4 text-[#666]" />
@@ -221,9 +223,7 @@ const AdminCategories = () => {
                   }`}
                   aria-label="Table view"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <path d="M7 17V7m0 0L3 11m4-4 4 4M17 7v10m0 0 4-4m-4 4-4-4" />
-                  </svg>
+                  <Table2 className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
@@ -233,12 +233,7 @@ const AdminCategories = () => {
                   }`}
                   aria-label="Card view"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
-                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
