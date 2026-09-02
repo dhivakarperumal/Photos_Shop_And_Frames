@@ -60,6 +60,7 @@ const fieldStyle = 'w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 
 const AddAlbum = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState(albumProduct);
+  const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
@@ -81,11 +82,51 @@ const AddAlbum = () => {
       }
     };
 
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories');
+        const allCategories = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const albumCategories = allCategories.filter((category) => {
+          const categoryType = String(category.category_type || category.categoryType || '').trim().toLowerCase();
+          return categoryType === 'albums' || categoryType === 'album';
+        });
+
+        setCategories(albumCategories);
+
+        if (albumCategories.length && !formData.category) {
+          setFormData((prev) => ({
+            ...prev,
+            category: albumCategories[0].category_name,
+            subCategory: Array.isArray(albumCategories[0].sub_categories) ? albumCategories[0].sub_categories[0] || '' : '',
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+
     fetchNextProductId();
+    fetchCategories();
   }, []);
+
+  const selectedCategory = categories.find((category) => category.category_name === formData.category) || categories[0] || null;
+  const subCategoryOptions = Array.isArray(selectedCategory?.sub_categories) ? selectedCategory.sub_categories : [];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === 'category') {
+      const matchedCategory = categories.find((category) => category.category_name === value);
+      const firstSubCategory = Array.isArray(matchedCategory?.sub_categories) ? matchedCategory.sub_categories[0] || '' : '';
+
+      setFormData((prev) => ({
+        ...prev,
+        category: value,
+        subCategory: firstSubCategory,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -252,14 +293,28 @@ const AddAlbum = () => {
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Category *</span>
                     <select name="category" value={formData.category} onChange={handleChange} className={fieldStyle}>
-                      <option>Albums</option>
-                      <option>Photo Albums</option>
-                      <option>Wedding</option>
+                      {categories.length ? (
+                        categories.map((category) => (
+                          <option key={category.category_id || category.category_name} value={category.category_name}>
+                            {category.category_name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="Albums">Albums</option>
+                      )}
                     </select>
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Sub Category</span>
-                    <input name="subCategory" value={formData.subCategory} onChange={handleChange} className={fieldStyle} />
+                    <select name="subCategory" value={formData.subCategory} onChange={handleChange} className={fieldStyle}>
+                      {subCategoryOptions.length ? (
+                        subCategoryOptions.map((subCategory) => (
+                          <option key={subCategory} value={subCategory}>{subCategory}</option>
+                        ))
+                      ) : (
+                        <option value="">No sub category</option>
+                      )}
+                    </select>
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Brand</span>

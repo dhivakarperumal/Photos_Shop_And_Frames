@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   ChevronDown,
@@ -18,7 +18,8 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api, { API_URL } from "../../api";
