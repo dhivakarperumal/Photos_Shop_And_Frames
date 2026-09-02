@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   CalendarDays,
@@ -48,8 +48,12 @@ const getInitialCategoryId = () => 'CAT001';
 
 const AddCategory = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const { profileName } = useAuth();
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState('');
 
   const [formData, setFormData] = useState({
     categoryId: getInitialCategoryId(),
@@ -78,9 +82,51 @@ const AddCategory = () => {
     }
   };
 
+  const fetchCategoryForEdit = async (categoryId) => {
+    try {
+      const response = await api.get(`/categories/${categoryId}`);
+      const category = response?.data?.data || response?.data || null;
+      if (!category) return;
+
+      const imageUrl = category.category_image ? normalizeImageUrl(category.category_image) : '';
+      setFormData({
+        categoryId: category.category_id || categoryId,
+        categoryType: category.category_type || 'Frame',
+        categoryName: category.category_name || '',
+        subCategories: Array.isArray(category.sub_categories) ? category.sub_categories : [],
+        description: category.description || '',
+        sortOrder: Number(category.sort_order || 1),
+        status: String(category.status || 'Active') !== 'Inactive',
+        createdBy: category.created_by || profileName || 'Admin',
+        updatedBy: category.updated_by || profileName || 'Super Admin',
+        createdDate: category.created_date ? formatDate(new Date(category.created_date)) : formatDate(new Date()),
+        updatedDate: category.updated_date ? formatDate(new Date(category.updated_date)) : formatDate(new Date()),
+      });
+      setUploadedImageUrl(imageUrl);
+      setPreviewUrl(imageUrl);
+      setEditingCategoryId(categoryId);
+      setIsEditMode(true);
+    } catch (error) {
+      console.error('Failed to load category for edit:', error);
+      alert(error?.response?.data?.message || 'Unable to load category details for editing.');
+    }
+  };
+
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const editId = params.get('edit');
+
+    if (editId) {
+      setIsEditMode(true);
+      setEditingCategoryId(editId);
+      fetchCategoryForEdit(editId);
+      return;
+    }
+
+    setIsEditMode(false);
+    setEditingCategoryId('');
     fetchNextCategoryId();
-  }, []);
+  }, [location.search, profileName]);
   const [newSubCategory, setNewSubCategory] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
@@ -193,16 +239,19 @@ const AddCategory = () => {
       sort_order: formData.sortOrder,
       status: formData.status ? 'Active' : 'Inactive',
       created_by: formData.createdBy,
-      updated_by: formData.updatedBy,
+      updated_by: formData.updatedBy || profileName || 'Admin',
       created_date: formData.createdDate,
       updated_date: formatDate(new Date()),
     };
 
     try {
-      const response = await api.post('/categories', payload);
-      console.log('Category saved:', response.data);
+      if (isEditMode && editingCategoryId) {
+        await api.put(`/categories/${editingCategoryId}`, payload);
+      } else {
+        await api.post('/categories', payload);
+      }
 
-      if (mode === 'add-another') {
+      if (mode === 'add-another' && !isEditMode) {
         await resetForm();
         return;
       }
@@ -223,13 +272,15 @@ const AddCategory = () => {
               <Sparkles className="h-3.5 w-3.5" />
               Product catalog
             </div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.06em] text-[#1f1f1f]">Add New Category</h1>
+            <h1 className="text-[2.1rem] font-bold tracking-[-0.06em] text-[#1f1f1f]">
+              {isEditMode ? 'Edit Category' : 'Add New Category'}
+            </h1>
             <div className="mt-2 flex items-center gap-2 text-[13px] text-[#666]">
               <span>Dashboard</span>
               <span className="text-[#c0b8af]">›</span>
               <span>Categories</span>
               <span className="text-[#c0b8af]">›</span>
-              <span className="font-semibold text-[#1f1f1f]">Add New Category</span>
+              <span className="font-semibold text-[#1f1f1f]">{isEditMode ? 'Edit Category' : 'Add New Category'}</span>
             </div>
           </div>
 
@@ -557,17 +608,19 @@ const AddCategory = () => {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(26,60,54,0.16)] transition hover:bg-[#214a42]"
             >
               <Save className="h-4 w-4" />
-              Save Category
+              {isEditMode ? 'Update Category' : 'Save Category'}
             </button>
 
-            <button
-              type="button"
-              onClick={(event) => onSubmit(event, 'add-another')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b87840] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(184,120,64,0.18)] transition hover:bg-[#a96b36]"
-            >
-              <Check className="h-4 w-4" />
-              Save & Add Another
-            </button>
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={(event) => onSubmit(event, 'add-another')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b87840] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(184,120,64,0.18)] transition hover:bg-[#a96b36]"
+              >
+                <Check className="h-4 w-4" />
+                Save & Add Another
+              </button>
+            )}
           </div>
         </form>
       </div>
