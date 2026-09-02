@@ -1,18 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
-  Check,
-  Eye,
-  Filter,
   Frame,
   Layers,
   LayoutGrid,
   Pencil,
   Plus,
-  RotateCw,
   Search,
-  Sparkles,
   Table2,
   Trash2,
 } from "lucide-react";
@@ -112,23 +106,18 @@ const FramesList = () => {
               />
             </div>
 
-            {/* ORIENTATION TABS */}
+            {/* ORIENTATION FILTER */}
             <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-              {["All", "Portrait", "Landscape", "Square"].map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setSelectedOrientation(tab)}
-                  className={`flex h-10 items-center gap-1.5 rounded-xl border px-4 text-xs font-bold transition ${
-                    selectedOrientation === tab
-                      ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-sm"
-                      : "border-[#e6ddd1] bg-[#faf9f8] text-[#555] hover:border-[#d4a553] hover:bg-white"
-                  }`}
-                >
-                  <RotateCw className="h-3 w-3" />
-                  {tab}
-                </button>
-              ))}
+              <select
+                value={selectedOrientation}
+                onChange={(event) => setSelectedOrientation(event.target.value)}
+                className="h-10 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-xs font-bold text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+                aria-label="Filter frames by orientation"
+              >
+                {["All", "Portrait", "Landscape", "Square"].map((orientation) => (
+                  <option key={orientation} value={orientation}>{orientation}</option>
+                ))}
+              </select>
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
                 <button
                   type="button"
@@ -178,7 +167,7 @@ const FramesList = () => {
             </Link>
           </div>
         ) : (
-          {viewMode === "table" ? (
+          viewMode === "table" ? (
             <div className="overflow-x-auto rounded-[16px] border border-[#e8e4df] bg-white">
               <table className="w-full min-w-[700px] border-collapse text-left">
                 <thead className="bg-[#f7f4ef] text-xs font-semibold text-[#333]">
@@ -318,7 +307,7 @@ const FramesList = () => {
               );
             })}
           </div>
-          )}
+          )
         )}
       </div>
     </div>
