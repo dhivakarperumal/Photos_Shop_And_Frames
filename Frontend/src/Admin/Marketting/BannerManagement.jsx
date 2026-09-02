@@ -329,7 +329,7 @@ const BannerManagement = () => {
                         className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-y-auto hide-scrollbar"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
+                        <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-white sticky top-0 z-10 backdrop-blur-sm">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20">
                                     <FiImage size={24} />
