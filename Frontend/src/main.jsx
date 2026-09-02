@@ -10,6 +10,8 @@ import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
 
 import AdminDashboard from './Admin/AdminDashboard.jsx'
 import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
+import AddProducts from './Admin/AdminProducts/AddProducts.jsx'
+import AddFrame from './Admin/AdminProducts/AddFrame.jsx'
 import AdminCategories from './Admin/AdminProducts/Categories.jsx'
 import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
@@ -58,6 +60,18 @@ const router = createHashRouter([
           {
             path: 'products',
             element: <AdminProducts />,
+          },
+          {
+            path: 'products/add',
+            element: <AddProducts />,
+          },
+          {
+            path: 'products/frame-setup',
+            element: <AddFrame />,
+          },
+          {
+            path: 'frames',
+            element: <AddFrame />,
           },
           {
             path: 'products/categories',

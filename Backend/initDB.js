@@ -70,6 +70,56 @@ async function initializeDatabase() {
     await connection.query(createCategoriesTableQuery);
     console.log("✅ Categories table created successfully!");
 
+    // Create frames table (Frame Templates & Slots only)
+    const createFramesTableQuery = `
+      CREATE TABLE IF NOT EXISTS frames (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(100) NOT NULL UNIQUE,
+        frame_name VARCHAR(255) NOT NULL,
+        orientation VARCHAR(50) NOT NULL DEFAULT 'Portrait',
+        frame_image VARCHAR(255) NOT NULL,
+        photo_slots JSON NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'Active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_frame_orientation (orientation),
+        KEY idx_frame_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await connection.query(createFramesTableQuery);
+    console.log("✅ Frames table created successfully!");
+
+    // Create products table (Full Product Details + Size Variants + Frame Template Link + Slot Photos)
+    const createProductsTableQuery = `
+      CREATE TABLE IF NOT EXISTS products (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(100) NOT NULL UNIQUE,
+        product_id VARCHAR(50) NOT NULL UNIQUE,
+        product_name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        material_type VARCHAR(100) DEFAULT NULL,
+        color VARCHAR(50) DEFAULT NULL,
+        description TEXT,
+        size_variants JSON NOT NULL,
+        orientation VARCHAR(50) NOT NULL DEFAULT 'Portrait',
+        frame_id INT(11) DEFAULT NULL,
+        frame_data JSON DEFAULT NULL,
+        slot_photos JSON DEFAULT NULL,
+        product_images JSON DEFAULT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'Active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_product_id (product_id),
+        KEY idx_product_category (category),
+        KEY idx_product_orientation (orientation),
+        KEY idx_product_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    await connection.query(createProductsTableQuery);
+    console.log("✅ Products table created successfully!");
+
     await connection.end();
     console.log("✅ Database initialization complete!");
     process.exit(0);
