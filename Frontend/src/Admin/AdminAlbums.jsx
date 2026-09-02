@@ -63,8 +63,8 @@ const normalizeAlbum = (album) => {
     return [];
   })();
 
-  const firstGalleryImage = productImages.find((image) => Boolean(image));
-  const thumbnail = getImageUrl(album.thumbnail_image || firstGalleryImage || '');
+  const firstGalleryImage = Array.isArray(productImages) && productImages.length > 0 ? productImages[0] : '';
+  const thumbnail = getImageUrl(firstGalleryImage || album.thumbnail_image || '');
   const stock = Number(album.stock_quantity || 0);
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
 
