@@ -23,6 +23,7 @@ const bannerRouter = require("./src/routers/bannerRouter");
 const galleryRouter = require("./src/routers/galleryRouter");
 const videoRouter = require("./src/routers/videoRouter");
 const albumRouter = require("./src/routers/albumRouter");
+const reviewRouter = require("./src/routers/reviewRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -95,6 +96,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/frames", frameRouter);
 app.use("/api/products", productRouter);
+app.use("/api/reviews", reviewRouter);
 app.use("/api/banners", bannerRouter);
 app.use("/api/gallery", galleryRouter);
 app.use("/api/videos", videoRouter);

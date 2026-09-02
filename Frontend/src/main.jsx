@@ -13,6 +13,7 @@ import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
 import AddProducts from './Admin/AdminProducts/AddProducts.jsx'
 import AddFrame from './Admin/AdminProducts/AddFrame.jsx'
 import FramesList from './Admin/AdminProducts/FramesList.jsx'
+import AdminReviews from './Admin/AdminReviews/AdminReviews.jsx'
 import AdminCategories from './Admin/AdminProducts/Categories.jsx'
 import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
@@ -74,7 +75,15 @@ const router = createHashRouter([
             element: <AddProducts />,
           },
           {
+            path: 'products/edit/:id',
+            element: <AddProducts />,
+          },
+          {
             path: 'products/frame-setup',
+            element: <AddFrame />,
+          },
+          {
+            path: 'products/frame-setup/edit/:id',
             element: <AddFrame />,
           },
           {
@@ -84,6 +93,10 @@ const router = createHashRouter([
           {
             path: 'frames',
             element: <FramesList />,
+          },
+          {
+            path: 'frames/edit/:id',
+            element: <AddFrame />,
           },
           {
             path: 'products/categories',
@@ -124,6 +137,10 @@ const router = createHashRouter([
           {
             path: 'customers',
             element: <AdminCustomers />,
+          },
+          {
+            path: 'reviews',
+            element: <AdminReviews />,
           },
         ],
       },

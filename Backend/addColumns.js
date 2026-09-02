@@ -1,0 +1,83 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+const mysql = require("mysql2/promise");
+
+async function addColumns() {
+  const dbConfig = {
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "frame_shop_db",
+    port: Number(process.env.DB_PORT || 3306),
+  };
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    console.log("✅ Connected to database");
+
+    // Add columns to products table
+    console.log("Adding columns to products table...");
+    try {
+      await connection.query(
+        `ALTER TABLE products ADD COLUMN created_by VARCHAR(100)`
+      );
+      console.log("✅ Added created_by to products table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  created_by already exists in products table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
+        `ALTER TABLE products ADD COLUMN updated_by VARCHAR(100)`
+      );
+      console.log("✅ Added updated_by to products table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  updated_by already exists in products table");
+      } else {
+        throw error;
+      }
+    }
+
+    // Add columns to frames table
+    console.log("\nAdding columns to frames table...");
+    try {
+      await connection.query(
+        `ALTER TABLE frames ADD COLUMN created_by VARCHAR(100)`
+      );
+      console.log("✅ Added created_by to frames table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  created_by already exists in frames table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
+        `ALTER TABLE frames ADD COLUMN updated_by VARCHAR(100)`
+      );
+      console.log("✅ Added updated_by to frames table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  updated_by already exists in frames table");
+      } else {
+        throw error;
+      }
+    }
+
+    await connection.end();
+    console.log("\n✅ Database migration complete!");
+    process.exit(0);
+  } catch (error) {
+    console.error("❌ Error:", error.message);
+    process.exit(1);
+  }
+}
+
+addColumns();

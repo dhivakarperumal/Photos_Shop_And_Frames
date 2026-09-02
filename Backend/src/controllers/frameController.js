@@ -9,6 +9,8 @@ const createFrame = async (req, res) => {
       frame_image,
       photo_slots,
       status,
+      created_by,
+      updated_by,
     } = req.body;
 
     if (!frame_name || !frame_name.trim()) {
@@ -32,6 +34,8 @@ const createFrame = async (req, res) => {
       frame_image,
       photo_slots: Array.isArray(photo_slots) ? photo_slots : [],
       status: status || "Active",
+      created_by: created_by || null,
+      updated_by: updated_by || created_by || null,
     };
 
     const result = await frameModule.createFrame(payload);

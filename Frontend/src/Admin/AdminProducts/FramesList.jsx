@@ -7,6 +7,7 @@ import {
   Filter,
   Frame,
   Layers,
+  Pencil,
   Plus,
   RotateCw,
   Search,
@@ -237,6 +238,15 @@ const FramesList = () => {
                         className="flex-1 rounded-xl bg-[#1a3c36] py-2 text-center text-xs font-bold text-white shadow-xs transition hover:bg-[#235048]"
                       >
                         Use in Product
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/frames/edit/${frame.id}`)}
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#dcd4c8] bg-white text-[#444] transition hover:border-[#d4a553] hover:text-[#1a3c36]"
+                        title="Edit frame template"
+                      >
+                        <Pencil className="h-4 w-4" />
                       </button>
 
                       <button

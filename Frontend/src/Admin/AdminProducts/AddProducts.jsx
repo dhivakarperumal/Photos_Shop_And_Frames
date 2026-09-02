@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
   ChevronRight,
   Coins,
   DollarSign,
+  Eye,
   Frame,
   Image as ImageIcon,
   ImagePlus,
@@ -18,7 +19,6 @@ import {
   Trash2,
   UploadCloud,
   X,
-  Eye,
 } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";
@@ -178,13 +178,16 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos) => {
 
 const AddProducts = () => {
   const navigate = useNavigate();
+  const { id: editProductId } = useParams();
+  const isEditMode = Boolean(editProductId);
+
   const [searchParams] = useSearchParams();
   const preSelectedFrameId = searchParams.get("frameId");
 
   // ==========================================
   // BASIC PRODUCT STATE
   // ==========================================
-  const [uuid] = useState(generateUuid);
+  const [uuid, setUuid] = useState(generateUuid);
   const [productId, setProductId] = useState("IQF1");
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("Photo Frames");
@@ -192,6 +195,7 @@ const AddProducts = () => {
   const [color, setColor] = useState("Natural Wood");
   const [description, setDescription] = useState("");
   const [categoriesList, setCategoriesList] = useState([]);
+  const [loadingProduct, setLoadingProduct] = useState(false);
 
   // ==========================================
   // SIZE VARIANTS (MRP, OFFER, STOCK)
@@ -217,19 +221,11 @@ const AddProducts = () => {
   const [saving, setSaving] = useState(false);
 
   // ==========================================
-  // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES & PRESELECTED FRAME
+  // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES & LOAD IN EDIT MODE
   // ==========================================
   useEffect(() => {
     const fetchInitData = async () => {
-      try {
-        const idRes = await api.get("/products/next-id");
-        if (idRes.data?.data) {
-          setProductId(idRes.data.data);
-        }
-      } catch (err) {
-        console.warn("Could not fetch next product ID:", err);
-      }
-
+      // 1. Fetch categories
       try {
         const catRes = await api.get("/categories");
         if (catRes.data?.data && Array.isArray(catRes.data.data)) {
@@ -239,23 +235,87 @@ const AddProducts = () => {
         console.warn("Could not fetch categories:", err);
       }
 
-      // If frameId is specified in URL params, load that frame
-      if (preSelectedFrameId) {
+      // 2. If in Edit Mode, fetch product
+      if (isEditMode) {
+        setLoadingProduct(true);
         try {
-          const frameRes = await api.get(`/frames/${preSelectedFrameId}`);
-          if (frameRes.data?.data) {
-            const fr = frameRes.data.data;
-            setSelectedFrame(fr);
-            setOrientation(fr.orientation || "Portrait");
+          const res = await api.get(`/products/${editProductId}`);
+          const p = res.data?.data;
+          if (p) {
+            setUuid(p.uuid || generateUuid());
+            setProductId(p.product_id || "");
+            setProductName(p.product_name || "");
+            setCategory(p.category || "Photo Frames");
+            setMaterialType(p.material_type || "Wooden");
+            setColor(p.color || "Natural Wood");
+            setDescription(p.description || "");
+
+            if (p.size_variants && Array.isArray(p.size_variants)) {
+              setSizeVariants(
+                p.size_variants.map((v, i) => ({
+                  id: i + 1,
+                  size: v.size || "",
+                  mrp: String(v.mrp || ""),
+                  offerPrice: String(v.offer_price || ""),
+                  stock: String(v.stock || 0),
+                }))
+              );
+            }
+
+            setOrientation(p.orientation || "Portrait");
+
+            if (p.frame_data) {
+              setSelectedFrame(p.frame_data);
+            }
+
+            if (p.slot_photos && typeof p.slot_photos === "object") {
+              const loadedPhotos = {};
+              Object.entries(p.slot_photos).forEach(([slotId, url]) => {
+                if (url) {
+                  loadedPhotos[slotId] = { preview: url, url };
+                }
+              });
+              setSlotPhotos(loadedPhotos);
+            }
+          } else {
+            toast.error("Product not found");
+            navigate("/admin/products");
           }
         } catch (err) {
-          console.warn("Could not load preselected frame:", err);
+          console.error("Failed to load product for edit:", err);
+          toast.error("Failed to load product");
+        } finally {
+          setLoadingProduct(false);
+        }
+      } else {
+        // Fetch next product code
+        try {
+          const idRes = await api.get("/products/next-id");
+          if (idRes.data?.data) {
+            setProductId(idRes.data.data);
+          }
+        } catch (err) {
+          console.warn("Could not fetch next product ID:", err);
+        }
+
+        // If frameId is specified in URL params, pre-select that frame
+        if (preSelectedFrameId) {
+          try {
+            const frameRes = await api.get(`/frames/${preSelectedFrameId}`);
+            if (frameRes.data?.data) {
+              const fr = frameRes.data.data;
+              setSelectedFrame(fr);
+              setOrientation(fr.orientation || "Portrait");
+            }
+          } catch (err) {
+            console.warn("Could not load preselected frame:", err);
+          }
         }
       }
     };
 
     fetchInitData();
-  }, [preSelectedFrameId]);
+  }, [editProductId, isEditMode, navigate, preSelectedFrameId]);
 
   // ==========================================
   // FETCH FRAMES WHEN ORIENTATION CHANGES
@@ -271,10 +331,10 @@ const AddProducts = () => {
         // Keep pre-selected frame if matching, else select first available
         if (selectedFrame && selectedFrame.orientation === orientation) {
           // keep
-        } else if (frames.length > 0) {
+        } else if (!isEditMode && frames.length > 0) {
           setSelectedFrame(frames[0]);
           setSlotPhotos({});
-        } else {
+        } else if (!isEditMode) {
           setSelectedFrame(null);
           setSlotPhotos({});
         }
@@ -395,7 +455,11 @@ const AddProducts = () => {
     }
 
     setSaving(true);
-    const toastId = toast.loading("Generating product composite image & saving...");
+    const toastId = toast.loading(
+      isEditMode
+        ? "Updating composite image & product..."
+        : "Generating product composite image & saving..."
+    );
 
     try {
       // 1. Generate full composite (Frame + Photos merged on Canvas)
@@ -429,7 +493,7 @@ const AddProducts = () => {
         slotPhotosMap[slotId] = slotPhotos[slotId]?.url || slotPhotos[slotId]?.preview || "";
       });
 
-      // 3. Save Product
+      // 3. Save or Update Product
       const payload = {
         uuid,
         product_id: productId,
@@ -457,24 +521,44 @@ const AddProducts = () => {
         status: "Active",
       };
 
-      const response = await api.post("/products", payload);
+      let response;
+      if (isEditMode) {
+        response = await api.put(`/products/${editProductId}`, payload);
+      } else {
+        response = await api.post("/products", payload);
+      }
 
       if (response.data?.success) {
         toast.dismiss(toastId);
-        toast.success(`Product ${productId} saved with complete frame & photo layout!`);
+        toast.success(
+          isEditMode
+            ? `Product ${productId} updated successfully!`
+            : `Product ${productId} saved with complete frame & photo layout!`
+        );
         navigate("/admin/products");
       } else {
         toast.dismiss(toastId);
-        toast.error(response.data?.message || "Failed to create product.");
+        toast.error(response.data?.message || "Failed to save product.");
       }
     } catch (error) {
       toast.dismiss(toastId);
-      console.error("Create product error:", error);
-      toast.error(error.response?.data?.message || "Failed to create product.");
+      console.error("Create/update product error:", error);
+      toast.error(error.response?.data?.message || "Failed to save product.");
     } finally {
       setSaving(false);
     }
   };
+
+  if (loadingProduct) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f4f6]">
+        <div className="text-center">
+          <div className="mb-2 text-3xl">📦</div>
+          <p className="text-sm font-semibold text-[#555]">Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] p-4 md:p-6">
@@ -484,13 +568,15 @@ const AddProducts = () => {
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#e8d9ba] bg-[#fffaf2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9b6b2d]">
               <Sparkles className="h-3.5 w-3.5" />
-              Product Catalog Studio
+              {isEditMode ? "Edit Product" : "Product Catalog Studio"}
             </div>
             <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1f1f]">
-              Add New Product
+              {isEditMode ? `Edit Product: ${productName || productId}` : "Add New Product"}
             </h1>
             <p className="mt-1 text-[13px] text-[#6b6b6b]">
-              Configure product details, size-wise pricing & stock, select frame by orientation, and place demo photos.
+              {isEditMode
+                ? "Update product pricing, size stock matrix, frame selection, and slot photos."
+                : "Configure product details, size-wise pricing & stock, select frame by orientation, and place demo photos."}
             </p>
           </div>
 
@@ -559,12 +645,13 @@ const AddProducts = () => {
                   {/* AUTO PRODUCT CODE */}
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Product ID (Auto-Generated)
+                      Product ID
                     </label>
                     <input
                       type="text"
                       value={productId}
-                      readOnly
+                      readOnly={!isEditMode}
+                      onChange={(e) => setProductId(e.target.value)}
                       className="h-11 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-sm font-bold text-[#1a3c36] outline-none"
                     />
                   </div>
@@ -1056,7 +1143,13 @@ const AddProducts = () => {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(26,60,54,0.18)] transition hover:bg-[#224e47] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" />
-              {saving ? "Saving Product with Photo Layout..." : "Save Product"}
+              {saving
+                ? isEditMode
+                  ? "Updating Product..."
+                  : "Saving Product..."
+                : isEditMode
+                ? "Update Product"
+                : "Save Product"}
             </button>
           </div>
         </form>
