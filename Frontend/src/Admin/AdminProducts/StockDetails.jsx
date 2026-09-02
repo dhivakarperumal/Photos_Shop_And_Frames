@@ -215,8 +215,8 @@ const StockDetails = () => {
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:flex-nowrap">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 lg:flex-nowrap">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
@@ -228,7 +228,7 @@ const StockDetails = () => {
                 />
               </div>
 
-              <div className="flex w-full flex-wrap items-center justify-end gap-3 lg:ml-auto">
+              <div className="flex w-full flex-wrap items-center justify-end gap-3 lg:ml-auto lg:w-auto lg:flex-nowrap">
               <select value={selectedCategory} onChange={(event) => { setSelectedCategory(event.target.value); setCurrentPage(1); }} className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none">
                 <option>All Categories</option>
                 {categories.map((category) => <option key={category}>{category}</option>)}
@@ -243,7 +243,7 @@ const StockDetails = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }} className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none">
                 <option value="latest">Sort by: Latest</option>
                 <option value="name">Name: A to Z</option>
