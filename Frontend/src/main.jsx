@@ -14,6 +14,7 @@ import AdminCategories from './Admin/AdminProducts/Categories.jsx'
 import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
 import BannerManagement from './Admin/Marketting/BannerManagement.jsx'
+import VideoManagement from './Admin/Marketting/VideoManagement.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
@@ -76,6 +77,10 @@ const router = createHashRouter([
           {
             path: 'banners',
             element: <BannerManagement />,
+          },
+          {
+            path: 'videos',
+            element: <VideoManagement />,
           },
           {
             path: 'customers',

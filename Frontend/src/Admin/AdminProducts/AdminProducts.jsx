@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowDownUp,
   ArrowUpRight,
@@ -121,6 +122,8 @@ const statCards = [
 ];
 
 const AdminProducts = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -287,7 +290,12 @@ const AdminProducts = () => {
                           <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" aria-label="Edit product">
                             <Pencil className="h-4 w-4" />
                           </button>
-                          <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" aria-label="View product">
+                          <button
+                            type="button"
+                            onClick={() => navigate('/admin/products/stock-details')}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+                            aria-label="View product"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
                           <button className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]" aria-label="Delete product">

@@ -18,6 +18,7 @@ const { upload } = require("./src/config/multerConfig");
 const usersRouter = require("./src/routers/usersRouter");
 const categoryRouter = require("./src/routers/categoryRouter");
 const bannerRouter = require("./src/routers/bannerRouter");
+const videoRouter = require("./src/routers/videoRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -80,8 +81,8 @@ const handleUploadRequest = (req, res) => {
 
 app.post("/api/upload", upload.any(), handleUploadRequest);
 app.post("/api/banners/upload", upload.any(), handleUploadRequest);
-
-
+app.post("/api/videos/upload", upload.any(), handleUploadRequest);
+app.post("/api/videos/upload-thumbnail", upload.any(), handleUploadRequest);
 
 // Health check (must be before the catch-all /api/* 404 handler)
 app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_ENV || 'development' }));
@@ -89,6 +90,7 @@ app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_
 app.use("/api/users", usersRouter);
 app.use("/api/categories", categoryRouter);
 app.use("/api/banners", bannerRouter);
+app.use("/api/videos", videoRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

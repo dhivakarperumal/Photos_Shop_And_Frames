@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -130,6 +131,8 @@ const statCards = [
 ];
 
 const StockDetails = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -297,7 +300,11 @@ const StockDetails = () => {
                     <td className="px-4 py-4 whitespace-pre-line text-[#5b5b5b]">{item.lastUpdated}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
+                        <button
+                          type="button"
+                          onClick={() => navigate('/admin/products/stock-details')}
+                          className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">

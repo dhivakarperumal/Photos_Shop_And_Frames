@@ -135,7 +135,6 @@ const navItems = [
       { path: "/admin/videos", label: "Videos Management", icon: Image },
       { path: "/admin/gallery", label: "Gallery", icon: Image },
       { path: "/admin/coupons", label: "Coupons & Offers", icon: Tag },
-      { path: "/admin/categories", label: "Categories", icon: Layers },
     ],
   },
 
