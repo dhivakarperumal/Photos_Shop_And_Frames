@@ -440,7 +440,7 @@ const AdminCustomers = () => {
             {/* Left: search + filters */}
             <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
               {/* Search */}
-              <div className="relative w-full max-w-[300px]">
+              <div className="relative w-full max-w-[500px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
@@ -452,7 +452,13 @@ const AdminCustomers = () => {
               </div>
 
               {/* Role */}
-              <div className="relative">
+              
+            </div>
+
+            {/* Right: page size + view toggle */}
+            <div className="flex shrink-0 items-center gap-3">
+              {/* Page size */}
+            <div className="relative">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
@@ -473,25 +479,6 @@ const AdminCustomers = () => {
                   {STATUSES.map((s) => <option key={s}>{s}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
-              </div>
-            </div>
-
-            {/* Right: page size + view toggle */}
-            <div className="flex shrink-0 items-center gap-3">
-              {/* Page size */}
-              <div className="flex items-center gap-2 text-[13px] text-[#6a6a6a]">
-                <span>Show</span>
-                <div className="relative">
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="h-[38px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer"
-                  >
-                    {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#666]" />
-                </div>
-                <span>entries</span>
               </div>
 
               {/* View toggle */}
@@ -654,17 +641,25 @@ const AdminCustomers = () => {
               </table>
             </div>
           )}
+          
 
           {/* ── PAGINATION ── */}
           {!loading && !error && filtered.length > 0 && (
             <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
-              <span>
-                Showing {Math.min((page - 1) * pageSize + 1, filtered.length)}–
-                {Math.min(page * pageSize, filtered.length)} of {filtered.length} customer
-                {filtered.length !== 1 ? "s" : ""}
-                {customers.length !== filtered.length && ` (filtered from ${customers.length})`}
-              </span>
-
+               <div className="flex items-center gap-2 text-[13px] text-[#6a6a6a]">
+                <span>Show</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="h-[38px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer"
+                  >
+                    {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#666]" />
+                </div>
+                <span>entries</span>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
