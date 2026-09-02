@@ -13,6 +13,7 @@ import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
 import AdminCategories from './Admin/AdminProducts/Categories.jsx'
 import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
+import AdminAlbums from './Admin/AdminAlbums.jsx'
 import BannerManagement from './Admin/Marketting/BannerManagement.jsx'
 import VideoManagement from './Admin/Marketting/VideoManagement.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
@@ -73,6 +74,10 @@ const router = createHashRouter([
           {
             path: 'products/stock-details',
             element: <StockDetails />,
+          },
+          {
+            path: 'albums',
+            element: <AdminAlbums />,
           },
           {
             path: 'banners',
