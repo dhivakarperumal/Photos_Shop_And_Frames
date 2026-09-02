@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -57,30 +57,51 @@ const statCards = [
 ];
 
 const AdminCategories = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('table');
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/categories');
-        const items = response?.data?.data || [];
-        setCategories(items);
-        setError('');
-      } catch (err) {
-        console.error('Failed to fetch categories:', err);
-        setError(err?.response?.data?.message || 'Unable to load categories right now.');
-        setCategories([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/categories');
+      const items = response?.data?.data || [];
+      setCategories(items);
+      setError('');
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+      setError(err?.response?.data?.message || 'Unable to load categories right now.');
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCategories();
   }, []);
+
+  const handleEditCategory = (category) => {
+    const categoryId = category?.category_id || category?.id;
+    if (!categoryId) return;
+    navigate(`/admin/products/categories/add?edit=${encodeURIComponent(categoryId)}`);
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (!categoryId) return;
+    const confirmed = window.confirm('Are you sure you want to delete this category?');
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/categories/${categoryId}`);
+      await fetchCategories();
+    } catch (err) {
+      console.error('Failed to delete category:', err);
+      setError(err?.response?.data?.message || 'Unable to delete category right now.');
+    }
+  };
 
   const listData = useMemo(() => {
     if (categories.length) {
@@ -286,11 +307,9 @@ const AdminCategories = () => {
                     <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
                       <tr>
                         <th className="px-4 py-4">Category</th>
-                        <th className="px-4 py-4">Description</th>
-                        <th className="px-4 py-4">Products</th>
+                        <th className="px-4 py-4">Sub Categories</th>
                         <th className="px-4 py-4">Status</th>
                         <th className="px-4 py-4">Sort Order</th>
-                        <th className="px-4 py-4">Created At</th>
                         <th className="px-4 py-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -309,8 +328,8 @@ const AdminCategories = () => {
                               <span className="font-medium text-[#202020]">{item.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
-                          <td className="px-4 py-4">{item.products}</td>
+                          <td className="px-4 py-4 text-[#5d5d5d]">{item.subCategories}</td>
+                          
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${item.status === 'Active' ? 'bg-[#eaf7ef] text-[#2b7a4b]' : 'bg-[#fdf1f1] text-[#b85c5c]'}`}>
                               <span className={`mr-1.5 h-2 w-2 rounded-full ${item.status === 'Active' ? 'bg-[#2b7a4b]' : 'bg-[#b85c5c]'}`} />
@@ -318,13 +337,22 @@ const AdminCategories = () => {
                             </span>
                           </td>
                           <td className="px-4 py-4">{item.sortOrder}</td>
-                          <td className="px-4 py-4">{item.createdAt}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-end gap-2">
-                              <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
+                              <button
+                                type="button"
+                                onClick={() => handleEditCategory(item)}
+                                className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
+                                aria-label={`Edit ${item.name}`}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </button>
-                              <button className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCategory(item.id)}
+                                className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]"
+                                aria-label={`Delete ${item.name}`}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
