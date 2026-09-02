@@ -538,7 +538,7 @@ const AdminReviews = () => {
         <div className="rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-sm md:p-5">
           {/* SEARCH AND FILTER BAR */}
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center">
               {/* SEARCH */}
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
@@ -551,6 +551,9 @@ const AdminReviews = () => {
                 />
               </div>
 
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
               {/* RATING FILTER */}
               <div className="relative">
                 <select
@@ -586,12 +589,8 @@ const AdminReviews = () => {
                 <button type="button" onClick={() => setViewMode("table")} title="Table view" className={`flex h-11 w-11 items-center justify-center border-r border-[#dfe2e5] ${viewMode === "table" ? "bg-[#1a3c36] text-white" : "text-[#666] hover:bg-white"}`}><List className="h-4 w-4" /></button>
                 <button type="button" onClick={() => setViewMode("card")} title="Card view" className={`flex h-11 w-11 items-center justify-center ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#666] hover:bg-white"}`}><LayoutGrid className="h-4 w-4" /></button>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#777]">
-                Showing <strong className="text-[#222]">{filteredReviews.length}</strong> reviews
-              </span>
+             
             </div>
           </div>
 
