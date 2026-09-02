@@ -634,14 +634,13 @@ const AdminReviews = () => {
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[#f0e6d2] text-left text-xs font-bold uppercase tracking-wider text-[#3d3d3d]">
+                  <tr className="bg-[#f0e6d2] text-left text-xs font-bold capitalize tracking-wider text-[#3d3d3d]">
                     <th className="px-4 py-3.5 rounded-l-xl">ID & Product</th>
                     <th className="px-4 py-3.5">Reviewer</th>
                     <th className="px-4 py-3.5">Rating</th>
                     <th className="px-4 py-3.5">Review Comment</th>
                     <th className="px-4 py-3.5">Customer Photo</th>
                     <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5">Created By (User ID)</th>
                     <th className="px-4 py-3.5 rounded-r-xl">Actions</th>
                   </tr>
                 </thead>
@@ -773,31 +772,6 @@ const AdminReviews = () => {
                             />
                             {rev.status}
                           </span>
-                        </td>
-
-                        {/* CREATED BY (USER ID) & DATE */}
-                        <td className="px-4 py-3.5 align-middle">
-                          <p className="text-xs font-medium text-[#333]">
-                            {formatDate(rev.created_at)}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-1">
-                            <span
-                              title={`User ID: ${displayUserId}`}
-                              className="font-mono text-[10px] text-[#666] bg-[#f2ede6] px-1.5 py-0.5 rounded"
-                            >
-                              {displayUserId.length > 18
-                                ? `${displayUserId.slice(0, 8)}...${displayUserId.slice(-4)}`
-                                : displayUserId}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => copyToClipboard(displayUserId, "User ID")}
-                              className="text-[#999] hover:text-[#1a3c36]"
-                              title="Copy user_id"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </button>
-                          </div>
                         </td>
 
                         {/* ACTIONS */}
