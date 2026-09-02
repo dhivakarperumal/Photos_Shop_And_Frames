@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../api";
 import {
     FiPlus,
@@ -9,11 +10,16 @@ import {
     FiX,
     FiUploadCloud,
     FiLink,
-    FiFileText
+    FiFileText,
+    FiGrid,
+    FiList,
+    FiFilter
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 
 const BannerManagement = () => {
+    const { user } = useAuth();
     const [banners, setBanners] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -31,17 +37,15 @@ const BannerManagement = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [mobileUploading, setMobileUploading] = useState(false);
+    const [viewMode, setViewMode] = useState("table");
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [activeFilter, setActiveFilter] = useState("all");
 
     const fetchBanners = async () => {
         setLoading(true);
         try {
             const response = await api.get("/banners");
-            const bannerList = Array.isArray(response.data)
-                ? response.data
-                : Array.isArray(response.data?.data)
-                    ? response.data.data
-                    : [];
-            setBanners(bannerList);
+            setBanners(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("Error fetching banners:", error);
             toast.error("Failed to load banners");
@@ -72,6 +76,12 @@ const BannerManagement = () => {
         setIsModalOpen(true);
     };
 
+    const resolveAssetUrl = (url) => {
+        if (!url || /^(https?:|data:|blob:)/i.test(url)) return url;
+        const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+        return `${backendUrl}${url.startsWith("/") ? url : `/${url}`}`;
+    };
+
     const handleImageUpload = async (e, isMobile = false) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -84,28 +94,39 @@ const BannerManagement = () => {
         if (isMobile) setMobileUploading(true);
         else setUploading(true);
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
+        try {
+            const formData = new FormData();
+            formData.append("type", currentBanner.type || "hero");
+            formData.append("image", file);
+            const response = await api.post("/banners/upload", formData);
+            const imageUrl = response.data.url;
             if (isMobile) {
-                setCurrentBanner(prev => ({ ...prev, mobile_image: reader.result }));
-                setMobileUploading(false);
+                setCurrentBanner(prev => ({ ...prev, mobile_image: imageUrl }));
             } else {
-                setCurrentBanner(prev => ({ ...prev, image: reader.result }));
-                setUploading(false);
+                setCurrentBanner(prev => ({ ...prev, image: imageUrl }));
             }
             toast.success(`${isMobile ? 'Mobile' : 'Desktop'} image ready!`);
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("Error uploading banner image:", error);
+            toast.error("Image upload failed");
+        } finally {
+            if (isMobile) setMobileUploading(false);
+            else setUploading(false);
+        }
     };
 
     const handleSubmit = async (e, shouldContinue = false) => {
         e.preventDefault();
         try {
+            const bannerPayload = {
+                ...currentBanner,
+                user_id: user?.user_id || currentBanner.user_id || null,
+            };
             if (isEditing) {
-                await api.put(`/banners/${currentBanner.id}`, currentBanner);
+                await api.put(`/banners/${currentBanner.id}`, bannerPayload);
                 toast.success("Banner updated successfully");
             } else {
-                await api.post("/banners", currentBanner);
+                await api.post("/banners", bannerPayload);
                 toast.success("Banner added successfully");
             }
             fetchBanners();
@@ -132,19 +153,66 @@ const BannerManagement = () => {
         }
     };
 
+    const filteredBanners = banners.filter((banner) => {
+        const matchesSearch = (banner.title || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = typeFilter === "all" || banner.type === typeFilter;
+        const matchesActive = activeFilter === "all" || (activeFilter === "active" ? banner.active : !banner.active);
+        return matchesSearch && matchesType && matchesActive;
+    });
+
+    const totalBanners = banners.length;
+    const offerBanners = banners.filter((banner) => banner.type === "offer").length;
+    const heroBanners = banners.filter((banner) => banner.type === "hero").length;
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-[600px]">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#240046] to-[#7b2cbf] flex items-center justify-center text-white shadow-lg shrink-0"><FiImage size={22} /></div>
+                    <div><p className="text-xs text-gray-400 font-medium">Total Banners</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{totalBanners.toLocaleString()}</h3><p className="text-[10px] text-gray-400">All uploaded banners</p></div>
                 </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 active:scale-95"
-                >
-                    <FiPlus /> New Promotion
-                </button>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiFileText size={22} /></div>
+                    <div><p className="text-xs text-gray-400 font-medium">Offer Banners</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{offerBanners.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Promotional sections</p></div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiLink size={22} /></div>
+                    <div><p className="text-xs text-gray-400 font-medium">Hero Section</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{heroBanners.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Primary page banners</p></div>
+                </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div className="relative w-full xl:max-w-md">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search banners by title..."
+                        className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-[#4b0b78] transition-all text-sm font-bold"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="relative">
+                        <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
+                        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="appearance-none pl-9 pr-8 py-2.5 w-full sm:w-32 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none focus:border-[#4b0b78]">
+                            <option value="all">All Types</option>
+                            <option value="hero">Hero</option>
+                            <option value="offer">Offers</option>
+                        </select>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none">▼</span>
+                    </div>
+                    <select value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)} className="appearance-none px-4 py-2.5 w-full sm:w-32 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none focus:border-[#4b0b78]">
+                        <option value="all">All Status</option>
+                        <option value="active">Published</option>
+                        <option value="inactive">Draft</option>
+                    </select>
+                    <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+                        <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Table mode" title="Table mode"><FiList size={16} /></button>
+                        <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Card mode" title="Card mode"><FiGrid size={16} /></button>
+                    </div>
+                    <button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2 bg-[#4b0b78] hover:bg-[#260642] text-white px-5 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-purple-200 active:scale-95"><FiPlus /> New Promotion</button>
+                </div>
             </div>
 
             {loading ? (
@@ -154,45 +222,32 @@ const BannerManagement = () => {
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden text-slate-800">
-                    <div className="p-6 border-b border-gray-50">
-                        <div className="relative max-w-md">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Filter banners by title..."
-                                className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all text-sm font-bold"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto hide-scrollbar">
+                    {viewMode === "table" ? <div className="overflow-x-auto hide-scrollbar">
                         <table className="w-full text-left border-collapse block md:table">
                             <thead className="hidden md:table-header-group">
-                                <tr className="bg-gray-50/50">
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Visual Assets</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Promotion Details</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Configuration</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                                <tr className="bg-gradient-to-r from-[#260642] to-[#4b0b78]">
+                                    <th className="px-4 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-center">S No</th>
+                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Visual Assets</th>
+                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Promotion Details</th>
+                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Configuration</th>
+                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="block md:table-row-group divide-y divide-gray-50 text-slate-800 px-3 py-4 md:p-0">
-                                {banners
-                                    .filter(b => (b.title || "").toLowerCase().includes(searchTerm.toLowerCase()))
-                                    .map((banner) => (
+                                {filteredBanners.map((banner, index) => (
                                         <tr key={banner.id} className="hover:bg-indigo-50/30 transition-colors group block md:table-row bg-white md:bg-transparent border border-gray-100 md:border-0 rounded-2xl md:rounded-none mb-4 md:mb-0 shadow-sm md:shadow-none">
+                                            <td className="px-3 py-4 md:px-4 md:py-4 block md:table-cell border-b border-gray-50 md:border-b-0 text-center"><span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest mr-3">S No</span><span className="text-sm font-bold text-gray-400">{index + 1}</span></td>
                                             <td className="px-3 py-4 md:px-6 md:py-4 block md:table-cell border-b border-gray-50 md:border-b-0">
                                                 <div className="flex md:block items-center justify-between w-full">
                                                     <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Visual Assets</span>
                                                     <div className="flex items-center gap-3 justify-end md:justify-start">
                                                         <div className="relative w-20 h-10 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 shadow-sm">
-                                                            <img src={banner.image} className="w-full h-full object-cover" alt="" />
+                                                            <img src={resolveAssetUrl(banner.image)} className="w-full h-full object-cover" alt="" />
                                                             <div className="absolute top-0.5 right-0.5 bg-white/90 text-[7px] px-1 rounded font-black uppercase tracking-tighter shadow-sm border border-gray-100">D</div>
                                                         </div>
                                                         {banner.mobile_image && (
                                                             <div className="relative w-8 h-12 rounded-lg overflow-hidden border border-gray-100 bg-gray-100 shadow-sm">
-                                                                <img src={banner.mobile_image} className="w-full h-full object-cover" alt="" />
+                                                                <img src={resolveAssetUrl(banner.mobile_image)} className="w-full h-full object-cover" alt="" />
                                                                 <div className="absolute top-0.5 right-0.5 bg-white/90 text-[7px] px-1 rounded font-black uppercase tracking-tighter shadow-sm border border-gray-100">M</div>
                                                             </div>
                                                         )}
@@ -228,14 +283,14 @@ const BannerManagement = () => {
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
                                                             onClick={() => handleOpenModal(banner)}
-                                                            className="p-2 border border-gray-200 text-gray-500 rounded-lg hover:bg-green-500 hover:text-white transition-all shadow-sm md:shadow-none"
+                                                            className="p-2 border border-[#4b0b78] bg-[#4b0b78] text-white rounded-lg hover:bg-[#260642] transition-all shadow-sm md:shadow-none"
                                                             title="Edit"
                                                         >
                                                             <FiEdit2 size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(banner.id)}
-                                                            className="p-2 border border-gray-200 text-gray-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm md:shadow-none"
+                                                            className="p-2 border border-[#4b0b78] bg-[#4b0b78] text-white rounded-lg hover:bg-[#260642] transition-all shadow-sm md:shadow-none"
                                                             title="Delete"
                                                         >
                                                             <FiTrash2 size={16} />
@@ -247,19 +302,27 @@ const BannerManagement = () => {
                                     ))}
                             </tbody>
                         </table>
-                        {banners.filter(b => (b.title || "").toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                        {filteredBanners.length === 0 && (
                             <div className="text-center py-20">
                                 <FiImage className="mx-auto text-gray-200 mb-4" size={48} />
                                 <p className="text-gray-400 font-bold tracking-tight">No creative banners discovered.</p>
                             </div>
                         )}
-                    </div>
+                    </div> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+                        {filteredBanners.length === 0 ? <div className="col-span-full text-center py-16 text-gray-400 font-bold">No creative banners discovered.</div> : filteredBanners.map((banner, index) => (
+                            <article key={banner.id} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
+                                <div className="h-36 bg-gray-100 relative"><img src={resolveAssetUrl(banner.image)} alt={banner.title || "Banner"} className="w-full h-full object-cover" /><span className="absolute top-3 left-3 bg-white/90 text-[10px] px-2 py-1 rounded font-black text-[#4b0b78]">S No. {index + 1}</span></div>
+                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{banner.title || "Untitled Banner"}</h3><p className="text-xs text-gray-400 truncate">{banner.subtitle || "No subtitle"}</p></div><div className="flex items-center justify-between"><span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-600">{banner.type} section</span><span className="text-[10px] font-bold text-gray-500">{banner.active ? "Published" : "Draft"}</span></div><div className="flex gap-2"><button onClick={() => handleOpenModal(banner)} className="flex-1 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]"><FiEdit2 className="inline mr-1" />Edit</button><button onClick={() => handleDelete(banner.id)} className="flex-1 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
+                            </article>
+                        ))}
+                    </div>}
                 </div>
             )}
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/60  animate-in fade-in duration-300 px-4">
+                createPortal(
+                <div className="fixed inset-0 z-[1000] flex h-screen w-screen items-center justify-center bg-slate-900/60 px-4 backdrop-blur-[3px] animate-in fade-in duration-300">
                     <div
                         className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[95vh] overflow-y-auto hide-scrollbar"
                         onClick={(e) => e.stopPropagation()}
@@ -300,7 +363,7 @@ const BannerManagement = () => {
                                         />
                                         {currentBanner.image ? (
                                             <div className="absolute inset-0">
-                                                <img src={currentBanner.image} className="w-full h-full object-cover" alt="Desktop Preview" />
+                                                <img src={resolveAssetUrl(currentBanner.image)} className="w-full h-full object-cover" alt="Desktop Preview" />
                                                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                                                     <FiUploadCloud size={24} />
                                                 </div>
@@ -325,7 +388,7 @@ const BannerManagement = () => {
                                         />
                                         {currentBanner.mobile_image ? (
                                             <div className="absolute inset-0">
-                                                <img src={currentBanner.mobile_image} className="w-full h-full object-cover" alt="Mobile Preview" />
+                                                <img src={resolveAssetUrl(currentBanner.mobile_image)} className="w-full h-full object-cover" alt="Mobile Preview" />
                                                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                                                     <FiUploadCloud size={24} />
                                                 </div>
@@ -452,7 +515,9 @@ const BannerManagement = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
+                )
             )}
         </div>
     );
