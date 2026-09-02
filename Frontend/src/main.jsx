@@ -18,6 +18,7 @@ import AddAlbum from './Admin/AddAlbum.jsx'
 import BannerManagement from './Admin/Marketting/BannerManagement.jsx'
 import VideoManagement from './Admin/Marketting/VideoManagement.jsx'
 import GalleryManagement from './Admin/Marketting/GalleryManagement.jsx'
+import AddGalleryAlbum from './Admin/Marketting/AddGalleryAlbum.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
@@ -96,6 +97,10 @@ const router = createHashRouter([
           {
             path: 'gallery',
             element: <GalleryManagement />,
+          },
+          {
+            path: 'gallery/add',
+            element: <AddGalleryAlbum />,
           },
           {
             path: 'customers',

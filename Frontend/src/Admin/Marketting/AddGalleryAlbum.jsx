@@ -1,0 +1,404 @@
+﻿import { useState } from "react";
+import {
+  ChevronLeft,
+  CloudUpload,
+  X,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Link as LinkIcon,
+  Upload,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import api from "../../api";
+
+const MOCK_PHOTOS = [
+  "linear-gradient(135deg, #d3b495, #f2e4d2)",
+  "linear-gradient(135deg, #a9c7d9, #e9d6c8)",
+  "linear-gradient(135deg, #e8d5c4, #fff)",
+  "linear-gradient(135deg, #f3e1c1, #fff)",
+  "linear-gradient(135deg, #2d7b5a, #a0d8c0)",
+  "linear-gradient(135deg, #d8d8d8, #b0b0b0)",
+  "linear-gradient(135deg, #e9d6c8, #d3b495)",
+  "linear-gradient(135deg, #f2e4d2, #a9c7d9)",
+];
+
+const AddGalleryAlbum = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "",
+    status: "Active",
+    sort_order: "1",
+    short_description: "",
+    description: "",
+    meta_title: "",
+    meta_description: "",
+  });
+  const [coverImage, setCoverImage] = useState("linear-gradient(135deg, #d3b495, #f2e4d2)");
+  const [photos, setPhotos] = useState(MOCK_PHOTOS);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const removePhoto = (idx) => {
+    setPhotos(photos.filter((_, i) => i !== idx));
+  };
+
+  const handleSave = async () => {
+    if (!formData.title || !formData.category || !formData.short_description) {
+      toast.error("Please fill in all required fields (*)");
+      return;
+    }
+    try {
+      setLoading(true);
+      await api.post("/gallery", { ...formData, cover_image: coverImage, photos });
+      toast.success("Album saved successfully");
+      navigate("/admin/gallery");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to save album");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f9fafb] flex flex-col">
+      <div className="flex-1 p-4 md:p-6 mx-auto w-full max-w-[1500px]">
+        {/* ── HEADER ── */}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-[2rem] font-bold tracking-tight text-[#1f1d1b]">
+              Add New Gallery Album
+            </h1>
+            <p className="mt-1 text-[13px] text-[#646464]">
+              Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span>
+              Gallery Management <span className="mx-2 text-[#9a9a9a]">&gt;</span>
+              <span className="font-medium text-[#2a2a2a]">Add New Gallery Album</span>
+            </p>
+          </div>
+          <Link
+            to="/admin/gallery"
+            className="inline-flex h-[42px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[14px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Gallery
+          </Link>
+        </div>
+
+        {/* ── MAIN GRID ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-24">
+          
+          {/* LEFT COLUMN */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Form Fields */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+              <div className="space-y-5">
+                {/* Album Title */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Album Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    placeholder="Enter album title"
+                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2.5 text-[14px] text-[#111827] outline-none focus:border-[#d4a843] focus:ring-1 focus:ring-[#d4a843]"
+                  />
+                  <p className="mt-1.5 text-[12px] text-[#6b7280]">
+                    Enter a clear and attractive title for the album
+                  </p>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2.5 text-[14px] text-[#111827] outline-none focus:border-[#d4a843] focus:ring-1 focus:ring-[#d4a843] appearance-none"
+                  >
+                    <option value="">Select category</option>
+                    <option value="Photo Frames">Photo Frames</option>
+                    <option value="Collage Frames">Collage Frames</option>
+                    <option value="Photo Prints">Photo Prints</option>
+                    <option value="Canvas Prints">Canvas Prints</option>
+                  </select>
+                  <p className="mt-1.5 text-[12px] text-[#6b7280]">
+                    Choose the most suitable category for this album
+                  </p>
+                </div>
+
+                {/* Status & Sort Order */}
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                      Status <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2.5 text-[14px] text-[#111827] outline-none focus:border-[#d4a843] appearance-none"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                    <p className="mt-1.5 text-[12px] text-[#6b7280]">
+                      Active albums will be visible on the website
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                      Sort Order
+                    </label>
+                    <input
+                      type="number"
+                      name="sort_order"
+                      value={formData.sort_order}
+                      onChange={handleChange}
+                      className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2.5 text-[14px] text-[#111827] outline-none focus:border-[#d4a843]"
+                    />
+                    <p className="mt-1.5 text-[12px] text-[#6b7280]">
+                      Lower numbers appear first
+                    </p>
+                  </div>
+                </div>
+
+                {/* Short Description */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Short Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="short_description"
+                    value={formData.short_description}
+                    onChange={handleChange}
+                    placeholder="Enter short description"
+                    rows="3"
+                    maxLength={160}
+                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-3 text-[14px] text-[#111827] outline-none focus:border-[#d4a843]"
+                  />
+                  <div className="mt-1.5 flex justify-between text-[12px] text-[#6b7280]">
+                    <span>A brief summary of this album (max 160 characters)</span>
+                    <span>{formData.short_description.length}/160</span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Description (Optional)
+                  </label>
+                  <div className="rounded-xl border border-[#d1d5db] overflow-hidden bg-white">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-1 border-b border-[#d1d5db] bg-[#f9fafb] p-2">
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><Bold className="h-4 w-4" /></button>
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><Italic className="h-4 w-4" /></button>
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><Underline className="h-4 w-4" /></button>
+                      <div className="w-[1px] h-5 bg-[#d1d5db] mx-1" />
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><List className="h-4 w-4" /></button>
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><ListOrdered className="h-4 w-4" /></button>
+                      <div className="w-[1px] h-5 bg-[#d1d5db] mx-1" />
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><AlignLeft className="h-4 w-4" /></button>
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><AlignCenter className="h-4 w-4" /></button>
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><AlignRight className="h-4 w-4" /></button>
+                      <div className="w-[1px] h-5 bg-[#d1d5db] mx-1" />
+                      <button className="p-1.5 text-[#4b5563] hover:bg-white hover:shadow-sm rounded"><LinkIcon className="h-4 w-4" /></button>
+                    </div>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Enter detailed description about this album"
+                      rows="6"
+                      maxLength={1000}
+                      className="w-full px-4 py-3 text-[14px] text-[#111827] outline-none border-none resize-none"
+                    />
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-[12px] text-[#6b7280]">
+                    <span>Detailed information about this album</span>
+                    <span>{formData.description.length}/1000</span>
+                  </div>
+                </div>
+
+                {/* Cover Image */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Album Cover Image <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="flex-1 w-full border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-8 bg-[#f9fafb] hover:bg-white transition cursor-pointer group">
+                      <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+                      <p className="mt-3 text-[14px] text-[#4b5563] font-medium text-center">
+                        <span className="text-[#111827]">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="mt-1 text-[12px] text-[#6b7280]">JPG, PNG or WEBP (max. 2MB)</p>
+                    </div>
+                    {coverImage && (
+                      <div className="relative shrink-0 w-[200px] h-[130px] rounded-xl overflow-hidden shadow-sm">
+                        <div className="w-full h-full bg-cover bg-center" style={{ background: coverImage }} />
+                        <button
+                          onClick={() => setCoverImage(null)}
+                          className="absolute top-2 right-2 h-6 w-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black transition"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-2 text-[12px] text-[#6b7280]">Recommended size: 1200 x 800 pixels</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Photos Upload */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[16px] font-bold text-[#1f1d1b]">Photos <span className="text-red-500">*</span></h3>
+                <button className="inline-flex h-[36px] items-center gap-1.5 rounded-lg bg-[#162420] px-3 text-[13px] font-semibold text-white transition hover:bg-[#1a3c36]">
+                  <Upload className="h-4 w-4" /> Upload Photos
+                </button>
+              </div>
+
+              <div className="border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-10 bg-[#f9fafb] hover:bg-white transition cursor-pointer group mb-5">
+                <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+                <p className="mt-3 text-[14px] text-[#4b5563] font-medium text-center">
+                  <span className="text-[#111827]">Click to upload</span> or drag and drop multiple photos
+                </p>
+                <p className="mt-1 text-[12px] text-[#6b7280]">JPG, PNG, WEBP (max. 5MB each)</p>
+                <p className="mt-3 text-[12px] text-[#9ca3af]">You can upload up to 50 photos</p>
+              </div>
+
+              {photos.length > 0 && (
+                <>
+                  <div className="grid grid-cols-4 gap-3">
+                    {photos.map((p, idx) => (
+                      <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-sm group">
+                        <div className="w-full h-full bg-cover bg-center" style={{ background: p }} />
+                        <button
+                          onClick={() => removePhoto(idx)}
+                          className="absolute top-1.5 right-1.5 h-6 w-6 bg-white/90 rounded-full flex items-center justify-center text-[#4b5563] shadow-sm hover:bg-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[13px] font-medium text-[#4b5563]">
+                    Total Photos: {photos.length}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* SEO Settings */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
+              <h3 className="text-[16px] font-bold text-[#1f1d1b] mb-4">SEO Settings (Optional)</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Title</label>
+                  <input
+                    type="text"
+                    name="meta_title"
+                    value={formData.meta_title}
+                    onChange={handleChange}
+                    placeholder="Enter meta title (max 60 characters)"
+                    maxLength={60}
+                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
+                  />
+                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_title.length}/60</div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Description</label>
+                  <textarea
+                    name="meta_description"
+                    value={formData.meta_description}
+                    onChange={handleChange}
+                    placeholder="Enter meta description (max 160 characters)"
+                    rows="3"
+                    maxLength={160}
+                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
+                  />
+                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_description.length}/160</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Card */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
+              <h3 className="text-[14px] font-bold text-[#1f1d1b] mb-4">Preview</h3>
+              <div className="rounded-2xl border border-[#e7e0d8] bg-white p-4 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                <div
+                  className="h-20 w-32 shrink-0 rounded-xl bg-cover bg-center border border-[#e7e0d8]"
+                  style={{ background: coverImage || "#f3f4f6" }}
+                />
+                <div className="flex-1 w-full text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-3">
+                    <h4 className="text-[15px] font-bold text-[#1f1f1f] truncate max-w-[150px]">
+                      {formData.title || "Album Title"}
+                    </h4>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold ${formData.status === 'Active' ? 'bg-[#edf7f1] text-[#2d7b5a]' : 'bg-[#fff0f0] text-[#d04d4d]'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${formData.status === 'Active' ? 'bg-[#2d7b5a]' : 'bg-[#d04d4d]'}`} />
+                      {formData.status}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[13px] font-medium text-[#4b5563]">
+                    {formData.category || "Category"}
+                  </div>
+                  <div className="mt-1 text-[12px] text-[#6b7280] line-clamp-2 leading-relaxed">
+                    {formData.short_description || "Short description will appear here..."}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM ACTION BAR ── */}
+      <div className="fixed bottom-0 left-0 right-0 lg:left-[280px] bg-white border-t border-[#e5e7eb] p-4 flex items-center justify-between z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button
+          onClick={() => navigate("/admin/gallery")}
+          className="inline-flex h-[42px] items-center justify-center rounded-xl border border-[#d1d5db] bg-white px-6 text-[14px] font-semibold text-[#374151] hover:bg-[#f9fafb]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[#162420] px-6 text-[14px] font-semibold text-white hover:bg-[#1a3c36] disabled:opacity-70"
+        >
+          {loading ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <CloudUpload className="h-4 w-4" />
+          )}
+          Save Album
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AddGalleryAlbum;
