@@ -33,6 +33,8 @@ const createProduct = async (req, res) => {
       slot_photos,
       product_images,
       status,
+      created_by,
+      updated_by,
     } = req.body;
 
     if (!product_name || !product_name.trim()) {
@@ -66,6 +68,8 @@ const createProduct = async (req, res) => {
       slot_photos: slot_photos || {},
       product_images: Array.isArray(product_images) ? product_images : [],
       status: status || "Active",
+      created_by: created_by || null,
+      updated_by: updated_by || created_by || null,
     };
 
     const result = await productModule.createProduct(payload);

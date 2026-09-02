@@ -40,6 +40,8 @@ const createProduct = async (productData) => {
     slot_photos,
     product_images,
     status = "Active",
+    created_by = null,
+    updated_by = null,
   } = productData;
 
   const query = `
@@ -57,8 +59,10 @@ const createProduct = async (productData) => {
       frame_data,
       slot_photos,
       product_images,
-      status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      status,
+      created_by,
+      updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -76,6 +80,8 @@ const createProduct = async (productData) => {
     slot_photos ? JSON.stringify(slot_photos) : null,
     product_images ? JSON.stringify(product_images) : null,
     status || "Active",
+    created_by || null,
+    updated_by || created_by || null,
   ];
 
   const pool = getDB();
@@ -201,6 +207,7 @@ const updateProduct = async (id, updateData) => {
     slot_photos,
     product_images,
     status,
+    updated_by = null,
   } = updateData;
 
   const query = `
@@ -216,7 +223,8 @@ const updateProduct = async (id, updateData) => {
         frame_data = ?,
         slot_photos = ?,
         product_images = ?,
-        status = ?
+        status = ?,
+        updated_by = ?
     WHERE id = ? OR uuid = ? OR product_id = ?
   `;
 
@@ -233,6 +241,7 @@ const updateProduct = async (id, updateData) => {
     slot_photos ? JSON.stringify(slot_photos) : null,
     product_images ? JSON.stringify(product_images) : null,
     status || "Active",
+    updated_by || null,
     id,
     id,
     id,

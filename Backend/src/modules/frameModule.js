@@ -13,6 +13,8 @@ const createFrame = async (frameData) => {
     frame_image,
     photo_slots,
     status = "Active",
+    created_by = null,
+    updated_by = null,
   } = frameData;
 
   const query = `
@@ -22,8 +24,10 @@ const createFrame = async (frameData) => {
       orientation,
       frame_image,
       photo_slots,
-      status
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      status,
+      created_by,
+      updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -33,6 +37,8 @@ const createFrame = async (frameData) => {
     frame_image,
     JSON.stringify(photo_slots || []),
     status || "Active",
+    created_by || null,
+    updated_by || created_by || null,
   ];
 
   const pool = getDB();
@@ -107,6 +113,7 @@ const updateFrame = async (id, updateData) => {
     frame_image,
     photo_slots,
     status,
+    updated_by = null,
   } = updateData;
 
   const query = `
@@ -115,7 +122,8 @@ const updateFrame = async (id, updateData) => {
         orientation = ?,
         frame_image = ?,
         photo_slots = ?,
-        status = ?
+        status = ?,
+        updated_by = ?
     WHERE id = ? OR uuid = ?
   `;
 
@@ -125,6 +133,7 @@ const updateFrame = async (id, updateData) => {
     frame_image,
     JSON.stringify(photo_slots || []),
     status || "Active",
+    updated_by || null,
     id,
     id,
   ];
