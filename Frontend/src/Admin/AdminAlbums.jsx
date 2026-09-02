@@ -33,9 +33,20 @@ const formatCurrency = (value) => {
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
-  if (/^https?:\/\//i.test(imagePath)) return imagePath;
-  if (imagePath.startsWith('/')) return `http://localhost:5000${imagePath}`;
-  return imagePath;
+
+  const normalizedPath = String(imagePath).trim();
+  if (!normalizedPath) return '';
+  if (/^https?:\/\//i.test(normalizedPath)) return encodeURI(normalizedPath);
+
+  const cleanPath = normalizedPath.replace(/\\/g, '/');
+  let finalPath = cleanPath;
+
+  if (finalPath.startsWith('/')) finalPath = finalPath;
+  else if (finalPath.startsWith('uploads/')) finalPath = `/${finalPath}`;
+  else if (finalPath.startsWith('images/')) finalPath = `/${finalPath}`;
+  else finalPath = `/${finalPath.replace(/^\//, '')}`;
+
+  return encodeURI(`http://localhost:5000${finalPath}`);
 };
 
 const normalizeAlbum = (album) => {
@@ -52,7 +63,8 @@ const normalizeAlbum = (album) => {
     return [];
   })();
 
-  const thumbnail = getImageUrl(album.thumbnail_image || productImages[0] || '');
+  const firstGalleryImage = productImages.find((image) => Boolean(image));
+  const thumbnail = getImageUrl(album.thumbnail_image || firstGalleryImage || '');
   const stock = Number(album.stock_quantity || 0);
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
 
@@ -317,15 +329,23 @@ const AdminAlbums = () => {
                     <tr key={album.id} className="border-b border-[#f0efec] text-sm text-[#2d2d2d] transition hover:bg-[#fafaf9]">
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className="h-14 w-14 rounded-xl border border-[#eaeaea] bg-cover bg-center shadow-sm"
-                            style={{
-                              backgroundImage: album.image && !album.image.startsWith('linear-gradient') ? `url(${album.image})` : undefined,
-                              background: album.image && album.image.startsWith('linear-gradient') ? album.image : undefined,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                            }}
-                          />
+                          {album.image && !album.image.startsWith('linear-gradient') ? (
+                            <img
+                              src={album.image}
+                              alt={album.name}
+                              className="h-14 w-14 rounded-xl border border-[#eaeaea] object-cover shadow-sm"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="h-14 w-14 rounded-xl border border-[#eaeaea] shadow-sm"
+                              style={{
+                                background: album.image && album.image.startsWith('linear-gradient') ? album.image : 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
+                              }}
+                            />
+                          )}
                           <div>
                             <div className="font-semibold text-[#1d1d1d]">{album.name}</div>
                             <div className="text-[12px] text-[#707070]">{album.category} album</div>
