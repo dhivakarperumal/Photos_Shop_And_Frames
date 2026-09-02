@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   Filter,
+  Frame,
   Layers,
   PackageCheck,
   Pencil,
@@ -18,6 +19,7 @@ import {
   Star,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import api from '../../api';
 import toast from 'react-hot-toast';
@@ -62,32 +64,6 @@ const initialMockProducts = [
     views: 2156,
     image: 'linear-gradient(135deg, #a9c7d9, #e9d6c8)',
   },
-  {
-    id: 'mock-4',
-    name: 'LED Light Frame',
-    code: 'PF-LED-001',
-    category: 'Custom Frames',
-    price: '₹1,599',
-    oldPrice: '₹2,199',
-    stock: 12,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 856,
-    image: 'linear-gradient(135deg, #d6bf9a, #f3e1c1)',
-  },
-  {
-    id: 'mock-5',
-    name: 'Personalized Photo Mug',
-    code: 'PF-GE-001',
-    category: 'Gifts',
-    price: '₹399',
-    oldPrice: '₹599',
-    stock: 80,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1789,
-    image: 'linear-gradient(135deg, #d6c4ae, #ebdfd0)',
-  },
 ];
 
 const AdminProducts = () => {
@@ -95,13 +71,14 @@ const AdminProducts = () => {
   const [productsList, setProductsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const res = await api.get('/products');
       if (res.data?.data && res.data.data.length > 0) {
-        // Map database products to table representation
+        // Map database products
         const mapped = res.data.data.map((p) => {
           const firstVariant = p.size_variants?.[0] || {};
           const totalStock = (p.size_variants || []).reduce(
@@ -110,6 +87,9 @@ const AdminProducts = () => {
           );
           const minOfferPrice = firstVariant.offer_price ? `₹${firstVariant.offer_price}` : '₹--';
           const minMrp = firstVariant.mrp ? `₹${firstVariant.mrp}` : '';
+
+          // Prefer composite image (product_images[0]), then frame image
+          const primaryImg = p.product_images?.[0] || p.frame_data?.frame_image || '';
 
           return {
             id: p.id,
@@ -123,7 +103,8 @@ const AdminProducts = () => {
             stockLabel: totalStock <= 15 ? 'Low Stock' : 'In Stock',
             status: p.status || 'Active',
             views: 0,
-            image: p.frame_data?.frame_image || p.product_images?.[0] || '',
+            image: primaryImg,
+            rawData: p,
             isDbProduct: true,
           };
         });
@@ -224,7 +205,16 @@ const AdminProducts = () => {
               Export
             </button>
 
-            {/* ADD FRAME SETUP BUTTON (PLACED NEAR ADD NEW PRODUCT) */}
+            {/* VIEW FRAMES BUTTON */}
+            <Link
+              to="/admin/frames"
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
+            >
+              <Eye className="h-4 w-4 text-[#d4a843]" />
+              View Frames
+            </Link>
+
+            {/* ADD FRAME SETUP BUTTON */}
             <Link
               to="/admin/products/frame-setup"
               className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#9b6b2d] shadow-sm transition hover:bg-[#fff5e0]"
@@ -348,7 +338,7 @@ const AdminProducts = () => {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
-                            {product.image && product.image.startsWith('http') || product.image?.startsWith('/') ? (
+                            {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
                               <img
                                 src={product.image}
                                 alt={product.name}
@@ -399,10 +389,12 @@ const AdminProducts = () => {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
+                            onClick={() => setSelectedProductView(product)}
                             className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
-                            aria-label="Edit product"
+                            aria-label="View product"
+                            title="View product details & frame layout"
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
@@ -437,6 +429,76 @@ const AdminProducts = () => {
             </div>
           </div>
         </div>
+
+        {/* ================= PRODUCT PREVIEW MODAL ================= */}
+        {selectedProductView && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+              <button
+                type="button"
+                onClick={() => setSelectedProductView(null)}
+                className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full bg-[#f4f0eb] text-[#444] hover:bg-[#e8e2d8]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-center gap-3 border-b border-[#f0ebe3] pb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f3ef] text-[#1a3c36]">
+                  <Frame className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#202020]">
+                    {selectedProductView.name}
+                  </h2>
+                  <p className="text-xs font-mono text-[#888]">
+                    {selectedProductView.code} • {selectedProductView.category}
+                  </p>
+                </div>
+              </div>
+
+              {/* PRODUCT IMAGE & FRAME COMPOSITE */}
+              <div className="my-5 flex items-center justify-center rounded-2xl border border-[#e8dfd2] bg-[#f7f4ee] p-4">
+                {selectedProductView.image && (selectedProductView.image.startsWith('http') || selectedProductView.image.startsWith('/')) ? (
+                  <img
+                    src={selectedProductView.image}
+                    alt={selectedProductView.name}
+                    className="max-h-[340px] rounded-lg object-contain shadow-md"
+                  />
+                ) : (
+                  <div className="h-48 w-48 rounded-xl" style={{ background: selectedProductView.image }} />
+                )}
+              </div>
+
+              {/* SIZE VARIANTS */}
+              {selectedProductView.rawData?.size_variants && (
+                <div className="mb-4">
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#666]">
+                    Available Sizes & Pricing
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {selectedProductView.rawData.size_variants.map((v, i) => (
+                      <div key={i} className="rounded-xl border border-[#e8e2d8] bg-[#faf8f5] p-2.5 text-xs">
+                        <p className="font-bold text-[#222]">{v.size}</p>
+                        <p className="mt-1 font-bold text-[#1a3c36]">₹{v.offer_price} <span className="font-normal text-[#888] line-through">₹{v.mrp}</span></p>
+                        <p className="text-[10px] text-[#666]">Stock: {v.stock}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedProductView(null)}
+                  className="rounded-xl bg-[#1a3c36] px-6 py-2 text-xs font-bold text-white hover:bg-[#235048]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

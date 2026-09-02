@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -63,8 +63,122 @@ const colorOptions = [
   "Custom Finish",
 ];
 
+/**
+ * Generate a composite image containing the frame background
+ * and all uploaded slot photos properly positioned & clipped
+ */
+const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos) => {
+  return new Promise((resolve) => {
+    if (!frameImageUrl) return resolve(null);
+
+    const frameImg = new Image();
+    frameImg.crossOrigin = "anonymous";
+    frameImg.src = frameImageUrl;
+
+    frameImg.onload = async () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const w = frameImg.naturalWidth || 1000;
+        const h = frameImg.naturalHeight || 1000;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+
+        // 1. Draw Frame background image
+        ctx.drawImage(frameImg, 0, 0, w, h);
+
+        const parsePercentage = (val, total) => {
+          if (typeof val === "string" && val.includes("%")) {
+            return (parseFloat(val) / 100) * total;
+          }
+          return parseFloat(val) || 0;
+        };
+
+        // 2. Draw slot photos
+        for (const slot of slots || []) {
+          const photoData = slotPhotos[slot.id];
+          const photoSrc = photoData?.preview || photoData?.url;
+
+          if (photoSrc) {
+            await new Promise((slotResolve) => {
+              const pImg = new Image();
+              pImg.crossOrigin = "anonymous";
+              pImg.src = photoSrc;
+
+              pImg.onload = () => {
+                ctx.save();
+
+                const sx = parsePercentage(slot.left, w);
+                const sy = parsePercentage(slot.top, h);
+                const sw = parsePercentage(slot.width, w);
+                const sh = parsePercentage(slot.height, h);
+
+                // Clip region
+                ctx.beginPath();
+                if (slot.shape === "circle") {
+                  ctx.arc(sx + sw / 2, sy + sh / 2, Math.min(sw, sh) / 2, 0, Math.PI * 2);
+                } else {
+                  const radius = Math.min(12, Math.min(sw, sh) * 0.05);
+                  if (ctx.roundRect) {
+                    ctx.roundRect(sx, sy, sw, sh, radius);
+                  } else {
+                    ctx.rect(sx, sy, sw, sh);
+                  }
+                }
+                ctx.closePath();
+                ctx.clip();
+
+                // Object-fit calculation (cover vs contain)
+                const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
+                const slotRatio = sw / sh;
+                let dx = sx, dy = sy, dw = sw, dh = sh;
+
+                if (slot.objectFit === "contain") {
+                  if (imgRatio > slotRatio) {
+                    dh = sw / imgRatio;
+                    dy = sy + (sh - dh) / 2;
+                  } else {
+                    dw = sh * imgRatio;
+                    dx = sx + (sw - dw) / 2;
+                  }
+                } else {
+                  // cover
+                  if (imgRatio > slotRatio) {
+                    dw = sh * imgRatio;
+                    dx = sx - (dw - sw) / 2;
+                  } else {
+                    dh = sw / imgRatio;
+                    dy = sy - (dh - sh) / 2;
+                  }
+                }
+
+                ctx.drawImage(pImg, dx, dy, dw, dh);
+                ctx.restore();
+                slotResolve();
+              };
+
+              pImg.onerror = () => slotResolve();
+            });
+          }
+        }
+
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, "image/jpeg", 0.92);
+      } catch (err) {
+        console.error("Composite creation error:", err);
+        resolve(null);
+      }
+    };
+
+    frameImg.onerror = () => resolve(null);
+  });
+};
+
 const AddProducts = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preSelectedFrameId = searchParams.get("frameId");
 
   // ==========================================
   // BASIC PRODUCT STATE
@@ -102,7 +216,7 @@ const AddProducts = () => {
   const [saving, setSaving] = useState(false);
 
   // ==========================================
-  // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES
+  // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES & PRESELECTED FRAME
   // ==========================================
   useEffect(() => {
     const fetchInitData = async () => {
@@ -123,10 +237,24 @@ const AddProducts = () => {
       } catch (err) {
         console.warn("Could not fetch categories:", err);
       }
+
+      // If frameId is specified in URL params, load that frame
+      if (preSelectedFrameId) {
+        try {
+          const frameRes = await api.get(`/frames/${preSelectedFrameId}`);
+          if (frameRes.data?.data) {
+            const fr = frameRes.data.data;
+            setSelectedFrame(fr);
+            setOrientation(fr.orientation || "Portrait");
+          }
+        } catch (err) {
+          console.warn("Could not load preselected frame:", err);
+        }
+      }
     };
 
     fetchInitData();
-  }, []);
+  }, [preSelectedFrameId]);
 
   // ==========================================
   // FETCH FRAMES WHEN ORIENTATION CHANGES
@@ -139,8 +267,10 @@ const AddProducts = () => {
         const frames = response.data?.data || [];
         setAvailableFrames(frames);
 
-        // If current selected frame doesn't match new orientation, auto select first match or clear
-        if (frames.length > 0) {
+        // Keep pre-selected frame if matching, else select first available
+        if (selectedFrame && selectedFrame.orientation === orientation) {
+          // keep
+        } else if (frames.length > 0) {
           setSelectedFrame(frames[0]);
           setSlotPhotos({});
         } else {
@@ -235,7 +365,7 @@ const AddProducts = () => {
   };
 
   // ==========================================
-  // SUBMIT FORM
+  // SUBMIT FORM WITH COMPOSITE IMAGE GENERATION
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -264,13 +394,41 @@ const AddProducts = () => {
     }
 
     setSaving(true);
+    const toastId = toast.loading("Generating product composite image & saving...");
+
     try {
-      // Map slot photos URL dictionary
+      // 1. Generate full composite (Frame + Photos merged on Canvas)
+      let finalProductImage = selectedFrame.frame_image;
+      const compositeBlob = await createCompositeFrameImage(
+        selectedFrame.frame_image,
+        selectedFrame.photo_slots || [],
+        slotPhotos
+      );
+
+      if (compositeBlob) {
+        const compFormData = new FormData();
+        compFormData.append("folder", "products");
+        compFormData.append(
+          "file",
+          compositeBlob,
+          `composite-${productId}-${Date.now()}.jpg`
+        );
+
+        try {
+          const compRes = await api.post("/upload", compFormData);
+          finalProductImage = compRes.data?.url || compRes.data?.urls?.[0] || finalProductImage;
+        } catch (uploadErr) {
+          console.warn("Composite upload fallback:", uploadErr);
+        }
+      }
+
+      // 2. Map slot photos URL dictionary
       const slotPhotosMap = {};
       Object.keys(slotPhotos).forEach((slotId) => {
         slotPhotosMap[slotId] = slotPhotos[slotId]?.url || slotPhotos[slotId]?.preview || "";
       });
 
+      // 3. Save Product
       const payload = {
         uuid,
         product_id: productId,
@@ -294,19 +452,22 @@ const AddProducts = () => {
           photo_slots: selectedFrame.photo_slots || [],
         },
         slot_photos: slotPhotosMap,
-        product_images: [selectedFrame.frame_image],
+        product_images: [finalProductImage, selectedFrame.frame_image],
         status: "Active",
       };
 
       const response = await api.post("/products", payload);
 
       if (response.data?.success) {
-        toast.success(`Product ${productId} created successfully!`);
+        toast.dismiss(toastId);
+        toast.success(`Product ${productId} saved with complete frame & photo layout!`);
         navigate("/admin/products");
       } else {
+        toast.dismiss(toastId);
         toast.error(response.data?.message || "Failed to create product.");
       }
     } catch (error) {
+      toast.dismiss(toastId);
       console.error("Create product error:", error);
       toast.error(error.response?.data?.message || "Failed to create product.");
     } finally {
@@ -332,7 +493,15 @@ const AddProducts = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/admin/frames"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffaf0] px-4 py-2.5 text-[14px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
+            >
+              <Eye className="h-4 w-4" />
+              View Frames
+            </Link>
+
             <Link
               to="/admin/products/frame-setup"
               className="inline-flex items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffaf0] px-4 py-2.5 text-[14px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
@@ -354,7 +523,7 @@ const AddProducts = () => {
         {/* ================= MAIN FORM ================= */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-6 xl:grid-cols-12">
-            {/* LEFT COLUMN: PRODUCT SPECS & SIZES (7 COLS) */}
+            {/* LEFT COLUMN: PRODUCT SPECS & SIZES (6 COLS) */}
             <div className="space-y-6 xl:col-span-6">
               {/* SECTION 1: PRODUCT DETAILS */}
               <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
@@ -614,7 +783,7 @@ const AddProducts = () => {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: ORIENTATION, FRAME SELECTOR & LIVE SLOT PHOTO UPLOADER (5 COLS) */}
+            {/* RIGHT COLUMN: ORIENTATION, FRAME SELECTOR & LIVE SLOT PHOTO UPLOADER (6 COLS) */}
             <div className="space-y-6 xl:col-span-6">
               {/* SECTION 3: ORIENTATION & FRAME PICKER */}
               <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
@@ -886,7 +1055,7 @@ const AddProducts = () => {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(26,60,54,0.18)] transition hover:bg-[#224e47] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" />
-              {saving ? "Saving Product..." : "Save Product"}
+              {saving ? "Saving Product with Photo Layout..." : "Save Product"}
             </button>
           </div>
         </form>
