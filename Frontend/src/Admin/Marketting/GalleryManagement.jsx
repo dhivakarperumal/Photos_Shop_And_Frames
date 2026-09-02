@@ -21,11 +21,12 @@ import {
   RefreshCw,
   Loader2
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api, { API_URL } from "../../api";
 import toast from "react-hot-toast";
 
 const GalleryManagement = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("albums");
   const [viewMode, setViewMode] = useState("table");
   
@@ -131,9 +132,18 @@ const GalleryManagement = () => {
 
   const handleDelete = async (album_id) => {
     if (!window.confirm("Are you sure you want to delete this album?")) return;
-    // API logic for delete would go here (e.g., api.delete(`/gallery/${album_id}`))
-    toast.error("Delete endpoint not implemented yet.");
+    try {
+      await api.delete(`/gallery/${album_id}`);
+      setAlbums((previousAlbums) => previousAlbums.filter((album) => album.album_id !== album_id));
+      toast.success("Gallery album deleted successfully");
+    } catch (error) {
+      console.error("Error deleting gallery album:", error);
+      toast.error(error?.response?.data?.message || "Failed to delete gallery album");
+    }
   };
+
+  const handleEdit = (albumId) => navigate(`/admin/gallery/add?edit=${albumId}`);
+  const handleView = (albumId) => navigate(`/admin/gallery/${albumId}`);
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -413,10 +423,10 @@ const GalleryManagement = () => {
                         {/* Actions */}
                         <td className="border-t border-[#f0ebe6] px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                            <button type="button" onClick={() => handleEdit(album.album_id)} aria-label="Edit gallery album" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                            <button type="button" onClick={() => handleView(album.album_id)} aria-label="View gallery album" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
                               <Eye className="h-3.5 w-3.5" />
                             </button>
                             <button 

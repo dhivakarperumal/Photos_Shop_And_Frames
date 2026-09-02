@@ -63,7 +63,43 @@ const getAllAlbums = async (req, res) => {
   }
 };
 
+const getAlbumById = async (req, res) => {
+  try {
+    const album = await galleryModule.getAlbumById(req.params.albumId);
+    if (!album) return res.status(404).json({ success: false, message: "Gallery album not found" });
+    return res.status(200).json({ success: true, data: album });
+  } catch (error) {
+    console.error("Get gallery album error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to get gallery album" });
+  }
+};
+
+const updateAlbum = async (req, res) => {
+  try {
+    const album = await galleryModule.updateAlbum(req.params.albumId, req.body, req.body.photos);
+    if (!album) return res.status(404).json({ success: false, message: "Gallery album not found" });
+    return res.status(200).json({ success: true, message: "Gallery album updated successfully", data: album });
+  } catch (error) {
+    console.error("Update gallery album error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to update gallery album" });
+  }
+};
+
+const deleteAlbum = async (req, res) => {
+  try {
+    const deleted = await galleryModule.deleteAlbum(req.params.albumId);
+    if (!deleted) return res.status(404).json({ success: false, message: "Gallery album not found" });
+    return res.status(200).json({ success: true, message: "Gallery album deleted successfully" });
+  } catch (error) {
+    console.error("Delete gallery album error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to delete gallery album" });
+  }
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
+  getAlbumById,
+  updateAlbum,
+  deleteAlbum,
 };

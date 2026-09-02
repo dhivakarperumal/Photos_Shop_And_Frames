@@ -107,7 +107,59 @@ const getAllAlbums = async () => {
   }
 };
 
+const getAlbumById = async (albumId) => {
+  const pool = getDB();
+  const [albums] = await pool.query("SELECT * FROM gallery_albums WHERE album_id = ? LIMIT 1", [albumId]);
+  if (!albums.length) return null;
+
+  const [photos] = await pool.query("SELECT image_url FROM gallery_photos WHERE album_id = ? ORDER BY id ASC", [albumId]);
+  return { ...albums[0], photos: photos.map((photo) => photo.image_url) };
+};
+
+const updateAlbum = async (albumId, albumData, photos) => {
+  const {
+    title,
+    category,
+    status,
+    sort_order,
+    short_description,
+    description,
+    cover_image,
+    meta_title,
+    meta_description,
+  } = albumData;
+  const pool = getDB();
+  const [result] = await pool.query(
+    `UPDATE gallery_albums
+     SET title = ?, category = ?, status = ?, sort_order = ?, short_description = ?,
+         description = ?, cover_image = ?, meta_title = ?, meta_description = ?
+     WHERE album_id = ?`,
+    [title, category || null, status || "Active", sort_order || 1, short_description || null,
+      description || null, cover_image || null, meta_title || null, meta_description || null, albumId]
+  );
+
+  if (!result.affectedRows) return null;
+
+  if (Array.isArray(photos)) {
+    await pool.query("DELETE FROM gallery_photos WHERE album_id = ?", [albumId]);
+    if (photos.length) {
+      await pool.query("INSERT INTO gallery_photos (album_id, image_url) VALUES ?", [photos.map((url) => [albumId, url])]);
+    }
+  }
+
+  return getAlbumById(albumId);
+};
+
+const deleteAlbum = async (albumId) => {
+  const pool = getDB();
+  const [result] = await pool.query("DELETE FROM gallery_albums WHERE album_id = ?", [albumId]);
+  return result.affectedRows > 0;
+};
+
 module.exports = {
   createAlbum,
   getAllAlbums,
+  getAlbumById,
+  updateAlbum,
+  deleteAlbum,
 };
