@@ -400,7 +400,7 @@ const AdminProducts = () => {
                       <th className="px-4 py-4">Price</th>
                       <th className="px-4 py-4">Stock</th>
                       <th className="px-4 py-4">Status</th>
-                      <th className="px-4 py-4">Views</th>
+                      {/* <th className="px-4 py-4">Views</th> */}
                       <th className="px-4 py-4">Actions</th>
                     </tr>
                   </thead>
@@ -460,7 +460,7 @@ const AdminProducts = () => {
                             </span>
                           </td>
 
-                          <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
+                          {/* <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td> */}
 
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
