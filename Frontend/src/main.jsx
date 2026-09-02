@@ -27,6 +27,7 @@ import AddGalleryAlbum from './Admin/Marketting/AddGalleryAlbum.jsx'
 import GalleryDetails from './Admin/Marketting/GalleryDetails.jsx'
 import Coupons from './Admin/Marketting/Coupons.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
+import CustomerDetails from './Admin/CustomerDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
 
@@ -152,6 +153,10 @@ const router = createHashRouter([
           {
             path: 'customers',
             element: <AdminCustomers />,
+          },
+          {
+            path: 'customers/:userId',
+            element: <CustomerDetails />,
           },
           {
             path: 'reviews',

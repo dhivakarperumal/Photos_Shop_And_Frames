@@ -18,11 +18,15 @@ const registerUser = async (req, res) => {
       mobile_number,
       phone,
       profile_image,
+      role,
+      status,
     } = req.body;
 
     const normalizedUsername = (username || firstName || email || "user").toString().trim();
     const normalizedEmail = (email || "").toString().trim().toLowerCase();
     const normalizedPhone = (mobile_number ?? phone ?? "").toString().trim();
+    const normalizedRole = String(role || "user").trim().toLowerCase() === "admin" ? "Admin" : "user";
+    const normalizedStatus = ["Active", "Inactive"].includes(status) ? status : "Active";
 
     // Validation
     if (!normalizedUsername || !normalizedEmail || !password) {
@@ -55,8 +59,8 @@ const registerUser = async (req, res) => {
       password: hashedPassword,
       mobile_number: normalizedPhone || null,
       profile_image: profile_image || null,
-      role: "user",
-      status: "Active",
+      role: normalizedRole,
+      status: normalizedStatus,
       created_by: "system",
     };
 
@@ -65,7 +69,7 @@ const registerUser = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: result.userId, email: normalizedEmail, role: "user" },
+      { userId: result.userId, email: normalizedEmail, role: normalizedRole },
       process.env.JWT_SECRET || "your_secret_key",
       { expiresIn: "7d" }
     );
@@ -75,7 +79,7 @@ const registerUser = async (req, res) => {
       user_id,
       username: normalizedUsername,
       email: normalizedEmail,
-      role: "user",
+      role: normalizedRole,
       phone: normalizedPhone,
       mobile_number: normalizedPhone,
       profile_image: profile_image || null,
@@ -226,6 +230,39 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const getAdminUser = async (req, res) => {
+  try {
+    const user = await userModule.getUserByDatabaseId(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    return res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    console.error("Get admin user error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to retrieve user" });
+  }
+};
+
+const updateAdminUser = async (req, res) => {
+  try {
+    const existingUser = await userModule.getUserByDatabaseId(req.params.userId);
+    if (!existingUser) return res.status(404).json({ success: false, message: "User not found" });
+
+    const updateData = {
+      username: req.body.username ?? existingUser.username,
+      mobile_number: req.body.mobile_number ?? existingUser.mobile_number,
+      email: existingUser.email,
+      profile_image: existingUser.profile_image,
+      role: req.body.role ?? existingUser.role,
+      status: req.body.status ?? existingUser.status,
+      updated_by: req.body.updated_by || "Admin",
+    };
+    await userModule.updateUser(req.params.userId, updateData);
+    return res.status(200).json({ success: true, message: "User updated successfully", data: await userModule.getUserByDatabaseId(req.params.userId) });
+  } catch (error) {
+    console.error("Update admin user error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to update user" });
+  }
+};
+
 // Update user profile
 const updateUserProfile = async (req, res) => {
   try {
@@ -299,6 +336,8 @@ module.exports = {
   loginUser,
   getUserProfile,
   getAllUsers,
+  getAdminUser,
+  updateAdminUser,
   updateUserProfile,
   deleteUser,
 };

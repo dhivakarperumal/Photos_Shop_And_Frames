@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Download,
   Eye,
+  Pencil,
   Trash2,
   ChevronDown,
   ArrowUpRight,
@@ -17,8 +18,12 @@ import {
   List,
   Mail,
   Calendar,
+  Plus,
+  X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../api";
+import toast from "react-hot-toast";
 
 /* ============================================================
    HELPERS
@@ -56,7 +61,7 @@ const PAGE_SIZES = [10, 25, 50];
 /* ============================================================
    CUSTOMER CARD (card-view)
    ============================================================ */
-const CustomerCard = ({ customer }) => {
+const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
   const isActive = customer.status === "Active";
   const isAdmin  = ["Admin", "Super Admin"].includes(customer.role);
 
@@ -120,12 +125,19 @@ const CustomerCard = ({ customer }) => {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => onView(customer.id)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
             title="View customer"
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
+          <button type="button" onClick={() => onEdit(customer.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" title="Edit customer">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
           <button
+            type="button"
+            onClick={() => onDelete(customer.id)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
             title="Delete customer"
           >
@@ -137,10 +149,50 @@ const CustomerCard = ({ customer }) => {
   );
 };
 
+const AddUserModal = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({ username: "", email: "", phone: "", password: "", role: "user" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    try {
+      setSaving(true);
+      await api.post("/users/register", { username: form.username.trim(), email: form.email.trim(), phone: form.phone.trim(), mobile_number: form.phone.trim(), password: form.password, role: form.role, status: "Active" });
+      toast.success("User created successfully");
+      onCreated();
+      onClose();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || "Failed to create user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-[#ece9e5] pb-4"><div><h2 className="text-xl font-bold text-[#1f1d1b]">Add New User</h2><p className="mt-1 text-xs text-[#777]">Create a user or admin account</p></div><button type="button" onClick={onClose} aria-label="Close"><X className="h-5 w-5 text-[#777]" /></button></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input required type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Role</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]"><option value="user">User</option><option value="Admin">Admin</option></select></label>
+          <label className="space-y-2 sm:col-span-2"><span className="text-sm font-semibold text-[#333]">Password</span><input required minLength={6} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]" /></label>
+        </div>
+        {error && <p className="mt-4 text-sm text-[#c03939]">{error}</p>}
+        <div className="mt-6 flex justify-end gap-3 border-t border-[#ece9e5] pt-5"><button type="button" onClick={onClose} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Creating..." : "Create User"}</button></div>
+      </form>
+    </div>
+  );
+};
+
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
 const AdminCustomers = () => {
+  const navigate = useNavigate();
   const [customers,    setCustomers]    = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -151,6 +203,7 @@ const AdminCustomers = () => {
   const [pageSize,     setPageSize]     = useState(10);
   const [refreshKey,   setRefreshKey]   = useState(0);
   const [viewMode,     setViewMode]     = useState("table"); // "table" | "card"
+  const [showAddUser,  setShowAddUser]  = useState(false);
 
   /* ---------- FETCH ---------- */
   const fetchCustomers = async () => {
@@ -167,6 +220,19 @@ const AdminCustomers = () => {
   };
 
   useEffect(() => { fetchCustomers(); }, [refreshKey]);
+
+  const handleView = (userId) => navigate(`/admin/customers/${userId}`);
+  const handleEdit = (userId) => navigate(`/admin/customers/${userId}?edit=true`);
+  const handleDelete = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    try {
+      await api.delete(`/users/${userId}`);
+      setCustomers((previousCustomers) => previousCustomers.filter((customer) => String(customer.id) !== String(userId)));
+      toast.success("Customer deleted successfully");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to delete customer");
+    }
+  };
 
   /* ---------- FILTER ---------- */
   const filtered = useMemo(() => {
@@ -269,6 +335,14 @@ const AdminCustomers = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowAddUser(true)}
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-4 w-4" />
+              Add New User
+            </button>
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
               disabled={loading}
@@ -432,7 +506,7 @@ const AdminCustomers = () => {
             /* ─────────── CARD VIEW ─────────── */
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {paginated.map((customer) => (
-                <CustomerCard key={customer.id || customer.user_id} customer={customer} />
+                <CustomerCard key={customer.id || customer.user_id} customer={customer} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           ) : (
@@ -510,12 +584,19 @@ const AdminCustomers = () => {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
                             <button
+                              type="button"
+                              onClick={() => handleView(customer.id)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
                               title="View customer"
                             >
                               <Eye className="h-4 w-4" />
                             </button>
+                            <button type="button" onClick={() => handleEdit(customer.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" title="Edit customer">
+                              <Pencil className="h-4 w-4" />
+                            </button>
                             <button
+                              type="button"
+                              onClick={() => handleDelete(customer.id)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
                               title="Delete customer"
                             >
@@ -576,6 +657,7 @@ const AdminCustomers = () => {
           )}
         </div>
       </div>
+      {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} onCreated={() => setRefreshKey((key) => key + 1)} />}
     </div>
   );
 };
