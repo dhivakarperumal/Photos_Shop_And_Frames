@@ -366,6 +366,15 @@ const AdminProducts = () => {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
+                                onClick={() => navigate(`/admin/products/edit/${product.id}`)}
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+                                aria-label="Edit product"
+                                title="Edit product"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setSelectedProductView(product)}
                                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
                                 aria-label="View product"

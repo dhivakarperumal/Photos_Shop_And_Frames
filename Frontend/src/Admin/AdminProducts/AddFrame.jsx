@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -15,6 +15,7 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Pencil
 } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";
@@ -28,16 +29,19 @@ const generateUuid = () => {
 
 const AddFrame = () => {
   const navigate = useNavigate();
+  const { id: editFrameId } = useParams();
+  const isEditMode = Boolean(editFrameId);
 
   // ==========================================
   // FRAME TEMPLATE STATE
   // ==========================================
-  const [uuid] = useState(generateUuid);
+  const [uuid, setUuid] = useState(generateUuid);
   const [frameName, setFrameName] = useState("");
   const [orientation, setOrientation] = useState("Portrait");
   const [frameImage, setFrameImage] = useState(null); // { file, preview, url }
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [loadingFrame, setLoadingFrame] = useState(false);
 
   // ==========================================
   // PHOTO SLOTS STATE
@@ -49,6 +53,44 @@ const AddFrame = () => {
 
   const frameInputRef = useRef(null);
   const photoInputRefs = useRef({});
+
+  // ==========================================
+  // LOAD FRAME DATA IN EDIT MODE
+  // ==========================================
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const fetchFrameDetails = async () => {
+      setLoadingFrame(true);
+      try {
+        const response = await api.get(`/frames/${editFrameId}`);
+        const data = response.data?.data;
+        if (data) {
+          setUuid(data.uuid || generateUuid());
+          setFrameName(data.frame_name || "");
+          setOrientation(data.orientation || "Portrait");
+          if (data.frame_image) {
+            setFrameImage({
+              file: null,
+              preview: data.frame_image,
+              url: data.frame_image,
+            });
+          }
+          setPhotoSlots(Array.isArray(data.photo_slots) ? data.photo_slots : []);
+        } else {
+          toast.error("Frame template not found");
+          navigate("/admin/frames");
+        }
+      } catch (err) {
+        console.error("Failed to load frame for edit:", err);
+        toast.error("Failed to load frame data");
+      } finally {
+        setLoadingFrame(false);
+      }
+    };
+
+    fetchFrameDetails();
+  }, [editFrameId, isEditMode, navigate]);
 
   // ==========================================
   // UPLOAD FRAME BACKGROUND IMAGE
@@ -178,7 +220,7 @@ const AddFrame = () => {
   };
 
   // ==========================================
-  // SUBMIT / SAVE FRAME TEMPLATE
+  // SUBMIT / SAVE / UPDATE FRAME TEMPLATE
   // ==========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -188,7 +230,7 @@ const AddFrame = () => {
       return;
     }
 
-    if (!frameImage) {
+    if (!frameImage || (!frameImage.url && !frameImage.preview)) {
       toast.error("Please upload a Frame background image.");
       return;
     }
@@ -218,11 +260,20 @@ const AddFrame = () => {
         status: "Active",
       };
 
-      const response = await api.post("/frames", payload);
+      let response;
+      if (isEditMode) {
+        response = await api.put(`/frames/${editFrameId}`, payload);
+      } else {
+        response = await api.post("/frames", payload);
+      }
 
       if (response.data?.success) {
-        toast.success("Frame template created successfully!");
-        navigate("/admin/products");
+        toast.success(
+          isEditMode
+            ? "Frame template updated successfully!"
+            : "Frame template created successfully!"
+        );
+        navigate("/admin/frames");
       } else {
         toast.error(response.data?.message || "Failed to save frame template.");
       }
@@ -251,6 +302,17 @@ const AddFrame = () => {
     toast.success("Form cleared.");
   };
 
+  if (loadingFrame) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f4f6]">
+        <div className="text-center">
+          <div className="mb-2 text-3xl">🖼️</div>
+          <p className="text-sm font-semibold text-[#555]">Loading frame template details...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f3f4f6] p-4 md:p-6">
       <div className="mx-auto max-w-[1440px]">
@@ -259,23 +321,25 @@ const AddFrame = () => {
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#e8d9ba] bg-[#fffaf2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9b6b2d]">
               <Layers className="h-3.5 w-3.5" />
-              Frame Template Builder
+              {isEditMode ? "Edit Frame Template" : "Frame Template Builder"}
             </div>
             <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1f1f]">
-              Add Frame Setup
+              {isEditMode ? `Edit Frame: ${frameName || "Template"}` : "Add Frame Setup"}
             </h1>
             <p className="mt-1 text-[13px] text-[#6b6b6b]">
-              Design a reusable frame template with background image, orientation, and configurable photo positions.
+              {isEditMode
+                ? "Update background design, orientation, and photo position coordinates."
+                : "Design a reusable frame template with background image, orientation, and configurable photo positions."}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
-              to="/admin/products"
+              to="/admin/frames"
               className="inline-flex items-center gap-2 rounded-xl border border-[#e6ddd1] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#2a2a2a] shadow-sm transition hover:bg-[#faf7f3]"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Products
+              View Frames
             </Link>
           </div>
         </div>
@@ -739,14 +803,13 @@ const AddFrame = () => {
           </div>
 
           {/* ================= ACTION BUTTONS FOOTER ================= */}
-          <div className="flex flex-col-reverse gap-3 border-t border-[#e5dfd4] bg-white px-5 py-4 rounded-2xl shadow-sm sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={handleReset}
+          <div className="flex flex-col-reverse gap-3 rounded-2xl border-t border-[#e5dfd4] bg-white px-5 py-4 shadow-sm sm:flex-row sm:justify-end">
+            <Link
+              to="/admin/frames"
               className="inline-flex items-center justify-center rounded-xl border border-[#ddd3c8] bg-[#faf8f5] px-6 py-3 text-sm font-semibold text-[#333] transition hover:bg-[#f2ece5]"
             >
-              Reset Form
-            </button>
+              Cancel
+            </Link>
 
             <button
               type="submit"
@@ -754,7 +817,13 @@ const AddFrame = () => {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-sm font-bold text-white shadow-[0_8px_20px_rgba(26,60,54,0.18)] transition hover:bg-[#224e47] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save className="h-4 w-4" />
-              {saving ? "Saving Frame..." : "Save Frame Template"}
+              {saving
+                ? isEditMode
+                  ? "Updating Frame..."
+                  : "Saving Frame..."
+                : isEditMode
+                ? "Update Frame Template"
+                : "Save Frame Template"}
             </button>
           </div>
         </form>

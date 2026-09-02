@@ -67,7 +67,15 @@ const router = createHashRouter([
             element: <AddProducts />,
           },
           {
+            path: 'products/edit/:id',
+            element: <AddProducts />,
+          },
+          {
             path: 'products/frame-setup',
+            element: <AddFrame />,
+          },
+          {
+            path: 'products/frame-setup/edit/:id',
             element: <AddFrame />,
           },
           {
@@ -77,6 +85,10 @@ const router = createHashRouter([
           {
             path: 'frames',
             element: <FramesList />,
+          },
+          {
+            path: 'frames/edit/:id',
+            element: <AddFrame />,
           },
           {
             path: 'products/categories',
