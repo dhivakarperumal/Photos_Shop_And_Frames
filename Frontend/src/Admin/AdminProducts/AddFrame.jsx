@@ -415,8 +415,9 @@ const AddFrame = () => {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* FRAME IMAGE UPLOAD */}
+            <div className="lg:col-span-7">
               <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
                 <div className="mb-4 flex items-center justify-between border-b border-[#f0ebe3] pb-4">
                   <div className="flex items-center gap-3">
@@ -498,129 +499,6 @@ const AddFrame = () => {
                         <span className="text-xs text-amber-600">Uploading...</span>
                       )}
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-6 lg:col-span-7">
-              <div className="sticky top-6 rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
-                <div className="mb-4 flex items-center justify-between border-b border-[#f0ebe3] pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4f46e5]">
-                      <Eye className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-[#202020]">
-                        Interactive Live Preview Canvas
-                      </h2>
-                      <p className="text-xs text-[#8a8a8a]">
-                        Click slot areas on the frame to test upload demo photos
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowJsonPreview(!showJsonPreview)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#e2d9cd] bg-[#faf8f5] px-3 py-1.5 text-xs font-semibold text-[#444] hover:bg-[#f0ebe3]"
-                  >
-                    <Code className="h-3.5 w-3.5" />
-                    {showJsonPreview ? "Hide JSON" : "View JSON"}
-                  </button>
-                </div>
-
-                <div className="relative flex min-h-[460px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5f1eb] p-6">
-                  {!frameImage ? (
-                    <div className="text-center">
-                      <div className="mb-3 text-4xl">🖼️</div>
-                      <p className="text-sm font-bold text-[#555]">
-                        Upload a frame image to activate preview
-                      </p>
-                      <p className="mt-1 text-xs text-[#888]">
-                        Position markers and slots will appear overlaid on top of the image
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="relative mx-auto w-full max-w-[550px] overflow-hidden rounded-lg shadow-md">
-                      <img
-                        src={frameImage.preview}
-                        alt="Frame Preview"
-                        className="block h-auto w-full select-none"
-                      />
-
-                      {photoSlots.map((slot, index) => {
-                        const testPhoto = slotTestPhotos[slot.id];
-
-                        return (
-                          <React.Fragment key={slot.id}>
-                            <input
-                              ref={(el) => {
-                                photoInputRefs.current[slot.id] = el;
-                              }}
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleSlotTestPhoto(slot.id, e)}
-                            />
-
-                            <button
-                              type="button"
-                              onClick={() => photoInputRefs.current[slot.id]?.click()}
-                              title={`Click to test upload photo for: ${slot.name}`}
-                              className="absolute overflow-hidden border-2 border-dashed border-blue-500/90 bg-white/75 shadow-md backdrop-blur-[1px] transition hover:bg-white/95"
-                              style={{
-                                top: slot.top,
-                                left: slot.left,
-                                width: slot.width,
-                                height: slot.height,
-                                borderRadius: slot.shape === "circle" ? "9999px" : "8px",
-                              }}
-                            >
-                              {testPhoto ? (
-                                <img
-                                  src={testPhoto.preview}
-                                  alt={slot.name}
-                                  className="h-full w-full"
-                                  style={{ objectFit: slot.objectFit }}
-                                />
-                              ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
-                                  <span className="text-base sm:text-xl">📷</span>
-                                  <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#1a3c36] shadow-xs">
-                                    {slot.name}
-                                  </span>
-                                  <span className="text-[9px] text-[#555]">
-                                    {slot.width} × {slot.height}
-                                  </span>
-                                </div>
-                              )}
-                            </button>
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {showJsonPreview && (
-                  <div className="mt-4 rounded-xl border border-[#2d3748] bg-[#1a202c] p-4 text-xs text-emerald-400">
-                    <div className="mb-2 font-mono font-bold text-white">
-                      JSON Template Config:
-                    </div>
-                    <pre className="max-h-60 overflow-auto font-mono text-[11px] leading-relaxed">
-                      {JSON.stringify(
-                        {
-                          uuid,
-                          frame_name: frameName,
-                          orientation,
-                          frame_image: frameImage?.url || frameImage?.file?.name || "",
-                          photo_slots: photoSlots,
-                        },
-                        null,
-                        2
-                      )}
-                    </pre>
                   </div>
                 )}
               </div>
