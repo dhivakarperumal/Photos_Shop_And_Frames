@@ -38,8 +38,8 @@ const createReview = async (reviewData) => {
     comment,
     review_photo,
     status = "Published",
-    created_by = "Admin",
-    updated_by = "Admin",
+    created_by = null,
+    updated_by = null,
   } = reviewData;
 
   const query = `
@@ -76,8 +76,8 @@ const createReview = async (reviewData) => {
     comment,
     review_photo || null,
     status || "Published",
-    created_by || "Admin",
-    updated_by || "Admin",
+    created_by || null,
+    updated_by || null,
   ];
 
   const pool = getDB();
@@ -157,7 +157,7 @@ const updateReview = async (id, updateData) => {
     comment,
     review_photo,
     status,
-    updated_by = "Admin",
+    updated_by = null,
   } = updateData;
 
   const query = `
@@ -189,7 +189,7 @@ const updateReview = async (id, updateData) => {
     comment,
     review_photo || null,
     status || "Published",
-    updated_by || "Admin",
+    updated_by || null,
     id,
     id,
     id,

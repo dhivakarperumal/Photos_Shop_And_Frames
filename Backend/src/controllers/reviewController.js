@@ -73,8 +73,8 @@ const createReview = async (req, res) => {
       comment: comment.trim(),
       review_photo: review_photo || null,
       status: status || "Published",
-      created_by: created_by || "Admin",
-      updated_by: updated_by || created_by || "Admin",
+      created_by: created_by || null,
+      updated_by: updated_by || created_by || null,
     };
 
     const result = await reviewModule.createReview(payload);

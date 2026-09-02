@@ -8,8 +8,10 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Eye,
   Filter,
+  IdCard,
   Image as ImageIcon,
   ImagePlus,
   MessageSquare,
@@ -26,6 +28,7 @@ import {
   X,
 } from "lucide-react";
 import api from "../../api";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 
 const generateUuid = () => {
@@ -50,11 +53,20 @@ const formatDate = (dateString) => {
 };
 
 const AdminReviews = () => {
+  const { user, userProfile } = useAuth();
+  const currentUserId =
+    userProfile?.user_id ||
+    userProfile?.id ||
+    user?.user_id ||
+    user?.id ||
+    "45e2dff5-104d-43ce-aed1-fb118b2e2ca9";
+
   // ==========================================
   // DATA STATE
   // ==========================================
   const [reviewsList, setReviewsList] = useState([]);
   const [productsList, setProductsList] = useState([]);
+  const [usersList, setUsersList] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("all");
   const [stats, setStats] = useState({
     total_reviews: 0,
@@ -88,8 +100,8 @@ const AdminReviews = () => {
   const [formComment, setFormComment] = useState("");
   const [formPhoto, setFormPhoto] = useState(null); // { file, preview, url }
   const [formStatus, setFormStatus] = useState("Published");
-  const [formCreatedBy, setFormCreatedBy] = useState("Admin");
-  const [formUpdatedBy, setFormUpdatedBy] = useState("Admin");
+  const [formCreatedBy, setFormCreatedBy] = useState(currentUserId);
+  const [formUpdatedBy, setFormUpdatedBy] = useState(currentUserId);
   const [formCreatedAt, setFormCreatedAt] = useState(new Date().toISOString());
   const [formUpdatedAt, setFormUpdatedAt] = useState(new Date().toISOString());
 
@@ -98,7 +110,7 @@ const AdminReviews = () => {
   const fileInputRef = useRef(null);
 
   // ==========================================
-  // FETCH PRODUCTS, REVIEWS & STATS
+  // FETCH PRODUCTS, USERS, REVIEWS & STATS
   // ==========================================
   const fetchProducts = async () => {
     try {
@@ -108,6 +120,17 @@ const AdminReviews = () => {
       }
     } catch (err) {
       console.warn("Could not fetch products for reviews:", err);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get("/users");
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        setUsersList(res.data.data);
+      }
+    } catch (err) {
+      console.warn("Could not fetch users list:", err);
     }
   };
 
@@ -137,6 +160,7 @@ const AdminReviews = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -179,8 +203,8 @@ const AdminReviews = () => {
     setFormComment("");
     setFormPhoto(null);
     setFormStatus("Published");
-    setFormCreatedBy("Admin");
-    setFormUpdatedBy("Admin");
+    setFormCreatedBy(currentUserId);
+    setFormUpdatedBy(currentUserId);
     setFormCreatedAt(new Date().toISOString());
     setFormUpdatedAt(new Date().toISOString());
 
@@ -221,8 +245,8 @@ const AdminReviews = () => {
     }
 
     setFormStatus(review.status || "Published");
-    setFormCreatedBy(review.created_by || "Admin");
-    setFormUpdatedBy("Admin");
+    setFormCreatedBy(review.created_by || currentUserId);
+    setFormUpdatedBy(currentUserId);
     setFormCreatedAt(review.created_at || new Date().toISOString());
     setFormUpdatedAt(new Date().toISOString());
 
@@ -320,8 +344,8 @@ const AdminReviews = () => {
         comment: formComment.trim(),
         review_photo: formPhoto?.url || formPhoto?.preview || null,
         status: formStatus,
-        created_by: formCreatedBy,
-        updated_by: formUpdatedBy,
+        created_by: formCreatedBy || currentUserId,
+        updated_by: formUpdatedBy || currentUserId,
         created_at: formCreatedAt,
         updated_at: new Date().toISOString(),
       };
@@ -365,6 +389,12 @@ const AdminReviews = () => {
     }
   };
 
+  const copyToClipboard = (text, label = "User ID") => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard!`);
+  };
+
   // Filtered reviews calculation
   const filteredReviews = reviewsList.filter((r) => {
     const matchesSearch =
@@ -372,6 +402,7 @@ const AdminReviews = () => {
       r.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.product_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.created_by?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.review_id?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesRating =
@@ -595,7 +626,7 @@ const AdminReviews = () => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search reviews by name, text or product..."
+                  placeholder="Search reviews by name, text, user ID or product..."
                   className="h-11 w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-10 pr-3 text-xs text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
@@ -675,13 +706,15 @@ const AdminReviews = () => {
                     <th className="px-4 py-3.5">Review Comment</th>
                     <th className="px-4 py-3.5">Customer Photo</th>
                     <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5">Date / By</th>
+                    <th className="px-4 py-3.5">Created By (User ID)</th>
                     <th className="px-4 py-3.5 rounded-r-xl">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {filteredReviews.map((rev) => {
+                    const displayUserId = rev.created_by || "system";
+
                     return (
                       <tr
                         key={rev.id}
@@ -807,14 +840,29 @@ const AdminReviews = () => {
                           </span>
                         </td>
 
-                        {/* DATE / BY */}
+                        {/* CREATED BY (USER ID) & DATE */}
                         <td className="px-4 py-3.5 align-middle">
-                          <p className="text-xs font-medium text-[#444]">
+                          <p className="text-xs font-medium text-[#333]">
                             {formatDate(rev.created_at)}
                           </p>
-                          <p className="text-[10px] text-[#888]">
-                            By {rev.created_by || "Admin"}
-                          </p>
+                          <div className="mt-0.5 flex items-center gap-1">
+                            <span
+                              title={`User ID: ${displayUserId}`}
+                              className="font-mono text-[10px] text-[#666] bg-[#f2ede6] px-1.5 py-0.5 rounded"
+                            >
+                              {displayUserId.length > 18
+                                ? `${displayUserId.slice(0, 8)}...${displayUserId.slice(-4)}`
+                                : displayUserId}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(displayUserId, "User ID")}
+                              className="text-[#999] hover:text-[#1a3c36]"
+                              title="Copy user_id"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
                         </td>
 
                         {/* ACTIONS */}
@@ -1092,7 +1140,7 @@ const AdminReviews = () => {
                   )}
                 </div>
 
-                {/* STATUS & AUDIT METADATA */}
+                {/* USER_ID FIELDS (CREATED_BY & UPDATED_BY) */}
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
@@ -1110,25 +1158,36 @@ const AdminReviews = () => {
 
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Created By
+                      Created By (User ID)
                     </label>
                     <input
                       type="text"
                       value={formCreatedBy}
                       onChange={(e) => setFormCreatedBy(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 text-xs text-[#555] outline-none"
+                      placeholder="User UUID (e.g. 45e2dff5-...)"
+                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-[11px] text-[#444] outline-none focus:border-[#d4a553]"
+                      list="users-datalist"
                     />
+                    <datalist id="users-datalist">
+                      {usersList.map((u) => (
+                        <option key={u.id} value={u.user_id}>
+                          {u.username} ({u.role})
+                        </option>
+                      ))}
+                    </datalist>
                   </div>
 
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Updated By
+                      Updated By (User ID)
                     </label>
                     <input
                       type="text"
                       value={formUpdatedBy}
                       onChange={(e) => setFormUpdatedBy(e.target.value)}
-                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 text-xs text-[#555] outline-none"
+                      placeholder="User UUID (e.g. 45e2dff5-...)"
+                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-[11px] text-[#444] outline-none focus:border-[#d4a553]"
+                      list="users-datalist"
                     />
                   </div>
                 </div>
@@ -1231,22 +1290,43 @@ const AdminReviews = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#eee] p-3 text-[11px] text-[#666]">
-                  <div>
-                    <p className="font-bold text-[#333]">Created Date</p>
-                    <p>{formatDate(viewingReview.created_at)}</p>
+                <div className="grid grid-cols-1 gap-2 rounded-xl border border-[#eee] bg-[#faf8f5] p-3 text-[11px] text-[#666]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#333]">Created Date:</span>
+                    <span>{formatDate(viewingReview.created_at)}</span>
                   </div>
-                  <div>
-                    <p className="font-bold text-[#333]">Created By</p>
-                    <p>{viewingReview.created_by || "Admin"}</p>
+
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-[#333]">Created By (User ID):</span>
+                    <div className="flex items-center justify-between rounded bg-white px-2 py-1 border border-[#e8e2d8] font-mono text-[10px] text-[#444]">
+                      <span>{viewingReview.created_by || "system"}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(viewingReview.created_by, "Created By User ID")}
+                        className="text-[#888] hover:text-[#1a3c36]"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-[#333]">Updated Date</p>
-                    <p>{formatDate(viewingReview.updated_at)}</p>
+
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#333]">Updated Date:</span>
+                    <span>{formatDate(viewingReview.updated_at)}</span>
                   </div>
-                  <div>
-                    <p className="font-bold text-[#333]">Updated By</p>
-                    <p>{viewingReview.updated_by || "Admin"}</p>
+
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-[#333]">Updated By (User ID):</span>
+                    <div className="flex items-center justify-between rounded bg-white px-2 py-1 border border-[#e8e2d8] font-mono text-[10px] text-[#444]">
+                      <span>{viewingReview.updated_by || viewingReview.created_by || "system"}</span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(viewingReview.updated_by, "Updated By User ID")}
+                        className="text-[#888] hover:text-[#1a3c36]"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
