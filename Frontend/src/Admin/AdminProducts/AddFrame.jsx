@@ -346,9 +346,8 @@ const AddFrame = () => {
 
         {/* ================= MAIN FORM ================= */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-12">
-            {/* LEFT COLUMN: FRAME SETTINGS */}
-            <div className="space-y-6 lg:col-span-5">
+          {/* TOP SECTION: FRAME DETAILS & IMAGE - FULL WIDTH */}
+          <div className="space-y-6">
               {/* BASIC DETAILS */}
               <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
                 <div className="mb-5 flex items-center gap-3 border-b border-[#f0ebe3] pb-4">
@@ -505,7 +504,12 @@ const AddFrame = () => {
                   </div>
                 )}
               </div>
+            </div>
 
+          {/* BOTTOM SECTION: PHOTO POSITIONS & PREVIEW - TWO COLUMNS */}
+          <div className="grid gap-6 lg:grid-cols-12">
+            {/* LEFT COLUMN: PHOTO POSITIONS (SCROLLABLE) */}
+            <div className="lg:col-span-5 lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
               {/* PHOTO POSITIONS SETTINGS */}
               <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
                 <div className="mb-4 flex items-center justify-between border-b border-[#f0ebe3] pb-4">
