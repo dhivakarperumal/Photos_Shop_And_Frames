@@ -75,11 +75,7 @@ const navItems = [
 
 
 
-  {
-    path: "/admin/gifts",
-    label: "Gifts",
-    icon: Gift,
-  },
+
 
  
 
@@ -94,10 +90,22 @@ const navItems = [
     ],
   },
 
+    {
+    path: "/admin/gifts",
+    label: "Gifts",
+    icon: Gift,
+  },
+
   {
     path: "/admin/customers",
     label: "Customers",
     icon: Users,
+  },
+
+  {
+    path: "/admin/billing",
+    label: "Billing",
+    icon: Receipt,
   },
 
   {
