@@ -90,8 +90,13 @@ body {
   font-family: "Josefin Sans", sans-serif;
   /* font-family: "Cormorant Garamond", serif; */
   /* font-family: "Vollkorn", serif; */
-  background: var(--bg-dark);
+  background: var(--bg);
   color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+  background: var(--bg);
 }
 
 

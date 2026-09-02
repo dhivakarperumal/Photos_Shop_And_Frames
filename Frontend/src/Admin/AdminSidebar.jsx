@@ -37,6 +37,17 @@ import {
   Layers,
   AlertCircle,
   XCircle,
+  Package,
+  Printer,
+  Gift,
+  Album,
+  ShoppingCart,
+  Star,
+  Zap,
+  Tag,
+  Lock,
+  Settings,
+  MessageSquare,
 } from "lucide-react";
 
 import { useAuth } from "../PrivateRouter/AuthContext";
@@ -51,119 +62,88 @@ const navItems = [
     exact: true,
   },
 
-  /* ---- CLIENTS ---- */
+  /* ---- PRODUCTS ---- */
   {
-    label: "Clients",
-    icon: Handshake,
-    children: [
-      { path: "/admin/clients", label: "All Clients", icon: Users },
+    path: "/admin/products",
+    label: "Products",
+    icon: Package,
+  },
 
-      { path: "/admin/clients/followups", label: "Followups", icon: Clock },
+  {
+    path: "/admin/frames",
+    label: "Frames",
+    icon: Layers,
+  },
+
+  {
+    path: "/admin/photo-printing",
+    label: "Photo Printing",
+    icon: Printer,
+  },
+
+  {
+    path: "/admin/custom-frames",
+    label: "Custom Frames",
+    icon: Zap,
+  },
+
+  {
+    path: "/admin/gifts",
+    label: "Gifts",
+    icon: Gift,
+  },
+
+  {
+    path: "/admin/albums",
+    label: "Albums",
+    icon: Album,
+  },
+
+  {
+    label: "Orders",
+    icon: ShoppingCart,
+    children: [
+      { path: "/admin/orders/new", label: "New Order", icon: PlusSquare },
+      { path: "/admin/orders", label: "All Orders", icon: List },
+      { path: "/admin/orders/delivery", label: "Delivery Orders", icon: Package },
+      { path: "/admin/orders/cancelled", label: "Cancelled Orders", icon: XCircle },
     ],
   },
 
-
-  /* ---- WORK ---- */
   {
-    label: "Project Management",
-    icon: FolderKanban,
-    children: [
-      { path: "/admin/projects", label: "All Projects", icon: FolderKanban },
-      { path: "/admin/projects/assignments", label: "Assigned Projects", icon: UserCheck },
-
-    ],
-  },
-
-  /* ---- PEOPLE ---- */
-  {
-    label: "Employees",
+    path: "/admin/customers",
+    label: "Customers",
     icon: Users,
+  },
+
+  {
+    path: "/admin/reviews",
+    label: "Reviews",
+    icon: Star,
+  },
+
+  /* ---- MARKETING ---- */
+  {
+    label: "Marketing",
+    icon: TrendingUp,
     children: [
-      { path: "/admin/employees", label: "All Employees", icon: Users },
-      // { path: "/admin/employees/add", label: "Add Employee", icon: UserCog },
-      { path: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
-      { path: "/admin/employees/leave", label: "Leave Management", icon: Briefcase },
+      { path: "/admin/banners", label: "Banners", icon: Image },
+      { path: "/admin/gallery", label: "Gallery", icon: Image },
+      { path: "/admin/coupons", label: "Coupons & Offers", icon: Tag },
+      { path: "/admin/categories", label: "Categories", icon: Layers },
     ],
   },
 
-
-
+  /* ---- SETTINGS ---- */
   {
-    label: "Task Management",
-    icon: CheckSquare,
+    label: "Settings",
+    icon: Settings,
     children: [
-      { path: "/admin/tasks/new", label: "New Tasks", icon: PlusSquare },
-      { path: "/admin/tasks", label: "All Tasks", icon: CheckSquare },
-      { path: "/admin/tasks/pending", label: "Pending Tasks", icon: AlertCircle },
-      { path: "/admin/tasks/completed", label: "Completed Tasks", icon: CheckSquare },
-      { path: "/admin/tasks/cancelled", label: "Cancelled Tasks", icon: XCircle },
+      { path: "/admin/users", label: "Users", icon: Users },
+      { path: "/admin/roles", label: "Roles & Permissions", icon: Lock },
+      { path: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
-
-  {
-    label: "My Projects",
-    icon: FolderKanban,
-    children: [
-      { path: "/admin/myprojects", label: "Projects Completed", icon: List },
-
-      { path: "/admin/myprojects/plans", label: "Project Plans", icon: ClipboardList },
-      { path: "/admin/myprojects/quotations", label: "Project Quotations", icon: FileText },
-
-
-      { path: "/admin/myprojects/images", label: "Project Images", icon: Image },
-
-
-
-      { path: "/admin/myprojects/expiry", label: "Hosting & Domain Expiry", icon: CalendarClock },
-    ],
-  },
-
-
-  /* ---- TRAINING ---- */
-  {
-    label: "Trainees & Internships",
-    icon: GraduationCap,
-    children: [
-      { path: "/admin/trainees/pending", label: "New Registrations", icon: AlertCircle, badge: 'pending' },
-      { path: "/admin/trainees", label: "All Trainees & Interns", icon: GraduationCap },
-      { path: "/admin/trainees/attendance", label: "Attendance", icon: ClipboardCheck },
-      { path: "/admin/trainees/tasks", label: "Tasks", icon: CheckSquare },
-      { path: "/admin/trainees/tasks/assign", label: "Assign Tasks", icon: UserCheck },
-    ],
-  },
-
-
-  /* ---- FINANCE ---- */
-  {
-    label: "Payroll",
-    icon: Receipt,
-    children: [
-      { path: "/admin/expenses", label: "All Expenses", icon: Receipt, exact: true },
-      { path: "/admin/expenses/salary", label: "Employee Salary", icon: DollarSign },
-      { path: "/admin/expenses/project-payment", label: "Project Payment", icon: DollarSign },
-      { path: "/admin/expenses/incomes", label: "Income", icon: DollarSign },
-    ],
-  },
-
-  /* ---- ANALYTICS ---- */
-  // {
-  //   path: "/admin/reports",
-  //   label: "Reports",
-  //   icon: BarChart3,
-  // },
-
-  /* ---- CALENDAR ---- */
-  {
-    path: "/admin/office-calendar",
-    label: "Office Calendar",
-    icon: CalendarDays,
-  },
-
-  {
-    path: "/admin/my-calendar",
-    label: "My Daily Calendar",
-    icon: CalendarClock,
-  }
 ];
 
 /* ================= SIDEBAR ================= */
@@ -250,13 +230,13 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         {/* ========== LOGO ========== */}
         <div className={`flex items-center gap-3 border-b border-[#1f3228] shrink-0 ${collapsed ? "px-3 py-5 justify-center" : "px-5 py-5"}`}>
           <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 p-1 border border-[#d4a843]/30 bg-[#1f3228]">
-            <img src={Logo} alt="Logo" className="w-full h-full object-contain drop-shadow-lg" />
+            <img src={Logo} alt="Logo" className="w-full h-full object-cover drop-shadow-lg" />
           </div>
 
           {!collapsed && (
             <div className="overflow-hidden flex-1">
-              <h1 className="text-base font-bold text-[#d4a843] tracking-wide font-serif">PixelFrame</h1>
-              <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase">
+              <h1 className="text-base font-bold text-white tracking-wide font-serif">PixelFrame</h1>
+              <p className="text-[10px] text-white tracking-[0.2em] uppercase">
                 Frame Your Memories
               </p>
             </div>
@@ -295,12 +275,12 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                       w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm
                       transition-all duration-200 group
                       ${isAnyChildActive
-                        ? "bg-[#1f3228] text-[#d4a843] border-l-2 border-[#d4a843]"
+                        ? "bg-[#1f3228] text-white border-l-2 border-white"
                         : "text-white hover:text-white hover:bg-[#1f3228]/70"
                       }
                     `}
                   >
-                    <Icon className={`w-[17px] h-[17px] shrink-0 ${isAnyChildActive ? "text-[#d4a843]" : "text-white"}`} />
+                    <Icon className={`w-[17px] h-[17px] shrink-0 ${isAnyChildActive ? "text-white" : "text-white"}`} />
                     {!collapsed && (
                       <>
                         <span className="flex-1 text-left font-medium truncate text-white">{item.label}</span>
@@ -461,7 +441,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                 <p className="text-xs font-semibold text-white truncate">
                   {userProfile?.displayName || "Administrator"}
                 </p>
-                <p className="text-[10px] text-white/50 truncate">
+                <p className="text-[10px] text-white truncate">
                   {userProfile?.role || "Super Admin"}
                 </p>
               </div>
