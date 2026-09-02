@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
@@ -64,6 +64,20 @@ const AddAlbum = () => {
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
+  useEffect(() => {
+    const fetchNextProductId = async () => {
+      try {
+        const response = await api.get('/albums/next-id');
+        const nextId = response?.data?.data || 'ALB001';
+        setFormData((prev) => ({ ...prev, productId: nextId }));
+      } catch (error) {
+        console.error('Failed to get next album ID:', error);
+      }
+    };
+
+    fetchNextProductId();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -73,8 +87,8 @@ const AddAlbum = () => {
   };
 
   const handleImageUpload = async (event, type = 'thumbnail') => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
 
     if (type === 'thumbnail') {
       setUploadingThumb(true);
@@ -83,28 +97,47 @@ const AddAlbum = () => {
     }
 
     try {
-      const form = new FormData();
-      form.append('folder', 'albums');
-      form.append('file', file);
+      const uploadedUrls = [];
 
-      const response = await api.post('/upload', form);
-      const uploadedUrl = response?.data?.url || response?.data?.urls?.[0] || '';
+      for (const file of files) {
+        const form = new FormData();
+        form.append('folder', 'albums');
+        form.append('file', file);
+
+        const response = await api.post('/upload', form);
+        const uploadedUrl = response?.data?.url || response?.data?.urls?.[0] || '';
+
+        if (uploadedUrl) {
+          uploadedUrls.push(uploadedUrl);
+        }
+      }
 
       if (type === 'thumbnail') {
-        setFormData((prev) => ({ ...prev, thumbnailImage: uploadedUrl }));
+        const [firstUrl] = uploadedUrls;
+        if (firstUrl) {
+          setFormData((prev) => ({ ...prev, thumbnailImage: firstUrl }));
+        }
       } else {
         setFormData((prev) => {
-          const productImages = [...prev.productImages];
-          const index = prev.productImages.findIndex((image) => !image);
-          if (index >= 0) productImages[index] = uploadedUrl;
-          else productImages.push(uploadedUrl);
-          return { ...prev, productImages: productImages.slice(0, 3) };
+          const productImages = Array.isArray(prev.productImages) ? [...prev.productImages] : [];
+
+          uploadedUrls.forEach((url) => {
+            const index = productImages.findIndex((image) => !image);
+            if (index >= 0) {
+              productImages[index] = url;
+            } else {
+              productImages.push(url);
+            }
+          });
+
+          return { ...prev, productImages: productImages.slice(0, 6) };
         });
       }
     } catch (error) {
       console.error(error);
       alert('Image upload failed.');
     } finally {
+      event.target.value = '';
       if (type === 'thumbnail') setUploadingThumb(false);
       else setUploadingGallery(false);
     }
@@ -266,9 +299,9 @@ const AddAlbum = () => {
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Product Images</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'gallery')} className={fieldStyle} />
+                    <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'gallery')} className={fieldStyle} />
                     {uploadingGallery && <span className="text-xs text-[#1a3c36]">Uploading...</span>}
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {formData.productImages.map((img, idx) => (img ? <img key={idx} src={img} alt={`gallery-${idx}`} className="h-20 w-20 rounded-xl object-cover border" /> : <div key={idx} className="h-20 w-20 rounded-xl border border-dashed border-[#dfe2e5] bg-white" />))}
                     </div>
                   </label>

@@ -12,10 +12,39 @@ const getNextAlbumId = async () => {
   const pool = getDB();
   const [rows] = await pool.query(query);
   const lastId = rows?.[0]?.product_id || "ALB000";
-  const lastNumber = Number(String(lastId).replace(/\D/g, "")) || 0;
-  const nextNumber = lastNumber + 1;
+  let lastNumber = Number(String(lastId).replace(/\D/g, "")) || 0;
 
-  return `ALB${String(nextNumber).padStart(3, "0")}`;
+  let nextNumber = lastNumber + 1;
+  let candidate = `ALB${String(nextNumber).padStart(3, "0")}`;
+
+  while (true) {
+    const [duplicateCheck] = await pool.query(
+      "SELECT 1 FROM albums WHERE product_id = ? LIMIT 1",
+      [candidate]
+    );
+
+    if (!duplicateCheck.length) {
+      return candidate;
+    }
+
+    nextNumber += 1;
+    candidate = `ALB${String(nextNumber).padStart(3, "0")}`;
+  }
+};
+
+const resolveUniqueAlbumId = async (requestedId) => {
+  if (!requestedId || !String(requestedId).trim()) {
+    return getNextAlbumId();
+  }
+
+  const pool = getDB();
+  const [rows] = await pool.query("SELECT 1 FROM albums WHERE product_id = ? LIMIT 1", [requestedId]);
+
+  if (!rows.length) {
+    return requestedId;
+  }
+
+  return getNextAlbumId();
 };
 
 const mapRow = (row) => ({
@@ -90,6 +119,8 @@ const createAlbum = async (albumData) => {
     updated_at,
   } = albumData;
 
+  const resolvedProductId = await resolveUniqueAlbumId(product_id);
+
   const columns = [
     "product_id",
     "product_name",
@@ -151,7 +182,7 @@ const createAlbum = async (albumData) => {
   `;
 
   const values = [
-    product_id,
+    resolvedProductId,
     product_name,
     product_code,
     category,
@@ -204,11 +235,20 @@ const createAlbum = async (albumData) => {
   ];
 
   const pool = getDB();
-  const [result] = await pool.query(query, values);
+  const [result] = await pool.query(query, values).catch(async (error) => {
+    if (error.code === "ER_DUP_ENTRY" && /product_id/i.test(error.message)) {
+      const fallbackProductId = await getNextAlbumId();
+      const fallbackValues = [...values];
+      fallbackValues[0] = fallbackProductId;
+      const [fallbackResult] = await pool.query(query, fallbackValues);
+      return [fallbackResult];
+    }
+    throw error;
+  });
 
   return {
     id: result.insertId,
-    product_id,
+    product_id: resolvedProductId,
     product_name,
     product_code,
     category,
