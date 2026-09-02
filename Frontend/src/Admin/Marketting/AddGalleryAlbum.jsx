@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useRef } from "react";
 import {
   ChevronLeft,
   CloudUpload,
@@ -13,25 +13,18 @@ import {
   AlignRight,
   Link as LinkIcon,
   Upload,
+  Loader2
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import api from "../../api";
-
-const MOCK_PHOTOS = [
-  "linear-gradient(135deg, #d3b495, #f2e4d2)",
-  "linear-gradient(135deg, #a9c7d9, #e9d6c8)",
-  "linear-gradient(135deg, #e8d5c4, #fff)",
-  "linear-gradient(135deg, #f3e1c1, #fff)",
-  "linear-gradient(135deg, #2d7b5a, #a0d8c0)",
-  "linear-gradient(135deg, #d8d8d8, #b0b0b0)",
-  "linear-gradient(135deg, #e9d6c8, #d3b495)",
-  "linear-gradient(135deg, #f2e4d2, #a9c7d9)",
-];
+import api, { API_URL } from "../../api";
 
 const AddGalleryAlbum = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -42,8 +35,12 @@ const AddGalleryAlbum = () => {
     meta_title: "",
     meta_description: "",
   });
-  const [coverImage, setCoverImage] = useState("linear-gradient(135deg, #d3b495, #f2e4d2)");
-  const [photos, setPhotos] = useState(MOCK_PHOTOS);
+  
+  const [coverImage, setCoverImage] = useState(null);
+  const [photos, setPhotos] = useState([]);
+
+  const coverInputRef = useRef(null);
+  const photosInputRef = useRef(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,11 +50,80 @@ const AddGalleryAlbum = () => {
     setPhotos(photos.filter((_, i) => i !== idx));
   };
 
+  const getImageUrl = (path) => {
+    if (!path) return "";
+    if (path.startsWith("http") || path.startsWith("data:")) return path;
+    // API_URL might be like http://localhost:5000/api
+    const baseUrl = API_URL.replace("/api", "");
+    return `${baseUrl}${path}`;
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const data = new FormData();
+    data.append("file", file); // Use "file" as per typical multer setup, backend uses upload.any() so field name doesn't matter much
+    
+    try {
+      setUploadingCover(true);
+      const res = await api.post("/upload", data);
+      if (res.data?.success && res.data?.urls?.length > 0) {
+        setCoverImage(res.data.urls[0]);
+        toast.success("Cover image uploaded");
+      } else if (res.data?.success && res.data?.url) {
+        setCoverImage(res.data.url);
+        toast.success("Cover image uploaded");
+      }
+    } catch (error) {
+      toast.error("Failed to upload cover image");
+    } finally {
+      setUploadingCover(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  };
+
+  const handlePhotosUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    if (photos.length + files.length > 50) {
+      toast.error("You can upload a maximum of 50 photos");
+      return;
+    }
+
+    const data = new FormData();
+    files.forEach((file) => data.append("files", file));
+    
+    try {
+      setUploadingPhotos(true);
+      const res = await api.post("/upload", data);
+      if (res.data?.success && res.data?.urls) {
+        setPhotos([...photos, ...res.data.urls]);
+        toast.success(`${res.data.urls.length} photos uploaded`);
+      }
+    } catch (error) {
+      toast.error("Failed to upload photos");
+    } finally {
+      setUploadingPhotos(false);
+      if (photosInputRef.current) photosInputRef.current.value = "";
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.title || !formData.category || !formData.short_description) {
       toast.error("Please fill in all required fields (*)");
       return;
     }
+    if (!coverImage) {
+      toast.error("Please upload a cover image (*)");
+      return;
+    }
+    if (photos.length === 0) {
+      toast.error("Please upload at least one photo (*)");
+      return;
+    }
+
     try {
       setLoading(true);
       await api.post("/gallery", { ...formData, cover_image: coverImage, photos });
@@ -242,16 +308,30 @@ const AddGalleryAlbum = () => {
                     Album Cover Image <span className="text-red-500">*</span>
                   </label>
                   <div className="flex flex-col sm:flex-row items-start gap-4">
-                    <div className="flex-1 w-full border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-8 bg-[#f9fafb] hover:bg-white transition cursor-pointer group">
-                      <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={coverInputRef} 
+                      onChange={handleCoverUpload}
+                    />
+                    <div 
+                      onClick={() => !uploadingCover && coverInputRef.current.click()}
+                      className={`flex-1 w-full border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-8 bg-[#f9fafb] hover:bg-white transition cursor-pointer group ${uploadingCover ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      {uploadingCover ? (
+                        <Loader2 className="h-8 w-8 text-[#d4a843] animate-spin" />
+                      ) : (
+                        <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+                      )}
                       <p className="mt-3 text-[14px] text-[#4b5563] font-medium text-center">
-                        <span className="text-[#111827]">Click to upload</span> or drag and drop
+                        <span className="text-[#111827]">{uploadingCover ? 'Uploading...' : 'Click to upload'}</span> {uploadingCover ? '' : 'or drag and drop'}
                       </p>
                       <p className="mt-1 text-[12px] text-[#6b7280]">JPG, PNG or WEBP (max. 2MB)</p>
                     </div>
                     {coverImage && (
                       <div className="relative shrink-0 w-[200px] h-[130px] rounded-xl overflow-hidden shadow-sm">
-                        <div className="w-full h-full bg-cover bg-center" style={{ background: coverImage }} />
+                        <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${getImageUrl(coverImage)})` }} />
                         <button
                           onClick={() => setCoverImage(null)}
                           className="absolute top-2 right-2 h-6 w-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-black transition"
@@ -275,15 +355,36 @@ const AddGalleryAlbum = () => {
             <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-[16px] font-bold text-[#1f1d1b]">Photos <span className="text-red-500">*</span></h3>
-                <button className="inline-flex h-[36px] items-center gap-1.5 rounded-lg bg-[#162420] px-3 text-[13px] font-semibold text-white transition hover:bg-[#1a3c36]">
-                  <Upload className="h-4 w-4" /> Upload Photos
+                <button 
+                  onClick={() => !uploadingPhotos && photosInputRef.current.click()}
+                  disabled={uploadingPhotos}
+                  className="inline-flex h-[36px] items-center gap-1.5 rounded-lg bg-[#162420] px-3 text-[13px] font-semibold text-white transition hover:bg-[#1a3c36] disabled:opacity-70"
+                >
+                  {uploadingPhotos ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} 
+                  Upload Photos
                 </button>
               </div>
 
-              <div className="border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-10 bg-[#f9fafb] hover:bg-white transition cursor-pointer group mb-5">
-                <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple
+                className="hidden" 
+                ref={photosInputRef} 
+                onChange={handlePhotosUpload}
+              />
+
+              <div 
+                onClick={() => !uploadingPhotos && photosInputRef.current.click()}
+                className={`border-2 border-dashed border-[#d1d5db] rounded-2xl flex flex-col items-center justify-center py-10 bg-[#f9fafb] hover:bg-white transition cursor-pointer group mb-5 ${uploadingPhotos ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                {uploadingPhotos ? (
+                  <Loader2 className="h-8 w-8 text-[#d4a843] animate-spin" />
+                ) : (
+                  <CloudUpload className="h-8 w-8 text-[#9ca3af] group-hover:text-[#d4a843]" />
+                )}
                 <p className="mt-3 text-[14px] text-[#4b5563] font-medium text-center">
-                  <span className="text-[#111827]">Click to upload</span> or drag and drop multiple photos
+                  <span className="text-[#111827]">{uploadingPhotos ? 'Uploading...' : 'Click to upload'}</span> {uploadingPhotos ? '' : 'or drag and drop multiple photos'}
                 </p>
                 <p className="mt-1 text-[12px] text-[#6b7280]">JPG, PNG, WEBP (max. 5MB each)</p>
                 <p className="mt-3 text-[12px] text-[#9ca3af]">You can upload up to 50 photos</p>
@@ -294,7 +395,7 @@ const AddGalleryAlbum = () => {
                   <div className="grid grid-cols-4 gap-3">
                     {photos.map((p, idx) => (
                       <div key={idx} className="relative aspect-[4/3] rounded-xl overflow-hidden shadow-sm group">
-                        <div className="w-full h-full bg-cover bg-center" style={{ background: p }} />
+                        <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${getImageUrl(p)})` }} />
                         <button
                           onClick={() => removePhoto(idx)}
                           className="absolute top-1.5 right-1.5 h-6 w-6 bg-white/90 rounded-full flex items-center justify-center text-[#4b5563] shadow-sm hover:bg-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
@@ -350,7 +451,7 @@ const AddGalleryAlbum = () => {
               <div className="rounded-2xl border border-[#e7e0d8] bg-white p-4 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 <div
                   className="h-20 w-32 shrink-0 rounded-xl bg-cover bg-center border border-[#e7e0d8]"
-                  style={{ background: coverImage || "#f3f4f6" }}
+                  style={{ backgroundImage: coverImage ? `url(${getImageUrl(coverImage)})` : "none", backgroundColor: "#f3f4f6" }}
                 />
                 <div className="flex-1 w-full text-center sm:text-left">
                   <div className="flex items-center justify-center sm:justify-start gap-3">
@@ -390,7 +491,7 @@ const AddGalleryAlbum = () => {
           className="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-[#162420] px-6 text-[14px] font-semibold text-white hover:bg-[#1a3c36] disabled:opacity-70"
         >
           {loading ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CloudUpload className="h-4 w-4" />
           )}

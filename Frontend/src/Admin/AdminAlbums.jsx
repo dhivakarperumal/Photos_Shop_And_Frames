@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -20,156 +20,50 @@ import {
   BarChart3,
   BriefcaseBusiness,
 } from 'lucide-react';
+import api from '../api';
 
-const albums = [
-  {
-    id: 1,
-    name: 'Premium Wedding Album',
-    code: 'ALB-WD-001',
-    category: 'Wedding',
-    size: '12" x 8"',
-    price: '₹1,499',
-    oldPrice: '₹1,999',
-    stock: 32,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 2456,
-    image: 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
-  },
-  {
-    id: 2,
-    name: 'Classic Leather Album',
-    code: 'ALB-LT-002',
-    category: 'Photo Albums',
-    size: '10" x 8"',
-    price: '₹1,299',
-    oldPrice: '₹1,699',
-    stock: 18,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 1892,
-    image: 'linear-gradient(135deg, #d5c4a5, #a78760)',
-  },
-  {
-    id: 3,
-    name: 'Baby Photo Album',
-    code: 'ALB-BY-003',
-    category: 'Baby',
-    size: '12" x 12"',
-    price: '₹1,199',
-    oldPrice: '₹1,499',
-    stock: 25,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 2145,
-    image: 'linear-gradient(135deg, #cfeaf7, #dfe6ed)',
-  },
-  {
-    id: 4,
-    name: 'Family Album',
-    code: 'ALB-FM-004',
-    category: 'Family',
-    size: '10" x 10"',
-    price: '₹999',
-    oldPrice: '₹1,299',
-    stock: 12,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 1567,
-    image: 'linear-gradient(135deg, #f5e4d5, #e0bb9e)',
-  },
-  {
-    id: 5,
-    name: 'Magnetic Album',
-    code: 'ALB-MG-005',
-    category: 'Premium',
-    size: '14" x 10"',
-    price: '₹1,899',
-    oldPrice: '₹2,399',
-    stock: 8,
-    stockLabel: 'Low Stock',
-    status: 'Active',
-    views: 1245,
-    image: 'linear-gradient(135deg, #1f2937, #374151)',
-  },
-  {
-    id: 6,
-    name: 'Kids Memory Album',
-    code: 'ALB-KD-006',
-    category: 'Kids',
-    size: '10" x 8"',
-    price: '₹899',
-    oldPrice: '₹1,199',
-    stock: 9,
-    stockLabel: 'Out of Stock',
-    status: 'Inactive',
-    views: 856,
-    image: 'linear-gradient(135deg, #f8dfe8, #f6cde3)',
-  },
-  {
-    id: 7,
-    name: 'Art Cover Album',
-    code: 'ALB-ART-007',
-    category: 'Designer',
-    size: '12" x 10"',
-    price: '₹1,699',
-    oldPrice: '₹2,199',
-    stock: 22,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1978,
-    image: 'linear-gradient(135deg, #d7c7b4, #a27452)',
-  },
-  {
-    id: 8,
-    name: 'Slim Photo Album',
-    code: 'ALB-SL-008',
-    category: 'Modern',
-    size: '8" x 8"',
-    price: '₹799',
-    oldPrice: '₹999',
-    stock: 40,
-    stockLabel: 'In Stock',
-    status: 'Active',
-    views: 1634,
-    image: 'linear-gradient(135deg, #e0f2fe, #c6d7ef)',
-  },
-];
+const formatCurrency = (value) => {
+  const numeric = Number(value || 0);
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(numeric);
+};
 
-const stats = [
-  {
-    title: 'Total Albums',
-    value: '186',
-    change: '+ 12.5%',
-    subtitle: 'from last month',
-    accent: 'bg-[#e9f6ef]',
-    icon: <BookOpen className="h-7 w-7 text-[#1f7a4b]" />,
-  },
-  {
-    title: 'Active Albums',
-    value: '162',
-    change: '+ 8.3%',
-    subtitle: 'from last month',
-    accent: 'bg-[#edf7ff]',
-    icon: <FolderOpen className="h-7 w-7 text-[#1f5aa8]" />,
-  },
-  {
-    title: 'Low Stock',
-    value: '14',
-    change: 'Needs restock',
-    subtitle: '',
-    accent: 'bg-[#f5ecff]',
-    icon: <Package className="h-7 w-7 text-[#7d5ad2]" />,
-  },
-  {
-    title: 'Total Views',
-    value: '24,580',
-    change: '+ 15.2%',
-    subtitle: 'from last month',
-    accent: 'bg-[#f6edff]',
-    icon: <BarChart3 className="h-7 w-7 text-[#7e54c8]" />,
-  },
-];
+const normalizeAlbum = (album) => {
+  const productImages = (() => {
+    if (Array.isArray(album.product_images)) return album.product_images;
+    if (typeof album.product_images === 'string') {
+      try {
+        const parsed = JSON.parse(album.product_images);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+    return [];
+  })();
+
+  const thumbnail = album.thumbnail_image || productImages[0] || '';
+  const stock = Number(album.stock_quantity || 0);
+  const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
+
+  return {
+    id: album.id || album.product_id,
+    name: album.product_name || 'Untitled Album',
+    code: album.product_code || album.product_id || 'N/A',
+    category: album.category || album.sub_category || 'General',
+    size: album.size || 'N/A',
+    price: formatCurrency(album.selling_price ?? album.price ?? 0),
+    oldPrice: formatCurrency(album.discount_price ?? album.selling_price ?? 0),
+    stock,
+    stockLabel,
+    status: album.status || 'Active',
+    views: album.views || 0,
+    image: thumbnail ? `url(${thumbnail})` : 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
+  };
+};
 
 const getStatusClasses = (status) => {
   if (status === 'Active') {
@@ -193,9 +87,85 @@ const getStockClasses = (stockLabel) => {
 
 const AdminAlbums = () => {
   const navigate = useNavigate();
+  const [albums, setAlbums] = useState([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All Categories');
   const [status, setStatus] = useState('All Status');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAlbums = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const response = await api.get('/albums');
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+
+        if (!isMounted) return;
+
+        setAlbums(data.map(normalizeAlbum));
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Failed to load albums:', err);
+        setError('Unable to load albums right now.');
+        setAlbums([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchAlbums();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const stats = useMemo(() => {
+    const totalAlbums = albums.length;
+    const activeAlbums = albums.filter((album) => album.status === 'Active').length;
+    const lowStock = albums.filter((album) => album.stockLabel === 'Low Stock').length;
+    const totalViews = albums.reduce((sum, album) => sum + (Number(album.views) || 0), 0);
+
+    return [
+      {
+        title: 'Total Albums',
+        value: String(totalAlbums),
+        change: totalAlbums ? '+ 12.5%' : '0%',
+        subtitle: totalAlbums ? 'from last month' : 'No albums yet',
+        accent: 'bg-[#e9f6ef]',
+        icon: <BookOpen className="h-7 w-7 text-[#1f7a4b]" />,
+      },
+      {
+        title: 'Active Albums',
+        value: String(activeAlbums),
+        change: activeAlbums ? '+ 8.3%' : '0%',
+        subtitle: activeAlbums ? 'from last month' : 'No active items',
+        accent: 'bg-[#edf7ff]',
+        icon: <FolderOpen className="h-7 w-7 text-[#1f5aa8]" />,
+      },
+      {
+        title: 'Low Stock',
+        value: String(lowStock),
+        change: lowStock ? 'Needs restock' : 'Healthy',
+        subtitle: '',
+        accent: 'bg-[#f5ecff]',
+        icon: <Package className="h-7 w-7 text-[#7d5ad2]" />,
+      },
+      {
+        title: 'Total Views',
+        value: totalViews.toLocaleString(),
+        change: '+ 15.2%',
+        subtitle: 'from last month',
+        accent: 'bg-[#f6edff]',
+        icon: <BarChart3 className="h-7 w-7 text-[#7e54c8]" />,
+      },
+    ];
+  }, [albums]);
 
   const filteredAlbums = useMemo(() => {
     return albums.filter((album) => {
@@ -204,7 +174,7 @@ const AdminAlbums = () => {
       const matchesStatus = status === 'All Status' || album.status === status;
       return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [search, category, status]);
+  }, [albums, search, category, status]);
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -311,78 +281,91 @@ const AdminAlbums = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
-              <thead>
-                <tr className="border-b border-[#ece9e5] text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6c6c6c]">
-                  <th className="px-4 py-3">Album</th>
-                  <th className="px-4 py-3">Product Code</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Size</th>
-                  <th className="px-4 py-3">Price</th>
-                  <th className="px-4 py-3">Stock</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Views</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredAlbums.map((album) => (
-                  <tr key={album.id} className="border-b border-[#f0efec] text-sm text-[#2d2d2d] transition hover:bg-[#fafaf9]">
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-14 w-14 rounded-xl border border-[#eaeaea] shadow-sm"
-                          style={{ background: album.image }}
-                        />
-                        <div>
-                          <div className="font-semibold text-[#1d1d1d]">{album.name}</div>
-                          <div className="text-[12px] text-[#707070]">{album.category} album</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-[#5d5d5d]">{album.code}</td>
-                    <td className="px-4 py-4">
-                      <span className="rounded-full bg-[#edf0f7] px-2.5 py-1 text-[11px] font-medium text-[#4d6480]">
-                        {album.category}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">{album.size}</td>
-                    <td className="px-4 py-4">
-                      <div className="font-semibold text-[#1e1e1e]">{album.price}</div>
-                      <div className="text-[11px] text-[#8e8e8e] line-through">{album.oldPrice}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="font-semibold text-[#1f1f1f]">{album.stock}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStockClasses(album.stockLabel)}`}>
-                        {album.stockLabel}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(album.status)}`}>
-                        {album.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-[#1f1f1f] font-medium">{album.views.toLocaleString()}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="View album">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="Edit album">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]" aria-label="Delete album">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="flex min-h-[200px] items-center justify-center text-sm text-[#5d5d5d]">
+                Loading albums...
+              </div>
+            ) : error ? (
+              <div className="flex min-h-[200px] items-center justify-center text-sm text-[#b42318]">
+                {error}
+              </div>
+            ) : (
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr className="border-b border-[#ece9e5] text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6c6c6c]">
+                    <th className="px-4 py-3">Album</th>
+                    <th className="px-4 py-3">Product Code</th>
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Size</th>
+                    <th className="px-4 py-3">Price</th>
+                    <th className="px-4 py-3">Stock</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Views</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                <tbody>
+                  {filteredAlbums.map((album) => (
+                    <tr key={album.id} className="border-b border-[#f0efec] text-sm text-[#2d2d2d] transition hover:bg-[#fafaf9]">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-14 w-14 rounded-xl border border-[#eaeaea] bg-cover bg-center shadow-sm"
+                            style={{
+                              backgroundImage: album.image.startsWith('url(') ? album.image : undefined,
+                              background: album.image.startsWith('url(') ? undefined : album.image,
+                            }}
+                          />
+                          <div>
+                            <div className="font-semibold text-[#1d1d1d]">{album.name}</div>
+                            <div className="text-[12px] text-[#707070]">{album.category} album</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-[#5d5d5d]">{album.code}</td>
+                      <td className="px-4 py-4">
+                        <span className="rounded-full bg-[#edf0f7] px-2.5 py-1 text-[11px] font-medium text-[#4d6480]">
+                          {album.category}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">{album.size}</td>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold text-[#1e1e1e]">{album.price}</div>
+                        <div className="text-[11px] text-[#8e8e8e] line-through">{album.oldPrice}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold text-[#1f1f1f]">{album.stock}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStockClasses(album.stockLabel)}`}>
+                          {album.stockLabel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(album.status)}`}>
+                          {album.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-[#1f1f1f] font-medium">{album.views.toLocaleString()}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="View album">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="Edit album">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]" aria-label="Delete album">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-[#ece9e5] px-2 pt-4 text-[12px] text-[#737373]">
