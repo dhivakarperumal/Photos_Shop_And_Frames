@@ -96,10 +96,12 @@ const BannerManagement = () => {
 
         try {
             const formData = new FormData();
-            formData.append("type", currentBanner.type || "hero");
-            formData.append("image", file);
-            const response = await api.post("/banners/upload", formData);
-            const imageUrl = response.data.url;
+            formData.append("folder", "banners");
+            formData.append("file", file);
+
+            const response = await api.post("/upload", formData);
+            const imageUrl = response?.data?.url || response?.data?.urls?.[0] || "";
+
             if (isMobile) {
                 setCurrentBanner(prev => ({ ...prev, mobile_image: imageUrl }));
             } else {
@@ -108,7 +110,7 @@ const BannerManagement = () => {
             toast.success(`${isMobile ? 'Mobile' : 'Desktop'} image ready!`);
         } catch (error) {
             console.error("Error uploading banner image:", error);
-            toast.error("Image upload failed");
+            toast.error(error?.response?.data?.message || "Image upload failed");
         } finally {
             if (isMobile) setMobileUploading(false);
             else setUploading(false);

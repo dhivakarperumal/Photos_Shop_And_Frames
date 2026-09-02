@@ -54,7 +54,7 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-app.post("/api/upload", upload.any(), (req, res) => {
+const handleUploadRequest = (req, res) => {
   const files = Array.isArray(req.files) ? req.files : [];
 
   if (!files.length) {
@@ -76,7 +76,10 @@ app.post("/api/upload", upload.any(), (req, res) => {
     urls,
     data: urls,
   });
-});
+};
+
+app.post("/api/upload", upload.any(), handleUploadRequest);
+app.post("/api/banners/upload", upload.any(), handleUploadRequest);
 
 
 
