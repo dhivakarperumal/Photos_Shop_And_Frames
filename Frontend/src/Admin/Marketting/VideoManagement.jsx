@@ -184,7 +184,7 @@ const VideoManagement = () => {
             </div>
             {/* Header Section */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <div className="relative w-full xl:max-w-md">
+                <div className="relative w-full xl:w-[420px] xl:max-w-[420px]">
                     <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
@@ -194,7 +194,7 @@ const VideoManagement = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3">
                     <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
                         <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Table mode" title="Table mode"><FiList size={16} /></button>
                         <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Card mode" title="Card mode"><FiGrid size={16} /></button>
@@ -213,12 +213,12 @@ const VideoManagement = () => {
                     {viewMode === "table" ? <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse block md:table">
                             <thead className="hidden md:table-header-group">
-                                <tr className="bg-gradient-to-r from-[#260642] to-[#4b0b78]">
-                                    <th className="px-4 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-center">S No</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Preview</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Title</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Source</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-right">Actions</th>
+                                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                                    <th className="rounded-tl-md px-4 py-4 text-xs font-black  capitalize tracking-wider text-center">S No</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Preview</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Title</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Source</th>
+                                    <th className="rounded-tr-md px-6 py-4 text-xs font-black  capitalize tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="block md:table-row-group divide-y divide-gray-50 text-slate-800 px-3 py-4 md:p-0">
