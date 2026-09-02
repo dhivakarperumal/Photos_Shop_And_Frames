@@ -908,7 +908,7 @@ const AdminReviews = () => {
         {/* ================= ADD / EDIT REVIEW MODAL ================= */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl hide-scrollbar">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -1222,7 +1222,7 @@ const AdminReviews = () => {
         {/* ================= VIEW REVIEW DETAIL MODAL ================= */}
         {viewingReview && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl hide-scrollbar">
               <button
                 type="button"
                 onClick={() => setViewingReview(null)}
