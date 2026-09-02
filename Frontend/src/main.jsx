@@ -107,6 +107,10 @@ const router = createHashRouter([
             element: <AddCategory />,
           },
           {
+            path: 'products/categories/edit/:categoryId',
+            element: <AddCategory />,
+          },
+          {
             path: 'products/stock-details',
             element: <StockDetails />,
           },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   CalendarDays,
@@ -50,6 +50,8 @@ const AddCategory = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const { profileName } = useAuth();
+  const { categoryId } = useParams();
+  const isEditMode = Boolean(categoryId);
 
   const [formData, setFormData] = useState({
     categoryId: getInitialCategoryId(),
@@ -79,8 +81,44 @@ const AddCategory = () => {
   };
 
   useEffect(() => {
+    if (isEditMode) {
+      const fetchCategory = async () => {
+        try {
+          const response = await api.get(`/categories/${categoryId}`);
+          const item = response?.data?.data;
+          if (!item) {
+            navigate('/admin/products/categories');
+            return;
+          }
+
+          setFormData({
+            categoryId: item.category_id || categoryId,
+            categoryType: item.category_type || 'Frame',
+            categoryName: item.category_name || '',
+            subCategories: Array.isArray(item.sub_categories) ? item.sub_categories : [],
+            description: item.description || '',
+            sortOrder: Number(item.sort_order || 1),
+            status: item.status !== 'Inactive',
+            createdBy: item.created_by || profileName || 'Admin',
+            updatedBy: item.updated_by || profileName || 'Admin',
+            createdDate: item.created_date ? formatDate(new Date(item.created_date)) : formatDate(new Date()),
+            updatedDate: item.updated_date ? formatDate(new Date(item.updated_date)) : formatDate(new Date()),
+          });
+          setUploadedImageUrl(normalizeImageUrl(item.category_image || ''));
+          setPreviewUrl(normalizeImageUrl(item.category_image || ''));
+        } catch (error) {
+          console.error('Failed to load category for edit:', error);
+          alert(error?.response?.data?.message || 'Failed to load category.');
+          navigate('/admin/products/categories');
+        }
+      };
+
+      fetchCategory();
+      return;
+    }
+
     fetchNextCategoryId();
-  }, []);
+  }, [categoryId, isEditMode, navigate, profileName]);
   const [newSubCategory, setNewSubCategory] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
@@ -193,16 +231,19 @@ const AddCategory = () => {
       sort_order: formData.sortOrder,
       status: formData.status ? 'Active' : 'Inactive',
       created_by: formData.createdBy,
-      updated_by: formData.updatedBy,
+      updated_by: formData.updatedBy || profileName || 'Admin',
       created_date: formData.createdDate,
       updated_date: formatDate(new Date()),
     };
 
     try {
-      const response = await api.post('/categories', payload);
-      console.log('Category saved:', response.data);
+      if (isEditMode) {
+        await api.put(`/categories/${categoryId}`, payload);
+      } else {
+        await api.post('/categories', payload);
+      }
 
-      if (mode === 'add-another') {
+      if (mode === 'add-another' && !isEditMode) {
         await resetForm();
         return;
       }
@@ -223,13 +264,17 @@ const AddCategory = () => {
               <Sparkles className="h-3.5 w-3.5" />
               Product catalog
             </div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.06em] text-[#1f1f1f]">Add New Category</h1>
+            <h1 className="text-[2.1rem] font-bold tracking-[-0.06em] text-[#1f1f1f]">
+              {isEditMode ? 'Edit Category' : 'Add New Category'}
+            </h1>
             <div className="mt-2 flex items-center gap-2 text-[13px] text-[#666]">
               <span>Dashboard</span>
               <span className="text-[#c0b8af]">›</span>
               <span>Categories</span>
               <span className="text-[#c0b8af]">›</span>
-              <span className="font-semibold text-[#1f1f1f]">Add New Category</span>
+              <span className="font-semibold text-[#1f1f1f]">
+                {isEditMode ? 'Edit Category' : 'Add New Category'}
+              </span>
             </div>
           </div>
 
