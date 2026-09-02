@@ -1,9 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ChevronDown,
-  Download,
-  Filter,
   Grid2x2,
   ImageIcon,
   LayoutGrid,
@@ -15,7 +12,6 @@ import {
   Table2,
   Trash2,
   TrendingUp,
-  Upload,
 } from 'lucide-react';
 import api from '../../api';
 
@@ -36,6 +32,10 @@ const AdminCategories = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedParent, setSelectedParent] = useState('All Parent Categories');
+  const [sortBy, setSortBy] = useState('latest');
 
   const fetchCategories = async () => {
     try {
@@ -89,6 +89,7 @@ const AdminCategories = () => {
         description: item.description || 'No description added yet.',
         products: productCounts[String(item.category_name || '').trim().toLowerCase()] || 0,
         status: item.status === 'Inactive' ? 'Inactive' : 'Active',
+        parentCategory: item.parent_category || item.parent_category_name || '',
         sortOrder: item.sort_order || index + 1,
         createdAt: item.created_date ? new Date(item.created_date).toLocaleString('en-GB', {
           day: '2-digit',
@@ -103,6 +104,23 @@ const AdminCategories = () => {
 
   const activeCount = listData.filter((item) => item.status === 'Active').length;
   const latestCategory = listData[0];
+  const parentCategories = [...new Set(listData.map((item) => item.parentCategory).filter(Boolean))];
+  const filteredCategories = listData
+    .filter((item) => {
+      const searchValue = searchTerm.toLowerCase();
+      const matchesSearch = [item.name, item.description].some((value) =>
+        String(value).toLowerCase().includes(searchValue)
+      );
+      const matchesStatus = selectedStatus === 'All Status' || item.status === selectedStatus;
+      const matchesParent = selectedParent === 'All Parent Categories' || item.parentCategory === selectedParent;
+      return matchesSearch && matchesStatus && matchesParent;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'products-high') return b.products - a.products;
+      if (sortBy === 'products-low') return a.products - b.products;
+      return a.sortOrder - b.sortOrder;
+    });
   const statValues = [
     { title: 'Total Categories', value: String(listData.length), inc: '10.7%', icon: <Grid2x2 className="h-7 w-7 text-white" />, iconBg: 'bg-[#22c55e]', waveColor: '#22c55e' },
     { title: 'Active Categories', value: String(activeCount), inc: '9.2%', icon: <PackageCheck className="h-7 w-7 text-white" />, iconBg: 'bg-[#f59e0b]', waveColor: '#f59e0b' },
@@ -185,21 +203,32 @@ const AdminCategories = () => {
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search categories..."
                   className="h-[46px] w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-10 pr-3 text-[14px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={selectedStatus}
+                onChange={(event) => setSelectedStatus(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option>All Status</option>
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Parent Categories
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              {/* <select
+                value={selectedParent}
+                onChange={(event) => setSelectedParent(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option>All Parent Categories</option>
+                {parentCategories.map((parent) => <option key={parent}>{parent}</option>)}
+              </select> */}
 
               {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
                 <Filter className="h-4 w-4 text-[#c69218]" />
@@ -209,10 +238,16 @@ const AdminCategories = () => {
             </div>
 
             <div className="flex items-center gap-3 lg:shrink-0">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="latest">Sort by: Latest</option>
+                <option value="name">Name: A to Z</option>
+                <option value="products-high">Products: High to Low</option>
+                <option value="products-low">Products: Low to High</option>
+              </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
                 <button
@@ -253,7 +288,7 @@ const AdminCategories = () => {
             <>
               {viewMode === 'card' ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                  {listData.map((category, index) => (
+                  {filteredCategories.map((category, index) => (
                     <div key={category.id || index} className="rounded-[18px] border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)] transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${index % 2 === 0 ? 'bg-[#f4e4d1] text-[#a05c2a]' : 'bg-[#dfeaf8] text-[#3f7db8]'}`}>
@@ -264,13 +299,26 @@ const AdminCategories = () => {
                           )}
                         </div>
 
-                        <button className="text-[#7c7c7c] hover:text-[#222]" aria-label="More options">
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                            <circle cx="12" cy="5" r="1.5" />
-                            <circle cx="12" cy="12" r="1.5" />
-                            <circle cx="12" cy="19" r="1.5" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/products/categories/edit/${category.id}`)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#4d4d4d] hover:bg-[#f8f6f3]"
+                            aria-label={`Edit ${category.name}`}
+                            title="Edit category"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#d94848] hover:bg-[#ffeded]"
+                            aria-label={`Delete ${category.name}`}
+                            title="Delete category"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="text-[16px] font-semibold text-[#1e1e1e]">{category.name}</div>
@@ -300,7 +348,7 @@ const AdminCategories = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {listData.map((item, idx) => (
+                      {filteredCategories.map((item, idx) => (
                         <tr key={item.id || idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
@@ -352,7 +400,7 @@ const AdminCategories = () => {
               )}
 
               <div className="mt-4 flex items-center justify-between text-[12px] text-[#666]">
-                <span>{loading ? 'Loading categories...' : `Showing 1 to ${listData.length} of ${listData.length} categories`}</span>
+                <span>{loading ? 'Loading categories...' : `Showing ${filteredCategories.length} of ${listData.length} categories`}</span>
                 <div className="flex items-center gap-2">
                   <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&lt;</button>
                   <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1d3d36] text-white">1</button>
