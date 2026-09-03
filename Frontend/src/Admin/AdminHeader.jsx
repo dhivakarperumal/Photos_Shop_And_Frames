@@ -33,6 +33,8 @@ const pageInfo = {
   "/admin/payments":                { title: "Payments",              icon: CreditCard },
   "/admin/billing":                 { title: "Billing",               icon: Receipt },
   "/admin/orders":                  { title: "Orders",                icon: ShoppingCart },
+  "/admin/getorders":               { title: "Get Orders",             icon: ShoppingCart },
+  "/admin/frames":                  { title: "Frames",                 icon: Boxes },
   "/admin/settings":                { title: "Settings",              icon: Settings },
   "/admin/settings/profile":        { title: "Profile",               icon: User },
   "/admin/send-message":            { title: "Bulk Messaging",        icon: Send },
@@ -414,6 +416,7 @@ const Header = ({ onMenuClick }) => {
                 { label: "Stock", path: "/admin/products/stock-details" },
                 { label: "Orders", path: "/admin/orders" },
                 { label: "Billing", path: "/admin/billing" },
+                    { label: "Frames", path: "/admin/frames" },
                 { label: "Customers", path: "/admin/customers" },
               ].map((l) => (
                 <Link
