@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, Edit3, Printer, Search, ShoppingBag, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import api from "../../api";
 
-const orders = [
+const fallbackOrders = [
   { id: "ORD-000124", customer: "Karthik R", phone: "+91 9876543210", items: 3, date: "02 May 2025", time: "11:30 AM", amount: 1299, status: "Confirmed" },
   { id: "ORD-000123", customer: "Priya Sharma", phone: "+91 9123456780", items: 2, date: "02 May 2025", time: "10:15 AM", amount: 2499, status: "Confirmed" },
   { id: "ORD-000122", customer: "Arun Kumar", phone: "+91 9988776655", items: 4, date: "01 May 2025", time: "06:45 PM", amount: 3599, status: "Preparing" },
@@ -31,10 +32,41 @@ const statusClass = {
 
 const Billing = () => {
   const navigate = useNavigate();
+  const [orders, setOrders] = useState(fallbackOrders);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState(orders[0]);
+  const [selectedOrder, setSelectedOrder] = useState(fallbackOrders[0]);
   const [activeStatus, setActiveStatus] = useState("All Orders");
   const [receivedAmount, setReceivedAmount] = useState("1300");
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await api.get("/orders");
+        const savedOrders = Array.isArray(response.data?.data) ? response.data.data : [];
+        const mappedOrders = savedOrders.map((order) => ({
+          id: order.order_id,
+          customer: order.address?.customer_name || order.customer_id || "Customer",
+          phone: order.address?.mobile_number || "",
+          items: Number(order.total_items || order.items?.length || 0),
+          date: order.order_date ? new Date(order.order_date).toLocaleDateString("en-GB") : "-",
+          time: order.created_at ? new Date(order.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "-",
+          amount: Number(order.total_amount || 0),
+          status: order.order_status || "Pending",
+          email: order.address?.email || "",
+          address: order.address,
+          orderItems: order.items || [],
+        }));
+        setOrders(mappedOrders);
+        setSelectedOrder(mappedOrders[0] || fallbackOrders[0]);
+      } catch (error) {
+        console.error("Failed to load billing orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const query = search.toLowerCase();
@@ -42,6 +74,8 @@ const Billing = () => {
     const matchesStatus = activeStatus === "All Orders" || order.status === activeStatus;
     return matchesSearch && matchesStatus;
   }), [search, activeStatus]);
+
+  const selectedOrderItems = selectedOrder?.orderItems || [];
 
   const subtotal = products.reduce((sum, product) => sum + product.price * product.quantity, 0);
   const discount = 598;

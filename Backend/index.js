@@ -25,6 +25,7 @@ const videoRouter = require("./src/routers/videoRouter");
 const albumRouter = require("./src/routers/albumRouter");
 const reviewRouter = require("./src/routers/reviewRouter");
 const couponRouter = require("./src/routers/couponRouter");
+const orderRouter = require("./src/routers/orderRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -103,6 +104,7 @@ app.use("/api/gallery", galleryRouter);
 app.use("/api/videos", videoRouter);
 app.use("/api/albums", albumRouter);
 app.use("/api/coupons", couponRouter);
+app.use("/api/orders", orderRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

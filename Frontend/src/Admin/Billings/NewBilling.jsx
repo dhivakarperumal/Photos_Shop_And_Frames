@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 
 const money = (value) =>
   `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -28,6 +29,7 @@ const parseVariants = (value) => {
 
 const NewBilling = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -61,6 +63,10 @@ const NewBilling = () => {
   const change = Math.max(Number(receivedAmount || 0) - total, 0);
 
   useEffect(() => {
+    setReceivedAmount(total.toFixed(2));
+  }, [total]);
+
+  useEffect(() => {
     const fetchProducts = async () => {
       try {
         const response = await api.get("/products");
@@ -70,6 +76,7 @@ const NewBilling = () => {
         const catalog = products.map((product, index) => ({
           id: product.product_id || product.id || `product-${index}`,
           name: product.product_name || product.name || "Unnamed Product",
+          productCode: product.product_code || product.product_id || "",
           detail: product.size || product.product_code || "",
           category: product.category || "General",
           price: Number(product.selling_price ?? product.price ?? 0),
@@ -191,6 +198,51 @@ const NewBilling = () => {
     setShowProductModal(false);
   };
 
+  const handleGenerateBill = async () => {
+    if (!selectedCustomer || !items.length) return;
+    try {
+      const createdBy = user?.user_id || user?.id || user?.email || "system";
+      await api.post("/orders", {
+        order: {
+          customer_id: selectedCustomer.user_id || selectedCustomer.id,
+          billing_type: "Shop Billing",
+          order_date: new Date().toISOString().slice(0, 10),
+          total_items: items.reduce((sum, item) => sum + item.quantity, 0),
+          subtotal,
+          discount_amount: itemDiscountTotal + Number(discount || 0),
+          tax_amount: 0,
+          total_amount: total,
+          payment_method: "Cash",
+          payment_status: Number(receivedAmount || 0) >= total ? "Paid" : Number(receivedAmount || 0) > 0 ? "Partial" : "Pending",
+          order_status: "Completed",
+          notes: "",
+          created_by: createdBy,
+          updated_by: createdBy,
+        },
+        items: items.map((item) => ({
+          product_id: item.product_id || item.id,
+          product_name: item.name,
+          product_code: item.productCode,
+          quantity: item.quantity,
+          unit_price: item.price,
+          discount: item.discount || 0,
+          tax: 0,
+          total_price: item.price * item.quantity - Number(item.discount || 0),
+        })),
+        address: {
+          user_id: createdBy,
+          customer_id: selectedCustomer.user_id || selectedCustomer.id,
+          customer_name: selectedCustomer.username || selectedCustomer.name || selectedCustomer.full_name,
+          mobile_number: selectedCustomer.mobile_number || selectedCustomer.phone || selectedCustomer.mobile,
+          address: selectedCustomer.address || selectedCustomer.full_address || selectedCustomer.billing_address,
+        },
+      });
+      navigate("/admin/billing");
+    } catch (error) {
+      console.error("Failed to generate bill:", error);
+    }
+  };
+
   return (
     <div className="billing-page min-h-screen bg-[#f3f4f6] p-4 text-[#1f2937] md:p-6">
       <div className="mx-auto max-w-[1500px]">
@@ -282,8 +334,8 @@ const NewBilling = () => {
 
         <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md border border-[#ff9869] px-3 py-2 text-xs font-semibold text-[#ed6b26]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3 font-semibold">{item.name}<div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr_0.85fr]">
-          <section className="rounded-lg border border-[#e5e7eb] bg-white p-3">
+        <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">
+          <section className="hidden rounded-lg border border-[#e5e7eb] bg-white p-3">
             <h2 className="text-sm font-bold">Order Notes</h2>
             <textarea
               placeholder="Enter order notes (optional)"
@@ -395,7 +447,9 @@ const NewBilling = () => {
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md bg-[#f56618] px-5 py-2 text-xs font-semibold text-white"
+              onClick={handleGenerateBill}
+              disabled={!selectedCustomer || !items.length}
+              className="inline-flex items-center gap-2 rounded-md bg-[#f56618] px-5 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer className="h-4 w-4" /> Generate Bill
             </button>
