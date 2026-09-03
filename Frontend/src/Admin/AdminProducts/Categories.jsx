@@ -340,10 +340,9 @@ const AdminCategories = () => {
                       <tr>
                         <th className="px-4 py-4">S.No</th>
                         <th className="px-4 py-4">Category</th>
-                        <th className="px-4 py-4">Sub Categories</th>
+                        <th className="px-4 py-4">Description</th>
+                        <th className="px-4 py-4">Products</th>
                         <th className="px-4 py-4">Status</th>
-                        {/* <th className="px-4 py-4">Sort Order</th> */}
-                        {/* <th className="px-4 py-4">Created At</th> */}
                         <th className="px-4 py-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -363,16 +362,14 @@ const AdminCategories = () => {
                               <span className="font-medium text-[#202020]">{item.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-[#5d5d5d]">{item.subCategories}</td>
-                          
+                          <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
+                          <td className="px-4 py-4">{item.products}</td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${item.status === 'Active' ? 'bg-[#eaf7ef] text-[#2b7a4b]' : 'bg-[#fdf1f1] text-[#b85c5c]'}`}>
                               <span className={`mr-1.5 h-2 w-2 rounded-full ${item.status === 'Active' ? 'bg-[#2b7a4b]' : 'bg-[#b85c5c]'}`} />
                               {item.status}
                             </span>
                           </td>
-                          {/* <td className="px-4 py-4">{item.sortOrder}</td>
-                          <td className="px-4 py-4">{item.createdAt}</td> */}
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <button
