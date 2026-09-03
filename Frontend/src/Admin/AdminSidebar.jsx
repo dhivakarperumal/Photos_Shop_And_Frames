@@ -70,6 +70,7 @@ const navItems = [
     icon: Package,
     children: [
       { path: "/admin/products", label: "All Products", icon: Package },
+      { path: "/admin/frames", label: "Frames", icon: Image },
       { path: "/admin/products/categories", label: "Category", icon: Layers },
       { path: "/admin/products/stock-details", label: "Stock Details", icon: ClipboardList },
     ],
