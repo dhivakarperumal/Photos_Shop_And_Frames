@@ -186,7 +186,7 @@ const FramesList = () => {
                           <img src={frame.frame_image} alt={frame.frame_name} className="h-12 w-12 rounded-lg bg-[#f6f2ec] object-contain" />
                           <div>
                             <div className="font-semibold text-[#202020]">{frame.frame_name}</div>
-                            <div className="font-mono text-[10px] text-[#888]">{frame.uuid?.slice(0, 16)}...</div>
+                            {/* <div className="font-mono text-[10px] text-[#888]">{frame.uuid?.slice(0, 16)}...</div> */}
                           </div>
                         </div>
                       </td>
@@ -258,12 +258,12 @@ const FramesList = () => {
                       <h3 className="text-base font-bold text-[#1f1f1f] group-hover:text-[#1a3c36]">
                         {frame.frame_name}
                       </h3>
-                      <p className="mt-1 font-mono text-[11px] text-[#888]">
+                      {/* <p className="mt-1 font-mono text-[11px] text-[#888]">
                         UUID: {frame.uuid?.slice(0, 16)}...
-                      </p>
+                      </p> */}
 
                       <div className="mt-3 flex flex-wrap gap-1">
-                        {slots.map((s, i) => (
+                        {slots.slice(0,3).map((s, i) => (
                           <span
                             key={i}
                             className="rounded-md bg-[#f4f0eb] px-2 py-0.5 text-[10px] text-[#666]"
