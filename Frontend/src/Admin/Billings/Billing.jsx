@@ -406,7 +406,6 @@ const Billing = () => {
                   <tr className="bg-[#fff4ed] font-semibold text-[#374151]">
                     <th className="rounded-tl-md px-4 py-4">S.No</th>
                     <th className="px-4 py-4">Order ID</th>
-                    <th className="px-4 py-4">Product</th>
                     <th className="px-4 py-4">Customer</th>
                     <th className="px-4 py-4">Items</th>
                     <th className="px-4 py-4">Order Date</th>
@@ -426,24 +425,6 @@ const Billing = () => {
                         {order.id}
                         <div className="font-normal text-[#6b7280]">
                           #{order.id.slice(-3)}
-                        </div>
-                      </td>
-                      <td className="px-2 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-[#e5e7eb] bg-[#f9fafb]">
-                            {getOrderImage(order.orderItems[0]?.product_image) ? (
-                              <img
-                                src={getOrderImage(order.orderItems[0].product_image)}
-                                alt={order.orderItems[0].product_name || "Ordered product"}
-                                className="h-full w-full object-contain"
-                              />
-                            ) : (
-                              <Package className="h-4 w-4 text-[#9ca3af]" />
-                            )}
-                          </div>
-                          <span className="max-w-36 truncate text-xs text-[#374151]">
-                            {order.orderItems[0]?.product_name || "No product image"}
-                          </span>
                         </div>
                       </td>
                       <td className="px-2 py-3 font-medium">
