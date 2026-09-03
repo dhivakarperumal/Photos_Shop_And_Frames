@@ -155,9 +155,13 @@ const getOrderById = async (orderId) => {
   const order = orderRows[0];
 
   const itemsQuery = `
-    SELECT * FROM order_items 
-    WHERE order_id = ? 
-    ORDER BY id ASC
+    SELECT 
+      oi.*,
+      cp.preview_image AS customized_preview_image
+    FROM order_items oi 
+    LEFT JOIN customized_photos cp ON oi.customization_id = cp.customization_id
+    WHERE oi.order_id = ? 
+    ORDER BY oi.id ASC
   `;
   const [itemRows] = await pool.query(itemsQuery, [order.order_id]);
 
@@ -167,6 +171,11 @@ const getOrderById = async (orderId) => {
       typeof item.slot_photos === "string"
         ? JSON.parse(item.slot_photos)
         : item.slot_photos || {},
+    whole_frame_image:
+      item.customized_preview_image ||
+      item.product_image ||
+      item.frame_image ||
+      null,
   }));
 
   return {

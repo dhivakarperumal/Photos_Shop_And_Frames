@@ -496,20 +496,59 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
                         </div>
                       </div>
 
-                      {/* CUSTOMIZED PHOTOS GALLERY FOR THIS FRAME */}
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs font-bold uppercase tracking-wider text-[#1a3c36] flex items-center gap-1.5">
-                            <ImageIcon className="h-4 w-4" /> Customer Customized Photos ({slotEntries.length})
+                      {/* 1. WHOLE FRAME PHOTO (MERGED DESIGN) */}
+                      {item.whole_frame_image && (
+                        <div className="mt-5 rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0e8dc] pb-3">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wider text-[#1a3c36] flex items-center gap-1.5">
+                                <Sparkles className="h-4 w-4 text-[#b07838]" /> Whole Frame Photo (Merged Customer Frame)
+                              </p>
+                              <p className="text-[11px] text-[#777]">
+                                Complete final composition of the frame with customer's photos placed
+                              </p>
+                            </div>
+
+                            <a
+                              href={item.whole_frame_image}
+                              download={`Order-${selectedOrder.order_id}-WholeFrame.jpg`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-[#1a3c36] px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#235048]"
+                            >
+                              <Download className="h-3.5 w-3.5" /> Download Whole Frame
+                            </a>
+                          </div>
+
+                          <div className="mt-4 flex justify-center">
+                            <div className="relative max-w-sm overflow-hidden rounded-xl border border-[#e8dfd2] bg-white p-2 shadow-md">
+                              <img
+                                src={item.whole_frame_image}
+                                alt="Whole Frame Complete Preview"
+                                className="max-h-72 w-auto object-contain rounded-lg"
+                              />
+                              <div className="mt-2 text-center text-[11px] font-semibold text-[#666]">
+                                Final Assembled Frame
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. SEPARATELY UPLOADED CUSTOMER PHOTOS (INDIVIDUAL SLOTS) */}
+                      <div className="mt-5">
+                        <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[#b07838] flex items-center gap-1.5">
+                            <ImageIcon className="h-4 w-4" /> Separately Uploaded Photos ({slotEntries.length} Slots)
                           </p>
                           <span className="text-[11px] text-[#777]">
-                            Download original files for lab printing
+                            Download individual high-resolution files for lab printing
                           </span>
                         </div>
 
                         {slotEntries.length === 0 ? (
                           <p className="mt-2 rounded-xl bg-[#faf8f5] p-3 text-xs text-[#888]">
-                            Customer did not attach individual slot photos for this item (or standard frame ordered).
+                            Customer did not attach individual slot photos for this item (standard frame ordered).
                           </p>
                         ) : (
                           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -517,7 +556,7 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
                               return (
                                 <div
                                   key={slotId || pIdx}
-                                  className="group relative overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#faf8f5] p-2"
+                                  className="group relative overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#faf8f5] p-2 transition hover:border-[#d4a553]"
                                 >
                                   <div className="flex h-36 items-center justify-center overflow-hidden rounded-xl bg-[#eee7de]">
                                     <img
@@ -534,11 +573,11 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
 
                                     <a
                                       href={photoUrl}
-                                      download={`Order-${selectedOrder.order_id}-Slot-${pIdx + 1}.jpg`}
+                                      download={`Order-${selectedOrder.order_id}-Position-${pIdx + 1}.jpg`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white shadow transition hover:bg-[#235048]"
-                                      title="Download high-resolution photo"
+                                      title="Download individual high-resolution photo"
                                     >
                                       <Download className="h-3.5 w-3.5" />
                                     </a>

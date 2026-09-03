@@ -148,6 +148,7 @@ async function ensureDatabaseSchema() {
         price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         quantity INT(11) NOT NULL DEFAULT 1,
         slot_photos JSON NULL,
+        preview_image VARCHAR(500) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_user_id (user_id),
