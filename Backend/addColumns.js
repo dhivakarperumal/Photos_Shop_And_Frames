@@ -72,6 +72,9 @@ async function addColumns() {
     }
 
     for (const column of [
+      "shipped_at DATETIME NULL",
+      "docket_number VARCHAR(100) NULL",
+      "courier_name VARCHAR(255) NULL",
       "created_by VARCHAR(255) NULL",
       "updated_by VARCHAR(255) NULL",
     ]) {

@@ -264,6 +264,10 @@ const getAllOrders = async (filters = {}) => {
     values.push(filters.billing_type);
   }
 
+  if (filters.today === "1" || filters.today === "true") {
+    query += ` AND o.created_at >= CURDATE() AND o.created_at < CURDATE() + INTERVAL 1 DAY`;
+  }
+
   if (filters.search) {
     query += ` AND (o.order_id LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ?)`;
     const searchPattern = `%${filters.search}%`;
@@ -339,7 +343,7 @@ const getOrdersByUser = async (userId) => {
 
 const updateOrderStatus = async (orderId, updateData) => {
   const pool = getDB();
-  const { order_status, payment_status, updated_by } = updateData;
+  const { order_status, payment_status, shipped_at, docket_number, courier_name, notes, updated_by } = updateData;
 
   let query = `UPDATE orders SET updated_at = NOW()`;
   const values = [];
@@ -352,6 +356,17 @@ const updateOrderStatus = async (orderId, updateData) => {
   if (payment_status) {
     query += `, payment_status = ?`;
     values.push(payment_status);
+  }
+
+  if (order_status === "Shipped" || order_status === "SHIPPED") {
+    query += `, shipped_at = ?, docket_number = ?, courier_name = ?`;
+    values.push(shipped_at || null, docket_number || null, courier_name || null);
+  } else if (order_status === "Cancelled" || order_status === "CANCELLED") {
+    query += `, shipped_at = NULL, docket_number = NULL, courier_name = NULL`;
+    if (notes?.trim()) {
+      query += `, notes = ?`;
+      values.push(notes.trim());
+    }
   }
 
   if (updated_by) {

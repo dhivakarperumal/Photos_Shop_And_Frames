@@ -14,6 +14,7 @@ import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
 import AdminOrders from './Admin/AdminOrders/AdminOrders.jsx'
+import NewOrderDetails from './Admin/AdminOrders/NewOrderDetails.jsx'
 
 import AdminDashboard from './Admin/AdminDashboard.jsx'
 import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
@@ -213,6 +214,10 @@ const router = createHashRouter([
             element: <OrderDetails />,
           },
           {
+            path: 'orders/new/:orderId',
+            element: <NewOrderDetails />,
+          },
+          {
             path: 'reviews',
             element: <AdminReviews />,
           },
@@ -226,15 +231,15 @@ const router = createHashRouter([
           },
           {
             path: 'orders/new',
-            element: <AdminOrders defaultStatus="NEW" />,
+            element: <AdminOrders todayOnly />,
           },
           {
             path: 'orders/delivery',
-            element: <AdminOrders allowedStatuses={["Delivered", "Completed"]} />,
+            element: <AdminOrders allowedStatuses={["Delivered", "Completed"]} readOnlyStatus />,
           },
           {
             path: 'orders/cancelled',
-            element: <AdminOrders allowedStatuses={["Cancelled"]} />,
+            element: <AdminOrders allowedStatuses={["Cancelled"]} readOnlyStatus />,
           },
         ],
       },
