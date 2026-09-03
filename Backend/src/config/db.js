@@ -178,6 +178,9 @@ async function ensureDatabaseSchema() {
         payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash On Delivery',
         payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
         order_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        shipped_at DATETIME NULL,
+        docket_number VARCHAR(100) NULL,
+        courier_name VARCHAR(255) NULL,
         notes TEXT NULL,
         created_by VARCHAR(255) NULL,
         updated_by VARCHAR(255) NULL,
@@ -243,6 +246,17 @@ async function ensureDatabaseSchema() {
       );
     } catch (error) {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    for (const column of [
+      "shipped_at DATETIME NULL",
+      "docket_number VARCHAR(100) NULL",
+      "courier_name VARCHAR(255) NULL",
+    ]) {
+      try {
+        await connection.query(`ALTER TABLE orders ADD COLUMN ${column}`);
+      } catch (error) {
+        if (error.code !== "ER_DUP_FIELDNAME") throw error;
+      }
     }
     await connection.query(createOrderItemsTableQuery);
     await connection.query(createAddressesTableQuery);

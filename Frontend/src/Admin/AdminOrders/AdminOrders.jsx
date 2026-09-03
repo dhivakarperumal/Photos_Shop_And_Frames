@@ -30,6 +30,8 @@ const orderStatuses = [
   { id: "NEW", name: "New Order" },
   { id: "CONFIRMED", name: "Confirmed" },
   { id: "PROCESSING", name: "Processing" },
+  { id: "PACKING", name: "Packing" },
+  { id: "SHIPPED", name: "Shipped" },
   { id: "READY", name: "Ready" },
   { id: "OUT_FOR_DELIVERY", name: "Out for Delivery" },
   { id: "DELIVERED", name: "Delivered" },
@@ -49,8 +51,13 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
   const [statusDraft, setStatusDraft] = useState("");
+  const [shippingDetails, setShippingDetails] = useState({
+    shipped_at: "",
+    docket_number: "",
+    courier_name: "",
+  });
+  const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -98,6 +105,14 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       const res = await api.get(`/orders/${orderId}`);
       if (res.data?.success && res.data.data) {
         setSelectedOrder(res.data.data);
+        setStatusDraft(res.data.data.order_status || "Pending");
+        setShippingDetails({
+          shipped_at: res.data.data.shipped_at
+            ? new Date(res.data.data.shipped_at).toISOString().slice(0, 16)
+            : "",
+          docket_number: res.data.data.docket_number || "",
+          courier_name: res.data.data.courier_name || "",
+        });
       } else {
         toast.error("Could not load order details");
       }
@@ -109,11 +124,12 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus, details = shippingDetails) => {
     try {
       setUpdatingStatus(true);
       const res = await api.patch(`/orders/${orderId}/status`, {
         order_status: newStatus,
+        ...details,
       });
 
       if (res.data?.success) {
@@ -126,6 +142,8 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             o.order_id === orderId ? { ...o, order_status: newStatus } : o
           )
         );
+        setStatusPopupOrderId(null);
+        setStatusDraft("");
         setStatusPopupOrderId(null);
       }
     } catch (err) {
@@ -159,7 +177,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       case "Pending":
         return "bg-[#fff8eb] text-[#b07838] border-[#eedac3]";
       case "Processing":
+      case "PACKING":
         return "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]";
+      case "SHIPPED":
+      case "Packing":
+        return "bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]";
       case "Shipped":
         return "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]";
       case "Delivered":
@@ -173,7 +195,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const statusOptions = allowedStatuses
     ? ["All", ...allowedStatuses]
-    : ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    : ["All", "Pending", "Processing", "Packing", "Shipped", "Delivered", "Cancelled"];
 
   // Metrics
   const totalOrdersCount = orders.length;
@@ -439,9 +461,16 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                       <option value={order.order_status}>{statusName(order.order_status)}</option>
                                     )}
                                   </select>
+                                  {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
+                                    <div className="mt-3 space-y-2">
+                                      <input type="datetime-local" value={shippingDetails.shipped_at} onChange={(event) => setShippingDetails((prev) => ({ ...prev, shipped_at: event.target.value }))} className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" />
+                                      <input value={shippingDetails.docket_number} onChange={(event) => setShippingDetails((prev) => ({ ...prev, docket_number: event.target.value }))} placeholder="Docket number" className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                                      <input value={shippingDetails.courier_name} onChange={(event) => setShippingDetails((prev) => ({ ...prev, courier_name: event.target.value }))} placeholder="Courier name" className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                                    </div>
+                                  )}
                                   <button
                                     type="button"
-                                    onClick={() => handleStatusChange(order.order_id, statusDraft)}
+                                    onClick={() => handleStatusChange(order.order_id, statusDraft, shippingDetails)}
                                     disabled={updatingStatus || !statusDraft || statusDraft === order.order_status}
                                     className="mt-3 w-full rounded-md bg-[#1a3c36] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#235048] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
@@ -526,21 +555,29 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 <div className="flex items-center gap-2">
                   <label className="text-xs font-bold text-[#666]">Change Status:</label>
                   <select
-                    value={selectedOrder.order_status}
-                    onChange={(e) =>
-                      handleStatusChange(selectedOrder.order_id, e.target.value)
-                    }
+                    value={statusDraft || selectedOrder.order_status}
+                    onChange={(e) => setStatusDraft(e.target.value)}
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
-                    {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(
-                      (st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      )
+                    {orderStatuses.map((status) => (
+                      <option key={status.id} value={status.id}>{status.name}</option>
+                    ))}
+                    {!orderStatuses.some((status) => status.id === selectedOrder.order_status) && (
+                      <option value={selectedOrder.order_status}>{statusName(selectedOrder.order_status)}</option>
                     )}
                   </select>
+                  {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
+                    <div className="mt-3 grid w-full gap-2 sm:grid-cols-3">
+                      <input type="datetime-local" value={shippingDetails.shipped_at} onChange={(e) => setShippingDetails((prev) => ({ ...prev, shipped_at: e.target.value }))} className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" />
+                      <input value={shippingDetails.docket_number} onChange={(e) => setShippingDetails((prev) => ({ ...prev, docket_number: e.target.value }))} placeholder="Docket number" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                      <input value={shippingDetails.courier_name} onChange={(e) => setShippingDetails((prev) => ({ ...prev, courier_name: e.target.value }))} placeholder="Courier name" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft, shippingDetails)} disabled={updatingStatus || statusDraft === selectedOrder.order_status} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50 sm:col-span-3">{updatingStatus ? "Updating..." : "Update Shipped Status"}</button>
+                    </div>
+                  )}
+                  {statusDraft !== "Shipped" && statusDraft !== "SHIPPED" && statusDraft !== selectedOrder.order_status && (
+                    <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">Update</button>
+                  )}
                 </div>
               </div>
             </div>

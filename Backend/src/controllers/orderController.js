@@ -211,12 +211,12 @@ const getOrdersByUser = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { order_status, payment_status } = req.body;
+    const { order_status, payment_status, shipped_at, docket_number, courier_name } = req.body;
 
     const validStatuses = [
-      "NEW", "CONFIRMED", "PROCESSING", "READY", "OUT_FOR_DELIVERY",
+      "NEW", "CONFIRMED", "PROCESSING", "PACKING", "SHIPPED", "READY", "OUT_FOR_DELIVERY",
       "DELIVERED", "CANCELLED", "ON_HOLD", "RETURNED",
-      "Pending", "Processing", "Shipped", "Delivered", "Cancelled",
+      "Pending", "Processing", "Packing", "Shipped", "Delivered", "Cancelled",
     ];
     if (order_status && !validStatuses.includes(order_status)) {
       return res.status(400).json({
@@ -228,6 +228,9 @@ const updateOrderStatus = async (req, res) => {
     const updated = await orderModule.updateOrderStatus(orderId, {
       order_status,
       payment_status,
+      shipped_at,
+      docket_number,
+      courier_name,
       updated_by: req.user?.user_id || req.body.updated_by || null,
     });
 
