@@ -9,17 +9,15 @@ const Shop = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [frames, setFrames] = useState([]);
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodRes, catRes, frameRes] = await Promise.all([
+        const [prodRes, catRes] = await Promise.all([
           api.get("/products"),
           api.get("/categories").catch(() => ({ data: { data: [] } })),
-          api.get("/frames?status=Active").catch(() => ({ data: { data: [] } })),
         ]);
 
         const rows = Array.isArray(prodRes.data?.data) ? prodRes.data.data : [];
@@ -27,9 +25,6 @@ const Shop = () => {
 
         const catRows = Array.isArray(catRes.data?.data) ? catRes.data.data : [];
         setCategories(catRows);
-
-        const frameRows = Array.isArray(frameRes.data?.data) ? frameRes.data.data : [];
-        setFrames(frameRows.filter((frame) => (frame.status || "Active") === "Active"));
       } finally {
         setLoading(false);
       }
@@ -44,10 +39,7 @@ const Shop = () => {
     return matchesCategory && matchesOrientation;
   });
 
-  const orientationCards = ["Portrait", "Landscape", "Square"].map((orientation) => ({
-    orientation,
-    frame: frames.find((item) => (item.orientation || "Portrait").toLowerCase() === orientation.toLowerCase()),
-  }));
+  const orientationCards = ["Portrait", "Landscape", "Square"];
 
   const selectOrientation = (orientation) => {
     setSelectedOrientation(orientation);
@@ -77,27 +69,26 @@ const Shop = () => {
           </div>
 
           {/* FRAME ORIENTATION SELECTOR */}
-          {frames.length > 0 && (
-            <section className="mb-8 rounded-2xl bg-[#f1f1f1] px-3 py-5 sm:px-5 md:px-6" aria-label="Choose frame orientation">
+          <section className="mb-8 rounded-2xl bg-[#f1f1f1] px-3 py-5 sm:px-5 md:px-6" aria-label="Choose frame orientation">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {orientationCards.map(({ orientation, frame }) => (
+                {orientationCards.map((orientation) => (
                   <button
                     key={orientation}
                     type="button"
                     onClick={() => selectOrientation(orientation)}
-                    disabled={!frame}
                     aria-label={`Show ${orientation} frames`}
-                    className={`text-left transition ${selectedOrientation === orientation ? "text-[#1a3c36]" : "text-[#171717]"} disabled:cursor-not-allowed disabled:opacity-50`}
+                    className={`text-left transition ${selectedOrientation === orientation ? "text-[#1a3c36]" : "text-[#171717]"}`}
                   >
                     <div className={`h-52 overflow-hidden rounded-xl border-2 bg-white sm:h-56 ${selectedOrientation === orientation ? "border-[#1a3c36]" : "border-transparent"}`}>
-                      {frame ? <img src={frame.frame_image} alt={`${orientation} frame`} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-[#888]">No frame added</div>}
+                      <div className="flex h-full items-center justify-center bg-[#f7f7f7]">
+                        <div className={`${orientation === "Portrait" ? "h-4/5 w-2/5" : orientation === "Landscape" ? "h-3/5 w-4/5" : "aspect-square h-3/5"} rounded-md border-4 border-[#1a3c36] bg-[#dce9e4] shadow-[inset_0_0_0_8px_#f7f7f7,0_5px_12px_rgba(26,60,54,0.15)]`} />
+                      </div>
                     </div>
                     <span className="mt-3 block text-center text-lg font-bold">{orientation}</span>
                   </button>
                 ))}
               </div>
             </section>
-          )}
 
           {/* CATEGORY FILTER PILLS */}
           <div className="mb-8 flex flex-wrap items-center gap-2">

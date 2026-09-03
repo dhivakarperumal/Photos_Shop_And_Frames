@@ -127,13 +127,15 @@ export const StoreProvider = ({ children }) => {
         let qty = 1;
         let customizationId = null;
         let slotPhotos = null;
+        let previewImage = null;
 
-        if (variantOrOptions && typeof variantOrOptions === "object" && !variantOrOptions.mrp && !variantOrOptions.sellingPrice && (variantOrOptions.size || variantOrOptions.slot_photos || variantOrOptions.customization_id)) {
+        if (variantOrOptions && typeof variantOrOptions === "object" && !variantOrOptions.mrp && !variantOrOptions.sellingPrice && (variantOrOptions.size || variantOrOptions.slot_photos || variantOrOptions.customization_id || variantOrOptions.preview_image)) {
             selectedSize = variantOrOptions.size || (product.size_variants?.[0]?.size) || "Standard";
             price = Number(variantOrOptions.price ?? product.size_variants?.[0]?.offer_price ?? product.offer_price ?? 0);
             qty = Number(variantOrOptions.quantity || variantOrOptions.qty || 1);
             customizationId = variantOrOptions.customization_id || null;
             slotPhotos = variantOrOptions.slot_photos || null;
+            previewImage = variantOrOptions.preview_image || null;
         } else {
             const selectedVariant = variantOrOptions || product.size_variants?.[0] || product.variants?.[0] || null;
             selectedSize = sizeParam || selectedVariant?.size || selectedVariant?.selectedSizes?.[0] || "Standard";
@@ -150,6 +152,7 @@ export const StoreProvider = ({ children }) => {
                 price: price,
                 quantity: qty,
                 slot_photos: slotPhotos,
+                preview_image: previewImage,
             });
             toast.success("Added to cart!");
             await fetchCart();

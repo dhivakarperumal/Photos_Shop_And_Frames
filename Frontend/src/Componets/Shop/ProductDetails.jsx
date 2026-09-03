@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
   CheckCircle2,
@@ -8,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Heart,
+  Image as ImageIcon,
   ImagePlus,
   Layers,
   Package,
@@ -20,6 +22,7 @@ import {
   Trash2,
   Truck,
   UploadCloud,
+  X,
 } from "lucide-react";
 import api from "../../api";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
@@ -163,6 +166,11 @@ const ProductDetails = () => {
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [customizationId, setCustomizationId] = useState(null);
 
+  // Confirmation Modal state & Action type
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmActionType, setConfirmActionType] = useState("cart"); // "cart" | "buy"
+  const [highlightMissingSlots, setHighlightMissingSlots] = useState(false);
+
   // View mode: 'editor' (interactive frame with slots) vs 'preview' (whole merged composite photo)
   const [viewMode, setViewMode] = useState("editor");
   const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
@@ -251,6 +259,7 @@ const ProductDetails = () => {
         ...prev,
         [slotId]: url,
       }));
+      setHighlightMissingSlots(false);
       toast.success("Photo uploaded to frame slot!");
     } catch (err) {
       console.error("Slot upload error:", err);
@@ -349,42 +358,94 @@ const ProductDetails = () => {
     }
   };
 
-  const handleAddToCart = async () => {
-    if (!product) return;
-    if (!inStock) {
-      toast.error("Selected size variant is out of stock.");
-      return;
-    }
-
-    setAddingToCart(true);
-    try {
-      const savedCust = await ensureCustomizationSaved();
-
-      await addToCart(product, {
-        size: selectedVariant.size || "Standard",
-        price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
-        quantity: Number(quantity),
-        customization_id: savedCust?.customization_id || null,
-        slot_photos: customerPhotos,
-        preview_image: savedCust?.preview_image || mergedPreviewUrl,
-      });
-    } finally {
-      setAddingToCart(false);
-    }
+  const getMissingSlots = () => {
+    if (!photoSlots || photoSlots.length === 0) return [];
+    return photoSlots.filter((slot) => !customerPhotos[slot.id]);
   };
 
-  const handleBuyNow = async () => {
+  const handleAddToCart = () => {
     if (!product) return;
     if (!inStock) {
       toast.error("Selected size variant is out of stock.");
       return;
     }
 
-    const savedCust = await ensureCustomizationSaved();
-    if (savedCust?.preview_image) {
-      setCompositeServerUrl(savedCust.preview_image);
+    const missing = getMissingSlots();
+    if (missing.length > 0) {
+      setHighlightMissingSlots(true);
+      setViewMode("editor");
+      toast.error(
+        `Please upload photos for all ${photoSlots.length} available positions before adding to cart (${photoSlots.length - missing.length}/${photoSlots.length} uploaded).`
+      );
+      return;
     }
-    setIsCheckoutOpen(true);
+
+    setConfirmActionType("cart");
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (!inStock) {
+      toast.error("Selected size variant is out of stock.");
+      return;
+    }
+
+    const missing = getMissingSlots();
+    if (missing.length > 0) {
+      setHighlightMissingSlots(true);
+      setViewMode("editor");
+      toast.error(
+        `Please upload photos for all ${photoSlots.length} available positions before checkout (${photoSlots.length - missing.length}/${photoSlots.length} uploaded).`
+      );
+      return;
+    }
+
+    setConfirmActionType("buy");
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmedAction = async () => {
+    if (confirmActionType === "cart") {
+      setAddingToCart(true);
+      try {
+        const savedCust = await ensureCustomizationSaved();
+
+        const success = await addToCart(product, {
+          size: selectedVariant.size || "Standard",
+          price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
+          quantity: Number(quantity),
+          customization_id: savedCust?.customization_id || null,
+          slot_photos: customerPhotos,
+          preview_image: savedCust?.preview_image || mergedPreviewUrl,
+        });
+
+        if (success !== false) {
+          setIsConfirmModalOpen(false);
+          toast.success("Custom frame confirmed & added to cart!");
+        }
+      } catch (err) {
+        console.error("Confirmed add to cart error:", err);
+        toast.error("Failed to add customized frame to cart");
+      } finally {
+        setAddingToCart(false);
+      }
+    } else if (confirmActionType === "buy") {
+      setSavingCustomization(true);
+      try {
+        const savedCust = await ensureCustomizationSaved();
+        if (savedCust?.preview_image) {
+          setCompositeServerUrl(savedCust.preview_image);
+        }
+        setIsConfirmModalOpen(false);
+        setIsCheckoutOpen(true);
+      } catch (err) {
+        console.error("Confirmed buy now error:", err);
+        toast.error("Failed to prepare checkout");
+      } finally {
+        setSavingCustomization(false);
+      }
+    }
   };
 
   if (loading) {
@@ -570,6 +631,8 @@ const ProductDetails = () => {
                               className={`group absolute overflow-hidden border-2 transition ${
                                 userPhoto
                                   ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
+                                  : highlightMissingSlots
+                                  ? "border-2 border-red-500 bg-red-100/50 ring-4 ring-red-400/50 animate-pulse"
                                   : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
                               }`}
                               style={{
@@ -585,26 +648,32 @@ const ProductDetails = () => {
                                   <img
                                     src={activePhoto}
                                     alt={slot.name}
-                                    className="h-full w-full"
+                                    className={`h-full w-full ${!userPhoto ? "opacity-75" : ""}`}
                                     style={{ objectFit: slot.objectFit || "cover" }}
                                   />
-                                  {userPhoto && (
+                                  {userPhoto ? (
                                     <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
+                                  ) : (
+                                    <div className="absolute top-1 left-1 rounded bg-[#b07838] px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
+                                      {highlightMissingSlots ? "Upload Needed" : "Sample Photo"}
+                                    </div>
                                   )}
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-                                    <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow">
-                                      Change Photo
+                                    <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow flex items-center gap-1">
+                                      <UploadCloud className="h-3 w-3 text-[#b07838]" />
+                                      {userPhoto ? "Change Photo" : "Upload Your Photo"}
                                     </span>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
-                                  <UploadCloud className="h-5 w-5 text-[#b07838]" />
+                                  <UploadCloud className={`h-5 w-5 ${highlightMissingSlots ? "text-red-500" : "text-[#b07838]"}`} />
                                   <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
                                     {slot.name || `Slot ${idx + 1}`}
                                   </span>
+                                  <span className="mt-0.5 text-[8px] font-semibold text-[#b07838]">Upload Photo</span>
                                 </div>
                               )}
                             </button>
@@ -752,20 +821,50 @@ const ProductDetails = () => {
               </div>
 
               {/* ================= PHOTO CUSTOMIZATION SECTION ================= */}
-              <div className="mt-6 rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-4">
+              <div className={`mt-6 rounded-2xl border p-4 transition ${
+                highlightMissingSlots && customPhotoCount < totalSlotsCount
+                  ? "border-red-300 bg-red-50/40 ring-2 ring-red-400/30"
+                  : "border-[#ebdcc8] bg-[#fdfbf8]"
+              }`}>
                 <div className="flex items-center justify-between border-b border-[#eee3d3] pb-3">
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
                       Customize Your Photos
                     </h3>
                     <p className="text-[11px] text-[#666]">
-                      Upload photos for each position in this frame
+                      {customPhotoCount === totalSlotsCount
+                        ? "All customer photos uploaded! Ready to add to cart."
+                        : `Upload photos for all ${totalSlotsCount} positions in this frame`}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#fff4e3] px-2.5 py-0.5 text-xs font-bold text-[#b07838]">
-                    {customPhotoCount} / {totalSlotsCount}
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    customPhotoCount === totalSlotsCount
+                      ? "bg-[#edf7f1] text-[#1b794b]"
+                      : "bg-[#fff4e3] text-[#b07838]"
+                  }`}>
+                    {customPhotoCount} / {totalSlotsCount} Uploaded
                   </span>
                 </div>
+
+                {/* PROGRESS BAR */}
+                {totalSlotsCount > 0 && (
+                  <div className="mt-3">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#eee5d8]">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          customPhotoCount === totalSlotsCount ? "bg-[#1b794b]" : "bg-[#b07838]"
+                        }`}
+                        style={{ width: `${(customPhotoCount / totalSlotsCount) * 100}%` }}
+                      />
+                    </div>
+                    {highlightMissingSlots && customPhotoCount < totalSlotsCount && (
+                      <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        Please upload your photo for all {totalSlotsCount} positions before adding to cart or buy now.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {photoSlots.length === 0 ? (
                   <p className="py-4 text-center text-xs text-[#888]">
@@ -776,13 +875,20 @@ const ProductDetails = () => {
                     {photoSlots.map((slot, index) => {
                       const userPhoto = customerPhotos[slot.id];
                       const isUploading = uploadingSlot === slot.id;
+                      const isMissing = !userPhoto;
 
                       return (
                         <div
                           key={slot.id || index}
-                          className="flex items-center gap-3 rounded-xl border border-[#ede3d5] bg-white p-2.5 shadow-xs"
+                          className={`flex items-center gap-3 rounded-xl border p-2.5 shadow-xs transition ${
+                            userPhoto
+                              ? "border-[#cce8db] bg-[#f9fdfa]"
+                              : highlightMissingSlots
+                              ? "border-red-300 bg-white ring-2 ring-red-200"
+                              : "border-[#ede3d5] bg-white"
+                          }`}
                         >
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
+                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
                             {userPhoto ? (
                               <img
                                 src={userPhoto}
@@ -790,7 +896,12 @@ const ProductDetails = () => {
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              <ImagePlus className="h-5 w-5 text-[#b9aa98]" />
+                              <ImagePlus className={`h-5 w-5 ${highlightMissingSlots ? "text-red-400" : "text-[#b9aa98]"}`} />
+                            )}
+                            {userPhoto && (
+                              <div className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                                <Check className="h-2 w-2" />
+                              </div>
                             )}
                           </div>
 
@@ -798,9 +909,19 @@ const ProductDetails = () => {
                             <p className="truncate text-xs font-bold text-[#333]">
                               {slot.name || `Photo Position ${index + 1}`}
                             </p>
-                            <p className="text-[10px] text-[#888]">
-                              {userPhoto ? "Your photo is attached" : "No photo selected"}
-                            </p>
+                            <div className="mt-0.5 flex items-center gap-1.5">
+                              {userPhoto ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1b794b]">
+                                  <CheckCircle2 className="h-3 w-3" /> Photo Attached
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                                  highlightMissingSlots ? "text-red-600" : "text-amber-700"
+                                }`}>
+                                  <AlertCircle className="h-3 w-3" /> Photo Required
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -819,10 +940,14 @@ const ProductDetails = () => {
                               type="button"
                               onClick={() => fileInputRefs.current[slot.id]?.click()}
                               disabled={isUploading}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d0c5] bg-[#faf8f5] px-3 py-1.5 text-xs font-bold text-[#333] transition hover:bg-white disabled:opacity-50"
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
+                                userPhoto
+                                  ? "border border-[#d8d0c5] bg-[#faf8f5] text-[#333] hover:bg-white"
+                                  : "border border-[#b07838] bg-[#fff8ef] text-[#9b6b2d] hover:bg-[#ffeed7] shadow-xs"
+                              }`}
                             >
                               <UploadCloud className="h-3.5 w-3.5" />
-                              {isUploading ? "Uploading" : userPhoto ? "Change" : "Upload"}
+                              {isUploading ? "Uploading..." : userPhoto ? "Change" : "Upload Photo"}
                             </button>
                           </div>
                         </div>
@@ -863,6 +988,15 @@ const ProductDetails = () => {
                     </button>
                   </div>
                 </div>
+
+                {photoSlots.length > 0 && customPhotoCount < totalSlotsCount && (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-[#fffbf2] p-2.5 text-xs text-amber-800">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <span>
+                      Please upload photos for all <strong>{totalSlotsCount} positions</strong> ({customPhotoCount}/{totalSlotsCount} uploaded) before adding to cart or buy now.
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2">
                   <button
@@ -921,6 +1055,184 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* ================= CUSTOMIZATION CONFIRMATION MODAL ================= */}
+      {isConfirmModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative my-8 w-full max-w-2xl rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl md:p-8">
+            {/* MODAL HEADER */}
+            <div className="flex items-start justify-between border-b border-[#f0e8dc] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#eef6f3] text-[#1a3c36]">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[#1d2925]">
+                    Confirm Your Custom Frame
+                  </h2>
+                  <p className="text-xs text-[#777]">
+                    Please review your uploaded photos, size, and pricing before {confirmActionType === "cart" ? "adding to cart" : "proceeding to checkout"}.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#999] hover:bg-[#f4efe8] hover:text-[#333]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* MODAL CONTENT */}
+            <div className="mt-5 space-y-5">
+              {/* COMPOSITE MERGED PREVIEW */}
+              <div className="rounded-2xl border border-[#e8dfd2] bg-[#f7f2ea] p-4 text-center">
+                <div className="relative mx-auto max-w-[320px] overflow-hidden rounded-xl shadow-lg">
+                  {mergedPreviewUrl || frameData.frame_image ? (
+                    <img
+                      src={mergedPreviewUrl || frameData.frame_image}
+                      alt="Customized Frame Preview"
+                      className="block h-auto w-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-48 w-full items-center justify-center bg-[#eee7de]">
+                      <Package className="h-10 w-10 text-[#bbb]" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs flex items-center gap-1">
+                    <Check className="h-3 w-3 text-[#22c55e]" /> Merged Frame Ready
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] font-medium text-[#777]">
+                  Preview of your personalized frame with customer-uploaded photos
+                </p>
+              </div>
+
+              {/* UPLOADED PHOTOS INDIVIDUAL BREAKDOWN */}
+              {photoSlots.length > 0 && (
+                <div>
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                    Your Uploaded Photos ({customPhotoCount} of {totalSlotsCount})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {photoSlots.map((slot, i) => {
+                      const photo = customerPhotos[slot.id];
+                      return (
+                        <div
+                          key={slot.id || i}
+                          className="flex items-center gap-2.5 rounded-xl border border-[#e2dacd] bg-[#faf8f5] p-2"
+                        >
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#eee7de]">
+                            {photo ? (
+                              <img
+                                src={photo}
+                                alt={slot.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[#bbb]">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] font-bold text-[#1d2925]">
+                              {slot.name || `Position ${i + 1}`}
+                            </p>
+                            <p className="text-[10px] font-semibold text-[#1b794b] flex items-center gap-1">
+                              <Check className="h-2.5 w-2.5" /> Attached
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SPECIFICATIONS & PRICE BREAKDOWN */}
+              <div className="rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-4">
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                  Order Specifications
+                </h4>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Product</span>
+                    <span className="font-bold text-[#1d2925]">{product.product_name}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Frame Size</span>
+                    <span className="rounded-md bg-[#eef6f3] px-2 py-0.5 font-bold text-[#1a3c36]">
+                      {selectedVariant.size || "Standard"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Unit Price</span>
+                    <span className="font-bold text-[#1d2925]">
+                      ₹{selectedVariant.offer_price || selectedVariant.mrp}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Quantity</span>
+                    <span className="font-bold text-[#1d2925]">{quantity}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-sm font-bold text-[#1d2925]">Total Amount</span>
+                      <p className="text-[10px] text-[#888]">Inclusive of all taxes</p>
+                    </div>
+                    <span className="text-2xl font-black text-[#1a3c36]">
+                      ₹{(Number(selectedVariant.offer_price || selectedVariant.mrp || 0) * Number(quantity))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* MODAL ACTIONS */}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-[#f0e8dc] pt-4">
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={addingToCart || savingCustomization}
+                className="rounded-xl border border-[#d8cfc3] bg-white px-5 py-2.5 text-xs font-bold text-[#555] transition hover:bg-[#faf8f5] disabled:opacity-50"
+              >
+                ← Edit Customization
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmedAction}
+                disabled={addingToCart || savingCustomization}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#235048] disabled:opacity-50"
+              >
+                {confirmActionType === "cart" ? (
+                  <>
+                    <ShoppingCart className="h-4 w-4" />
+                    {addingToCart || savingCustomization ? "Adding to Cart..." : "Confirm & Add to Cart"}
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" />
+                    {savingCustomization ? "Preparing Checkout..." : "Confirm & Proceed to Checkout"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CHECKOUT MODAL */}
       <CheckoutModal

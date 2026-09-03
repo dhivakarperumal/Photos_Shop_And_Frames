@@ -93,6 +93,7 @@ const Cart = () => {
             <div className="space-y-4 lg:col-span-8">
               {cart.map((item) => {
                 const img =
+                  item.preview_image ||
                   item.product_images?.[0] ||
                   item.frame_data?.frame_image ||
                   item.frame_image ||
