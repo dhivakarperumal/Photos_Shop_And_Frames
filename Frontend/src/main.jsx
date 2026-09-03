@@ -215,11 +215,11 @@ const router = createHashRouter([
           },
           {
             path: 'orders/delivery',
-            element: <AdminOrders allowedStatuses={["Delivered", "Completed"]} />,
+            element: <AdminOrders allowedStatuses={["Delivered", "Completed"]} readOnlyStatus />,
           },
           {
             path: 'orders/cancelled',
-            element: <AdminOrders allowedStatuses={["Cancelled"]} />,
+            element: <AdminOrders allowedStatuses={["Cancelled"]} readOnlyStatus />,
           },
         ],
       },

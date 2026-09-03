@@ -45,7 +45,7 @@ const orderStatuses = [
 const statusName = (status) =>
   orderStatuses.find((option) => option.id === status)?.name || status;
 
-const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false }) => {
+const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false, readOnlyStatus = false }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -83,7 +83,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       if (res.data?.success && Array.isArray(res.data.data)) {
         const nextOrders = res.data.data.filter((order) => {
           const normalizedStatus = String(order.order_status || "").toLowerCase();
-          if (todayOnly && ["completed", "delivered"].includes(normalizedStatus)) return false;
+          if (todayOnly && ["completed", "delivered", "cancelled"].includes(normalizedStatus)) return false;
           if (
             allowedStatuses &&
             !allowedStatuses.some(
@@ -452,19 +452,25 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                         </td>
                         <td className="px-4 py-4">
                           <div className="relative inline-block">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
-                                setStatusDraft(order.order_status);
-                                setCancellationReason(order.notes || "");
-                              }}
-                              className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
-                              title="Click to update order status"
-                            >
-                              {statusName(order.order_status)}
-                            </button>
-                            {statusPopupOrderId === order.order_id && (
+                            {readOnlyStatus ? (
+                              <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}>
+                                {statusName(order.order_status)}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
+                                  setStatusDraft(order.order_status);
+                                  setCancellationReason(order.notes || "");
+                                }}
+                                className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
+                                title="Click to update order status"
+                              >
+                                {statusName(order.order_status)}
+                              </button>
+                            )}
+                            {!readOnlyStatus && statusPopupOrderId === order.order_id && (
                               <div
                                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
                                 role="dialog"
@@ -631,7 +637,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 </h2>
 
                 {/* STATUS CHANGER */}
-                <div className="flex items-center gap-2">
+                {!readOnlyStatus && <div className="flex items-center gap-2">
                   <label className="text-xs font-bold text-[#666]">Change Status:</label>
                   <select
                     value={statusDraft || selectedOrder.order_status}
@@ -677,7 +683,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     statusDraft !== "Cancelled" && statusDraft !== "CANCELLED" &&
                     <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">Update</button>
                   )}
-                </div>
+                </div>}
               </div>
             </div>
 
