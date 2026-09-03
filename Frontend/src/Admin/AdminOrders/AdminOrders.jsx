@@ -30,10 +30,10 @@ import toast from "react-hot-toast";
 
 const orderStatuses = [
   { id: "NEW", name: "New Order" },
+  { id: "ORDER_PLACED", name: "Order Placed" },
   { id: "CONFIRMED", name: "Confirmed" },
   { id: "PROCESSING", name: "Processing" },
   { id: "PACKING", name: "Packing" },
-  { id: "SHIPPED", name: "Shipped" },
   { id: "READY", name: "Ready" },
   { id: "OUT_FOR_DELIVERY", name: "Out for Delivery" },
   { id: "DELIVERED", name: "Delivered" },
@@ -42,8 +42,45 @@ const orderStatuses = [
   { id: "RETURNED", name: "Returned" },
 ];
 
+const statusAliases = {
+  "NEW ORDER": "NEW",
+  PENDING: "NEW",
+  "ORDER PLACED": "ORDER_PLACED",
+  ORDER_PLACED: "ORDER_PLACED",
+  CONFIRMED: "CONFIRMED",
+  PROCESSING: "PROCESSING",
+  PACKING: "PACKING",
+  READY: "READY",
+  "OUT FOR DELIVERY": "OUT_FOR_DELIVERY",
+  OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+  DELIVERED: "DELIVERED",
+  CANCELLED: "CANCELLED",
+  "ON HOLD": "ON_HOLD",
+  ON_HOLD: "ON_HOLD",
+  RETURNED: "RETURNED",
+};
+
+const normalizeStatus = (status) =>
+  statusAliases[String(status || "").trim().toUpperCase()] || status;
+
 const statusName = (status) =>
-  orderStatuses.find((option) => option.id === status)?.name || status;
+  orderStatuses.find((option) => option.id === normalizeStatus(status))?.name || status;
+
+const getStatusOptions = (currentStatus) => {
+  const normalizedStatus = normalizeStatus(currentStatus);
+  const workflowIndex = orderStatuses.findIndex((option) => option.id === normalizedStatus);
+  const workflowOptions = workflowIndex >= 0 ? orderStatuses.slice(workflowIndex) : [];
+  const currentOption = workflowOptions.length
+    ? workflowOptions
+    : [{ id: normalizedStatus, name: statusName(currentStatus) }];
+  const specialOptions = orderStatuses.filter((option) =>
+    ["CANCELLED", "ON_HOLD", "RETURNED"].includes(option.id)
+  );
+
+  return [...currentOption, ...specialOptions.filter(
+    (option) => !currentOption.some((current) => current.id === option.id)
+  )];
+};
 
 const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false, readOnlyStatus = false }) => {
   const [orders, setOrders] = useState([]);
@@ -127,7 +164,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       const res = await api.get(`/orders/${orderId}`);
       if (res.data?.success && res.data.data) {
         setSelectedOrder(res.data.data);
-        setStatusDraft(res.data.data.order_status || "Pending");
+        setStatusDraft(normalizeStatus(res.data.data.order_status || "Pending"));
         setCancellationReason(res.data.data.notes || "");
         setShippingDetails({
           shipped_at: res.data.data.shipped_at
@@ -461,7 +498,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                 type="button"
                                 onClick={() => {
                                   setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
-                                  setStatusDraft(order.order_status);
+                                  setStatusDraft(normalizeStatus(order.order_status));
                                   setCancellationReason(order.notes || "");
                                 }}
                                 className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
@@ -497,11 +534,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                     disabled={updatingStatus}
                                     className="h-10 w-full rounded-md border border-[#d8cfc3] bg-white px-3 text-xs font-semibold text-[#1a3c36] outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                                   >
-                                    {orderStatuses.map((status) => (
+                                    {getStatusOptions(order.order_status).map((status) => (
                                       <option key={status.id} value={status.id}>{status.name}</option>
                                     ))}
-                                    {!orderStatuses.some((status) => status.id === order.order_status) && (
-                                      <option value={order.order_status}>{statusName(order.order_status)}</option>
+                                    {!getStatusOptions(order.order_status).some((status) => status.id === normalizeStatus(order.order_status)) && (
+                                      <option value={normalizeStatus(order.order_status)}>{statusName(order.order_status)}</option>
                                     )}
                                   </select>
                                   {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
@@ -525,7 +562,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                   <button
                                     type="button"
                                     onClick={() => handleStatusChange(order.order_id, statusDraft, shippingDetails)}
-                                    disabled={updatingStatus || !statusDraft || statusDraft === order.order_status || ((statusDraft === "Cancelled" || statusDraft === "CANCELLED") && !cancellationReason.trim())}
+                                    disabled={updatingStatus || !statusDraft || statusDraft === normalizeStatus(order.order_status) || ((statusDraft === "Cancelled" || statusDraft === "CANCELLED") && !cancellationReason.trim())}
                                     className="mt-3 w-full rounded-md bg-[#1a3c36] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#235048] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     {updatingStatus ? "Updating..." : "Update Status"}
@@ -650,11 +687,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
-                    {orderStatuses.map((status) => (
+                    {getStatusOptions(selectedOrder.order_status).map((status) => (
                       <option key={status.id} value={status.id}>{status.name}</option>
                     ))}
-                    {!orderStatuses.some((status) => status.id === selectedOrder.order_status) && (
-                      <option value={selectedOrder.order_status}>{statusName(selectedOrder.order_status)}</option>
+                    {!getStatusOptions(selectedOrder.order_status).some((status) => status.id === normalizeStatus(selectedOrder.order_status)) && (
+                      <option value={normalizeStatus(selectedOrder.order_status)}>{statusName(selectedOrder.order_status)}</option>
                     )}
                   </select>
                   {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (

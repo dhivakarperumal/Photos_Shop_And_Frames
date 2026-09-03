@@ -214,9 +214,9 @@ const updateOrderStatus = async (req, res) => {
     const { order_status, payment_status, shipped_at, docket_number, courier_name, notes } = req.body;
 
     const validStatuses = [
-      "NEW", "CONFIRMED", "PROCESSING", "PACKING", "SHIPPED", "READY", "OUT_FOR_DELIVERY",
+      "NEW", "ORDER_PLACED", "CONFIRMED", "PROCESSING", "PACKING", "SHIPPED", "READY", "OUT_FOR_DELIVERY",
       "DELIVERED", "CANCELLED", "ON_HOLD", "RETURNED",
-      "Pending", "Processing", "Packing", "Shipped", "Delivered", "Cancelled",
+      "Pending", "Order Placed", "Processing", "Packing", "Shipped", "Delivered", "Cancelled",
     ];
     if (order_status && !validStatuses.includes(order_status)) {
       return res.status(400).json({
