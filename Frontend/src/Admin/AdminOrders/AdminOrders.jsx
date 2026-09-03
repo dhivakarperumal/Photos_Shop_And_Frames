@@ -109,9 +109,6 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     try {
       setLoading(true);
       const params = {};
-      if (!allowedStatuses && !todayOnly && activeStatus && activeStatus !== "All") {
-        params.status = activeStatus;
-      }
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
@@ -358,25 +355,6 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
         {/* SEARCH & FILTER BAR */}
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-          {/* STATUS TABS */}
-          {!todayOnly && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {statusOptions.map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setActiveStatus(st)}
-                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                    activeStatus === st
-                      ? "bg-[#1a3c36] text-white shadow-xs"
-                      : "bg-[#f4efe7] text-[#666] hover:bg-[#eae4d9]"
-                  }`}
-                >
-                  {st}
-                </button>
-              ))}
-            </div>
-          )}
           {/* SEARCH */}
           <form onSubmit={handleSearch} className="relative w-full sm:w-72">
             <input
@@ -389,15 +367,13 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             <Search className="absolute left-3 top-3 h-4 w-4 text-[#999]" />
           </form>
           <div className="flex flex-wrap items-center justify-end gap-3 sm:ml-auto">
-            {todayOnly && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 
                 <select value={activeStatus} onChange={(event) => setActiveStatus(event.target.value)} className="h-10 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#b07838]" aria-label="Filter orders by status">
                   <option value="All">All Statuses</option>
                   {orderStatuses.map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
                 </select>
-              </div>
-            )}
+            </div>
 
             <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[#d8cfc3] bg-[#faf8f4] p-1">
             <button type="button" onClick={() => setViewMode("card")} className={`inline-flex h-8 w-9 items-center justify-center rounded-lg text-xs font-bold ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#66736e] hover:bg-white"}`} aria-pressed={viewMode === "card"} aria-label="Card view" title="Card view">
