@@ -12,6 +12,7 @@ import {
   MapPin,
   Package,
   Phone,
+  Plus,
   RefreshCw,
   Search,
   ShoppingCart,

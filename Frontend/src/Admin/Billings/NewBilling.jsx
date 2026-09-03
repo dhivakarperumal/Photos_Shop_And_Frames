@@ -107,7 +107,14 @@ const NewBilling = () => {
     name: "",
     email: "",
     phone: "",
-    address: "",
+    door_number: "",
+    street_name: "",
+    landmark: "",
+    city: "",
+    district: "",
+    state: "",
+    country: "",
+    pincode: "",
   });
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
   const [orderTime, setOrderTime] = useState(new Date().toTimeString().slice(0, 5));
@@ -234,7 +241,14 @@ const NewBilling = () => {
       name: user.username || user.name || user.full_name || "",
       email: user.email || "",
       phone: user.mobile_number || user.phone || user.mobile || "",
-      address: user.address || user.full_address || user.billing_address || "",
+      door_number: user.door_number || user.house_number || "",
+      street_name: user.street_name || user.address_line1 || user.address || user.full_address || user.billing_address || "",
+      landmark: user.landmark || "",
+      city: user.city || "",
+      district: user.district || "",
+      state: user.state || "",
+      country: user.country || "",
+      pincode: user.pincode || user.postal_code || "",
     };
 
     setSelectedCustomer(user);
@@ -249,7 +263,14 @@ const NewBilling = () => {
         name: current.name || "",
         email: current.email || "",
         phone: current.phone || "",
-        address: current.address || "",
+        door_number: current.door_number || "",
+        street_name: current.street_name || "",
+        landmark: current.landmark || "",
+        city: current.city || "",
+        district: current.district || "",
+        state: current.state || "",
+        country: current.country || "",
+        pincode: current.pincode || "",
       }));
       return;
     }
@@ -258,7 +279,14 @@ const NewBilling = () => {
       name: selectedCustomer.username || selectedCustomer.name || selectedCustomer.full_name || "",
       email: selectedCustomer.email || "",
       phone: selectedCustomer.mobile_number || selectedCustomer.phone || selectedCustomer.mobile || "",
-      address: selectedCustomer.address || selectedCustomer.full_address || selectedCustomer.billing_address || "",
+      door_number: selectedCustomer.door_number || selectedCustomer.house_number || "",
+      street_name: selectedCustomer.street_name || selectedCustomer.address_line1 || selectedCustomer.address || selectedCustomer.full_address || selectedCustomer.billing_address || "",
+      landmark: selectedCustomer.landmark || "",
+      city: selectedCustomer.city || "",
+      district: selectedCustomer.district || "",
+      state: selectedCustomer.state || "",
+      country: selectedCustomer.country || "",
+      pincode: selectedCustomer.pincode || selectedCustomer.postal_code || "",
     });
   }, [selectedCustomer]);
 
@@ -344,7 +372,15 @@ const NewBilling = () => {
           customer_id: customerId,
           customer_name: customerForm.name || selectedCustomer?.username || selectedCustomer?.name || selectedCustomer?.full_name || "",
           mobile_number: customerForm.phone || selectedCustomer?.mobile_number || selectedCustomer?.phone || selectedCustomer?.mobile || "",
-          address: customerForm.address || selectedCustomer?.address || selectedCustomer?.full_address || selectedCustomer?.billing_address || "",
+          door_number: customerForm.door_number,
+          street_name: customerForm.street_name,
+          address_line1: [customerForm.door_number, customerForm.street_name].filter(Boolean).join(", "),
+          landmark: customerForm.landmark,
+          city: customerForm.city,
+          district: customerForm.district,
+          state: customerForm.state,
+          country: customerForm.country,
+          pincode: customerForm.pincode,
         },
       });
       navigate("/admin/billing");
@@ -361,15 +397,15 @@ const NewBilling = () => {
           <button
             type="button"
             onClick={() => setShowProductModal(true)}
-            className="rounded-md border border-[#ff9869] px-4 py-2 text-xs font-semibold text-[#ed6b26]"
+            className="rounded-md border bg-[#1c5922] border-[#1c5922] px-4 py-2 text-xs font-semibold text-white"
           >
-            <Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item
+            <Plus className="mr-1 inline h-5 w-6" /> Add Item
           </button>
         </div>
 
         <div className="grid gap-3 xl:grid-cols-2">
-          <section className="rounded-lg border border-[#e5e7eb] bg-white p-3">
-            <h2 className="mb-4 text-sm font-bold">Order Details</h2>
+          <section className="rounded-lg border mt-5 border-[#e5e7eb] bg-white p-3">
+            <h2 className=" text-sm font-bold">Order Details</h2>
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-[10px] font-semibold">
                 Order Date *
@@ -432,13 +468,74 @@ const NewBilling = () => {
                 />
               </label>
               <label className="text-[10px] font-semibold">
-                Address
-                <textarea
-                  value={customerForm.address}
-                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, address: event.target.value }))}
-                  placeholder="Enter complete address"
-                  className="mt-1 h-14 w-full resize-none rounded-md border border-[#e5e7eb] px-3 py-2 text-xs outline-none focus:border-[#ff8a4c]"
-                />
+                Door Number
+                <input value={customerForm.door_number} onChange={(event) => setCustomerForm((prev) => ({ ...prev, door_number: event.target.value }))} placeholder="Enter door number" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                Street Name
+                <input value={customerForm.street_name} onChange={(event) => setCustomerForm((prev) => ({ ...prev, street_name: event.target.value }))} placeholder="Enter street name" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                Landmark
+                <input value={customerForm.landmark} onChange={(event) => setCustomerForm((prev) => ({ ...prev, landmark: event.target.value }))} placeholder="Enter landmark" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                City
+                <input value={customerForm.city} onChange={(event) => setCustomerForm((prev) => ({ ...prev, city: event.target.value }))} placeholder="Enter city" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                District
+                <input value={customerForm.district} onChange={(event) => setCustomerForm((prev) => ({ ...prev, district: event.target.value }))} placeholder="Enter district" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                State
+                <select value={customerForm.state} onChange={(event) => setCustomerForm((prev) => ({ ...prev, state: event.target.value }))} className={fieldClass}>
+                  <option value="">Select state</option>
+                  <option>Andhra Pradesh</option>
+                  <option>Arunachal Pradesh</option>
+                  <option>Assam</option>
+                  <option>Bihar</option>
+                  <option>Chhattisgarh</option>
+                  <option>Goa</option>
+                  <option>Gujarat</option>
+                  <option>Haryana</option>
+                  <option>Himachal Pradesh</option>
+                  <option>Jharkhand</option>
+                  <option>Karnataka</option>
+                  <option>Kerala</option>
+                  <option>Madhya Pradesh</option>
+                  <option>Maharashtra</option>
+                  <option>Manipur</option>
+                  <option>Meghalaya</option>
+                  <option>Mizoram</option>
+                  <option>Nagaland</option>
+                  <option>Odisha</option>
+                  <option>Punjab</option>
+                  <option>Rajasthan</option>
+                  <option>Sikkim</option>
+                  <option>Tamil Nadu</option>
+                  <option>Telangana</option>
+                  <option>Tripura</option>
+                  <option>Uttar Pradesh</option>
+                  <option>Uttarakhand</option>
+                  <option>West Bengal</option>
+                  <option>Andaman and Nicobar Islands</option>
+                  <option>Chandigarh</option>
+                  <option>Dadra and Nagar Haveli and Daman and Diu</option>
+                  <option>Delhi</option>
+                  <option>Jammu and Kashmir</option>
+                  <option>Ladakh</option>
+                  <option>Lakshadweep</option>
+                  <option>Puducherry</option>
+                </select>
+              </label>
+              <label className="text-[10px] font-semibold">
+                Country
+                <input value={customerForm.country} onChange={(event) => setCustomerForm((prev) => ({ ...prev, country: event.target.value }))} placeholder="Enter country" className={fieldClass} />
+              </label>
+              <label className="text-[10px] font-semibold">
+                Pincode
+                <input value={customerForm.pincode} onChange={(event) => setCustomerForm((prev) => ({ ...prev, pincode: event.target.value }))} placeholder="Enter pincode" className={fieldClass} />
               </label>
             </div>
           </section>

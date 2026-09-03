@@ -31,7 +31,15 @@ const createOrder = async (req, res) => {
           customer_name: address?.customer_name || order.customer_name || "Customer",
           customer_email: order.customer_email || "",
           customer_phone: address?.mobile_number || order.customer_phone || "",
-          shipping_address: [address?.address_line1, address?.address_line2].filter(Boolean).join(", ") || "Store Pickup",
+          shipping_address: [
+            address?.door_number,
+            address?.street_name,
+            address?.landmark,
+          ].filter(Boolean).join(", ") ||
+            [address?.address_line1, address?.address_line2]
+              .filter(Boolean)
+              .join(", ") ||
+            "Store Pickup",
           city: address?.city || "",
           state: address?.state || "",
           pincode: address?.pincode || "",
