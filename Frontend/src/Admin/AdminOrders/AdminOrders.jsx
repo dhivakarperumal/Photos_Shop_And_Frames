@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   Eye,
   Filter,
+  LayoutGrid,
+  List,
   Image as ImageIcon,
   IndianRupee,
   MapPin,
@@ -28,9 +32,12 @@ import toast from "react-hot-toast";
 
 const orderStatuses = [
   { id: "NEW", name: "New Order" },
+  { id: "ORDER_PLACED", name: "Order Placed" },
   { id: "CONFIRMED", name: "Confirmed" },
   { id: "PROCESSING", name: "Processing" },
+  { id: "PACKING", name: "Packing" },
   { id: "READY", name: "Ready" },
+  { id: "SHIPPED", name: "Shipped" },
   { id: "OUT_FOR_DELIVERY", name: "Out for Delivery" },
   { id: "DELIVERED", name: "Delivered" },
   { id: "CANCELLED", name: "Cancelled" },
@@ -38,10 +45,48 @@ const orderStatuses = [
   { id: "RETURNED", name: "Returned" },
 ];
 
-const statusName = (status) =>
-  orderStatuses.find((option) => option.id === status)?.name || status;
+const statusAliases = {
+  "NEW ORDER": "NEW",
+  PENDING: "NEW",
+  "ORDER PLACED": "ORDER_PLACED",
+  ORDER_PLACED: "ORDER_PLACED",
+  CONFIRMED: "CONFIRMED",
+  PROCESSING: "PROCESSING",
+  PACKING: "PACKING",
+  READY: "READY",
+  "OUT FOR DELIVERY": "OUT_FOR_DELIVERY",
+  OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+  DELIVERED: "DELIVERED",
+  CANCELLED: "CANCELLED",
+  "ON HOLD": "ON_HOLD",
+  ON_HOLD: "ON_HOLD",
+  RETURNED: "RETURNED",
+};
 
-const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false }) => {
+const normalizeStatus = (status) =>
+  statusAliases[String(status || "").trim().toUpperCase()] || status;
+
+const statusName = (status) =>
+  orderStatuses.find((option) => option.id === normalizeStatus(status))?.name || status;
+
+const getStatusOptions = (currentStatus) => {
+  const normalizedStatus = normalizeStatus(currentStatus);
+  const workflowIndex = orderStatuses.findIndex((option) => option.id === normalizedStatus);
+  const workflowOptions = workflowIndex >= 0 ? orderStatuses.slice(workflowIndex) : [];
+  const currentOption = workflowOptions.length
+    ? workflowOptions
+    : [{ id: normalizedStatus, name: statusName(currentStatus) }];
+  const specialOptions = orderStatuses.filter((option) =>
+    ["CANCELLED", "ON_HOLD", "RETURNED"].includes(option.id)
+  );
+
+  return [...currentOption, ...specialOptions.filter(
+    (option) => !currentOption.some((current) => current.id === option.id)
+  )];
+};
+
+const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false, readOnlyStatus = false }) => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -49,35 +94,54 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState("table");
   const [statusDraft, setStatusDraft] = useState("");
+  const [shippingDetails, setShippingDetails] = useState({
+    shipped_at: "",
+    docket_number: "",
+    courier_name: "",
+  });
+  const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const params = {};
-      if (!allowedStatuses && activeStatus && activeStatus !== "All") {
-        params.status = activeStatus;
-      }
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      params.billing_type = "Online Order";
+      if (todayOnly) {
+        params.today = "1";
+      } else {
+        params.billing_type = "Online Order";
+      }
 
       const res = await api.get("/orders", { params });
       if (res.data?.success && Array.isArray(res.data.data)) {
         const nextOrders = res.data.data.filter((order) => {
-          if (allowedStatuses && !allowedStatuses.includes(order.order_status)) return false;
-          return activeStatus === "All" || order.order_status === activeStatus;
+          const normalizedStatus = String(order.order_status || "").toLowerCase();
+          if (todayOnly && ["completed", "delivered", "cancelled"].includes(normalizedStatus)) return false;
+          if (
+            allowedStatuses &&
+            !allowedStatuses.some(
+              (status) => status.toLowerCase() === normalizedStatus
+            )
+          ) return false;
+          return activeStatus === "All" || normalizeStatus(order.order_status) === normalizeStatus(activeStatus);
         });
         setOrders(nextOrders);
+        setCurrentPage(1);
       } else {
         setOrders([]);
+        setCurrentPage(1);
       }
     } catch (err) {
       console.error("Fetch orders error:", err);
       toast.error("Failed to load orders");
       setOrders([]);
+      setCurrentPage(1);
     } finally {
       setLoading(false);
     }
@@ -85,7 +149,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   useEffect(() => {
     fetchOrders();
-  }, [activeStatus, allowedStatuses]);
+  }, [activeStatus, allowedStatuses, todayOnly]);
+
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -93,11 +161,25 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   };
 
   const handleViewOrder = async (orderId) => {
+    if (todayOnly) {
+      navigate(`/admin/orders/new/${orderId}`);
+      return;
+    }
+
     try {
       setLoadingDetails(true);
       const res = await api.get(`/orders/${orderId}`);
       if (res.data?.success && res.data.data) {
         setSelectedOrder(res.data.data);
+        setStatusDraft(normalizeStatus(res.data.data.order_status || "Pending"));
+        setCancellationReason(res.data.data.notes || "");
+        setShippingDetails({
+          shipped_at: res.data.data.shipped_at
+            ? new Date(res.data.data.shipped_at).toISOString().slice(0, 16)
+            : "",
+          docket_number: res.data.data.docket_number || "",
+          courier_name: res.data.data.courier_name || "",
+        });
       } else {
         toast.error("Could not load order details");
       }
@@ -109,23 +191,31 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus, details = shippingDetails) => {
+    if ((newStatus === "Cancelled" || newStatus === "CANCELLED") && !cancellationReason.trim()) {
+      toast.error("Please enter a cancellation reason");
+      return;
+    }
     try {
       setUpdatingStatus(true);
       const res = await api.patch(`/orders/${orderId}/status`, {
         order_status: newStatus,
+        ...details,
+        notes: cancellationReason.trim(),
       });
 
       if (res.data?.success) {
         toast.success(`Order status updated to ${statusName(newStatus)}`);
         if (selectedOrder) {
-          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus }));
+          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus, notes: cancellationReason.trim() }));
         }
         setOrders((prev) =>
           prev.map((o) =>
             o.order_id === orderId ? { ...o, order_status: newStatus } : o
           )
         );
+        setStatusPopupOrderId(null);
+        setStatusDraft("");
         setStatusPopupOrderId(null);
       }
     } catch (err) {
@@ -159,7 +249,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       case "Pending":
         return "bg-[#fff8eb] text-[#b07838] border-[#eedac3]";
       case "Processing":
+      case "PACKING":
         return "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]";
+      case "SHIPPED":
+      case "Packing":
+        return "bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]";
       case "Shipped":
         return "bg-[#f0fdf4] text-[#16a34a] border-[#bbf7d0]";
       case "Delivered":
@@ -173,7 +267,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const statusOptions = allowedStatuses
     ? ["All", ...allowedStatuses]
-    : ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    : ["All", "Pending", "Processing", "Packing", "Shipped", "Delivered", "Cancelled"];
 
   // Metrics
   const totalOrdersCount = orders.length;
@@ -217,41 +311,10 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   ];
 
   return (
-    <div className="min-h-screen bg-[#f7f5f2] p-4 md:p-8">
+    <div className="min-h-screen bg-[#f7f5f2] p-4 md:p-2">
       <style>{`@keyframes status-popup-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } } .status-popup-card { animation: status-popup-in 180ms ease-out; }`}</style>
       <div className="mx-auto max-w-7xl">
-        {/* HEADER */}
-        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#b07838]">
-              <ShoppingCart className="h-3.5 w-3.5" /> Store Management
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-[#1d2925] sm:text-3xl">
-              Customer Orders
-            </h1>
-            <p className="mt-1 text-xs text-[#666]">
-              Review orders, inspect customer-customized frame photos, and update delivery statuses.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 self-start">
-            {showNewOrderButton && (
-              <Link
-                to="/admin/billing/new"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#235048]"
-              >
-                <Plus className="h-3.5 w-3.5" /> Get New Order
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={fetchOrders}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#d8cfc3] bg-white px-4 py-2 text-xs font-bold text-[#444] shadow-xs transition hover:bg-[#faf7f3]"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh Orders
-            </button>
-          </div>
-        </div>
+     
 
         {/* METRICS ROW */}
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -292,24 +355,6 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
         {/* SEARCH & FILTER BAR */}
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-          {/* STATUS TABS */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {statusOptions.map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setActiveStatus(st)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                  activeStatus === st
-                    ? "bg-[#1a3c36] text-white shadow-xs"
-                    : "bg-[#f4efe7] text-[#666] hover:bg-[#eae4d9]"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
-
           {/* SEARCH */}
           <form onSubmit={handleSearch} className="relative w-full sm:w-72">
             <input
@@ -321,6 +366,24 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             />
             <Search className="absolute left-3 top-3 h-4 w-4 text-[#999]" />
           </form>
+          <div className="flex flex-wrap items-center justify-end gap-3 sm:ml-auto">
+            <div className="flex items-center gap-2">
+                
+                <select value={activeStatus} onChange={(event) => setActiveStatus(event.target.value)} className="h-10 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#b07838]" aria-label="Filter orders by status">
+                  <option value="All">All Statuses</option>
+                  {orderStatuses.map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
+                </select>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[#d8cfc3] bg-[#faf8f4] p-1">
+            <button type="button" onClick={() => setViewMode("card")} className={`inline-flex h-8 w-9 items-center justify-center rounded-lg text-xs font-bold ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#66736e] hover:bg-white"}`} aria-pressed={viewMode === "card"} aria-label="Card view" title="Card view">
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button type="button" onClick={() => setViewMode("table")} className={`inline-flex h-8 w-9 items-center justify-center rounded-lg text-xs font-bold ${viewMode === "table" ? "bg-[#1a3c36] text-white" : "text-[#66736e] hover:bg-white"}`} aria-pressed={viewMode === "table"} aria-label="Table view" title="Table view">
+              <List className="h-3.5 w-3.5" />
+            </button>
+            </div>
+          </div>
         </div>
 
         {/* ORDERS TABLE */}
@@ -337,8 +400,35 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
               <p className="text-xs text-[#888]">When customers buy frames, orders appear here with customized photos.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs">
+            <>
+              {viewMode === "card" && (
+                <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+                  {paginatedOrders.map((order) => (
+                    <article key={order.id} className="rounded-2xl border border-[#e8dfd2] bg-[#fffdfa] p-4 shadow-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-xs font-bold text-[#1a3c36]">{order.order_id}</p>
+                          <p className="mt-1 text-[11px] text-[#777]">{order.created_at ? new Date(order.created_at).toLocaleDateString("en-IN") : "--"}</p>
+                        </div>
+                        <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}>{statusName(order.order_status)}</span>
+                      </div>
+                      <div className="mt-4 space-y-2 text-xs">
+                        <p className="font-bold text-[#1d2925]">{order.customer_name || "--"}</p>
+                        <p className="flex items-center gap-1 text-[#777]"><Phone className="h-3 w-3" /> {order.customer_phone || "--"}</p>
+                        <p className="text-[#555]"><span className="font-semibold">{order.item_count || 1} item{order.item_count !== 1 ? "s" : ""}</span> · {order.product_names || "Custom Frame"}</p>
+                        <p className="text-base font-black text-[#1a3c36]">₹{order.total_amount}</p>
+                        <p className="text-[#777]">{order.payment_method || "--"} · {order.payment_status || "--"}</p>
+                      </div>
+                      <div className="mt-4 flex justify-end gap-2 border-t border-[#f0e8dc] pt-3">
+                        <button type="button" onClick={() => handleViewOrder(order.order_id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#d8cfc3] bg-white px-2.5 text-xs font-bold text-[#1a3c36] hover:bg-[#eef5f3]"><Eye className="h-3.5 w-3.5" /> View</button>
+                        <button type="button" onClick={() => handleDeleteOrder(order.order_id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f2dada] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]" title="Delete Order"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div className={viewMode === "card" ? "hidden" : "overflow-x-auto"}>
+                <table className="min-w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-[#f0e8dc] bg-[#faf8f4] font-bold text-[#555]">
                     <th className="px-4 py-3.5">Order ID</th>
@@ -352,7 +442,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f2ebdF]">
-                  {orders.map((order) => {
+                  {paginatedOrders.map((order) => {
                     const dateStr = order.created_at
                       ? new Date(order.created_at).toLocaleDateString("en-IN", {
                           day: "numeric",
@@ -399,18 +489,25 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                         </td>
                         <td className="px-4 py-4">
                           <div className="relative inline-block">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
-                                setStatusDraft(order.order_status);
-                              }}
-                              className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
-                              title="Click to update order status"
-                            >
-                              {statusName(order.order_status)}
-                            </button>
-                            {statusPopupOrderId === order.order_id && (
+                            {readOnlyStatus ? (
+                              <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}>
+                                {statusName(order.order_status)}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
+                                  setStatusDraft(normalizeStatus(order.order_status));
+                                  setCancellationReason(order.notes || "");
+                                }}
+                                className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
+                                title="Click to update order status"
+                              >
+                                {statusName(order.order_status)}
+                              </button>
+                            )}
+                            {!readOnlyStatus && statusPopupOrderId === order.order_id && (
                               <div
                                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
                                 role="dialog"
@@ -428,21 +525,44 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                   </div>
                                   <select
                                     value={statusDraft}
-                                    onChange={(event) => setStatusDraft(event.target.value)}
+                                    onChange={(event) => {
+                                      setStatusDraft(event.target.value);
+                                      if (event.target.value !== "Cancelled" && event.target.value !== "CANCELLED") {
+                                        setCancellationReason("");
+                                      }
+                                    }}
                                     disabled={updatingStatus}
                                     className="h-10 w-full rounded-md border border-[#d8cfc3] bg-white px-3 text-xs font-semibold text-[#1a3c36] outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                                   >
-                                    {orderStatuses.map((status) => (
+                                    {getStatusOptions(order.order_status).map((status) => (
                                       <option key={status.id} value={status.id}>{status.name}</option>
                                     ))}
-                                    {!orderStatuses.some((status) => status.id === order.order_status) && (
-                                      <option value={order.order_status}>{statusName(order.order_status)}</option>
+                                    {!getStatusOptions(order.order_status).some((status) => status.id === normalizeStatus(order.order_status)) && (
+                                      <option value={normalizeStatus(order.order_status)}>{statusName(order.order_status)}</option>
                                     )}
                                   </select>
+                                  {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
+                                    <div className="mt-3 space-y-2">
+                                      <input type="datetime-local" value={shippingDetails.shipped_at} onChange={(event) => setShippingDetails((prev) => ({ ...prev, shipped_at: event.target.value }))} className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" />
+                                      <input value={shippingDetails.docket_number} onChange={(event) => setShippingDetails((prev) => ({ ...prev, docket_number: event.target.value }))} placeholder="Docket number" className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                                      <input value={shippingDetails.courier_name} onChange={(event) => setShippingDetails((prev) => ({ ...prev, courier_name: event.target.value }))} placeholder="Courier name" className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                                    </div>
+                                  )}
+                                  {(statusDraft === "Cancelled" || statusDraft === "CANCELLED") && (
+                                    <textarea
+                                      value={cancellationReason}
+                                      onChange={(event) => setCancellationReason(event.target.value)}
+                                      placeholder="Enter cancellation reason"
+                                      rows={3}
+                                      required
+                                      className="mt-3 w-full rounded-md border border-[#d8cfc3] px-2 py-2 text-xs outline-none focus:border-[#1a3c36]"
+                                      aria-label="Cancellation reason"
+                                    />
+                                  )}
                                   <button
                                     type="button"
-                                    onClick={() => handleStatusChange(order.order_id, statusDraft)}
-                                    disabled={updatingStatus || !statusDraft || statusDraft === order.order_status}
+                                    onClick={() => handleStatusChange(order.order_id, statusDraft, shippingDetails)}
+                                    disabled={updatingStatus || !statusDraft || statusDraft === normalizeStatus(order.order_status) || ((statusDraft === "Cancelled" || statusDraft === "CANCELLED") && !cancellationReason.trim())}
                                     className="mt-3 w-full rounded-md bg-[#1a3c36] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#235048] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     {updatingStatus ? "Updating..." : "Update Status"}
@@ -476,8 +596,39 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+              <div className={viewMode === "card" ? "hidden" : "flex flex-col gap-3 border-t border-[#f0e8dc] px-4 py-3 text-xs text-[#777] sm:flex-row sm:items-center sm:justify-between"}>
+              <span>
+                Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, orders.length)} of {orders.length} orders
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#1a3c36] transition hover:bg-[#eef5f3] disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Previous page"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-16 text-center font-semibold text-[#444]">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#1a3c36] transition hover:bg-[#eef5f3] disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Next page"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -523,25 +674,53 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 </h2>
 
                 {/* STATUS CHANGER */}
-                <div className="flex items-center gap-2">
+                {!readOnlyStatus && <div className="flex items-center gap-2">
                   <label className="text-xs font-bold text-[#666]">Change Status:</label>
                   <select
-                    value={selectedOrder.order_status}
-                    onChange={(e) =>
-                      handleStatusChange(selectedOrder.order_id, e.target.value)
-                    }
+                    value={statusDraft || selectedOrder.order_status}
+                    onChange={(e) => {
+                      setStatusDraft(e.target.value);
+                      if (e.target.value !== "Cancelled" && e.target.value !== "CANCELLED") {
+                        setCancellationReason("");
+                      }
+                    }}
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
-                    {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(
-                      (st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      )
+                    {getStatusOptions(selectedOrder.order_status).map((status) => (
+                      <option key={status.id} value={status.id}>{status.name}</option>
+                    ))}
+                    {!getStatusOptions(selectedOrder.order_status).some((status) => status.id === normalizeStatus(selectedOrder.order_status)) && (
+                      <option value={normalizeStatus(selectedOrder.order_status)}>{statusName(selectedOrder.order_status)}</option>
                     )}
                   </select>
-                </div>
+                  {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
+                    <div className="mt-3 grid w-full gap-2 sm:grid-cols-3">
+                      <input type="datetime-local" value={shippingDetails.shipped_at} onChange={(e) => setShippingDetails((prev) => ({ ...prev, shipped_at: e.target.value }))} className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" />
+                      <input value={shippingDetails.docket_number} onChange={(e) => setShippingDetails((prev) => ({ ...prev, docket_number: e.target.value }))} placeholder="Docket number" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                      <input value={shippingDetails.courier_name} onChange={(e) => setShippingDetails((prev) => ({ ...prev, courier_name: e.target.value }))} placeholder="Courier name" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
+                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft, shippingDetails)} disabled={updatingStatus || statusDraft === selectedOrder.order_status} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50 sm:col-span-3">{updatingStatus ? "Updating..." : "Update Shipped Status"}</button>
+                    </div>
+                  )}
+                  {(statusDraft === "Cancelled" || statusDraft === "CANCELLED") && (
+                    <div className="mt-3 w-full">
+                      <textarea
+                        value={cancellationReason}
+                        onChange={(e) => setCancellationReason(e.target.value)}
+                        placeholder="Enter cancellation reason"
+                        rows={3}
+                        required
+                        className="w-full rounded-md border border-[#d8cfc3] px-2 py-2 text-xs outline-none focus:border-[#1a3c36]"
+                        aria-label="Cancellation reason"
+                      />
+                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus || !cancellationReason.trim()} className="mt-2 rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">{updatingStatus ? "Updating..." : "Update Cancelled Status"}</button>
+                    </div>
+                  )}
+                  {statusDraft !== "Shipped" && statusDraft !== "SHIPPED" && statusDraft !== selectedOrder.order_status && (
+                    statusDraft !== "Cancelled" && statusDraft !== "CANCELLED" &&
+                    <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">Update</button>
+                  )}
+                </div>}
               </div>
             </div>
 
