@@ -165,22 +165,34 @@ const VideoManagement = () => {
     const totalVideos = videos.length;
     const activeVideos = videos.filter((video) => video.active !== false).length;
     const inactiveVideos = videos.filter((video) => video.active === false).length;
+    const videoStats = [
+        { title: "Total Videos", value: totalVideos, note: "All uploaded videos", icon: FiVideo, color: "#22c55e", wave: "#9be7b9" },
+        { title: "Active Videos", value: activeVideos, note: "Available in showcase", icon: FiCheck, color: "#06b6d4", wave: "#93dce8" },
+        { title: "Inactive Videos", value: inactiveVideos, note: "Currently hidden", icon: FiSlash, color: "#f97316", wave: "#ffc39e" },
+    ];
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 min-h-[600px]">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#240046] to-[#7b2cbf] flex items-center justify-center text-white shadow-lg shrink-0"><FiVideo size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Total Videos</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{totalVideos.toLocaleString()}</h3><p className="text-[10px] text-gray-400">All uploaded videos</p></div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiCheck size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Active Videos</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{activeVideos.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Available in showcase</p></div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiSlash size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Inactive Videos</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{inactiveVideos.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Currently hidden</p></div>
-                </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {videoStats.map((stat) => {
+                    const Icon = stat.icon;
+                    return (
+                        <div key={stat.title} className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                            <div className="flex flex-1 items-start gap-4">
+                                <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: stat.color }}>
+                                    <Icon size={28} />
+                                </div>
+                                <div className="min-w-0 pt-1">
+                                    <p className="text-sm font-medium text-[#374151]">{stat.title}</p>
+                                    <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">{stat.value.toLocaleString()}</p>
+                                    <p className="mt-5 text-xs font-medium text-[#00a76f]">↗ {stat.note}</p>
+                                    <p className="mt-1 text-[11px] text-[#7c8798]">video overview</p>
+                                </div>
+                            </div>
+                            <div className="absolute bottom-0 left-0 h-6 w-full" style={{ background: stat.wave, clipPath: "ellipse(65% 75% at 55% 100%)" }} />
+                        </div>
+                    );
+                })}
             </div>
             {/* Header Section */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
