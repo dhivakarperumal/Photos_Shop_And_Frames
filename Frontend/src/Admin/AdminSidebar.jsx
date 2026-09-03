@@ -84,8 +84,8 @@ const navItems = [
     label: "Orders",
     icon: ShoppingCart,
     children: [
-      { path: "/admin/orders", label: "All Orders", icon: List },
       { path: "/admin/orders/new", label: "New Order", icon: PlusSquare },
+      { path: "/admin/orders", label: "All Orders", icon: List },
       { path: "/admin/orders/delivery", label: "Delivery Orders", icon: Package },
       { path: "/admin/orders/cancelled", label: "Cancelled Orders", icon: XCircle },
     ],
