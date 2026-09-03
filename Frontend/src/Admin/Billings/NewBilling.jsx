@@ -122,6 +122,7 @@ const NewBilling = () => {
   const [discount, setDiscount] = useState("0");
   const [shippingCharge, setShippingCharge] = useState("0");
   const [packagingCharge, setPackagingCharge] = useState("0");
+  const [billingStep, setBillingStep] = useState(1);
 
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -330,6 +331,8 @@ const NewBilling = () => {
 
   const isCustomerFormValid =
     customerForm.name.trim() && customerForm.phone.trim() && items.length > 0;
+  const canContinueToAddress = items.length > 0;
+  const canContinueToBilling = customerForm.name.trim() && customerForm.phone.trim();
 
   const handleGenerateBill = async () => {
     if (!isCustomerFormValid) return;
@@ -403,13 +406,25 @@ const NewBilling = () => {
           </button>
         </div>
 
+        <div className="mb-3 grid grid-cols-3 gap-2 rounded-lg border border-[#e5e7eb] bg-white p-2 text-xs font-semibold">
+          <div className={`rounded-md px-3 py-2 ${billingStep === 1 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
+            1. Add Products
+          </div>
+          <div className={`rounded-md px-3 py-2 ${billingStep === 2 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
+            2. Customer Address
+          </div>
+          <div className={`rounded-md px-3 py-2 ${billingStep === 3 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
+            3. Billing Details
+          </div>
+        </div>
+
         <div className="grid gap-3 ">
           
-          <section className="rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3">
-            <h2 className="mb-4 text-sm font-bold">Customer Details</h2>
+          <section className={`rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3 ${billingStep === 3 ? "hidden" : ""}`}>
+            <h2 className="mb-4 text-sm font-bold">{billingStep === 1 ? "Order Details" : "Customer Details"}</h2>
 
             <div className="mt-5 space-y-3">
-            <section className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+            <section className={`rounded-lg border border-[#e5e7eb] bg-white p-4 ${billingStep !== 1 ? "hidden" : ""}`}>
               <h2 className="mb-4 text-sm font-bold text-[#1f2937]">Order Details</h2>
               <div className="grid gap-3 md:grid-cols-3">
               <label className="text-[10px] font-semibold">
@@ -440,7 +455,7 @@ const NewBilling = () => {
               </div>
             </section>
 
-            <section className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+            <section className={`rounded-lg border border-[#e5e7eb] bg-white p-4 ${billingStep !== 2 ? "hidden" : ""}`}>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-sm font-bold text-[#1f2937]">Select Customer</h2>
@@ -479,16 +494,10 @@ const NewBilling = () => {
                   </div>
                 )}
               </div>
-              {selectedCustomer && (
-                <div className="mt-3 grid gap-2 rounded-md border border-[#e5e7eb] bg-white p-3 text-xs sm:grid-cols-3">
-                  <span><b>Name:</b> {selectedCustomer.username || selectedCustomer.name || "-"}</span>
-                  <span><b>Email:</b> {selectedCustomer.email || "-"}</span>
-                  <span><b>Phone:</b> {selectedCustomer.mobile_number || selectedCustomer.phone || "-"}</span>
-                </div>
-              )}
+              
             </section>
           </div>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className={`grid gap-3 md:grid-cols-2 ${billingStep !== 2 ? "hidden" : ""}`}>
               <label className="text-[10px] font-semibold">
                 Name *
                 <input
@@ -591,9 +600,14 @@ const NewBilling = () => {
           </section>
         </div>
 
-        <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
+        <section className={`mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3 ${billingStep === 2 ? "hidden" : ""}`}><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Product Details</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
 
-        <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">
+        {billingStep === 1 && <div className="mt-3 flex justify-end"><button type="button" onClick={() => canContinueToAddress && setBillingStep(2)} disabled={!canContinueToAddress} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-50">Next: Customer Address</button></div>}
+        {billingStep === 2 && <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setBillingStep(1)} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]">Previous</button><button type="button" onClick={() => canContinueToBilling && setBillingStep(3)} disabled={!canContinueToBilling} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-50">Next: Billing Details</button></div>}
+
+        {billingStep === 3 && <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-4"><h2 className="mb-3 text-sm font-bold">Customer Details</h2><div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3"><span><b>Name:</b> {customerForm.name || "-"}</span><span><b>Email:</b> {customerForm.email || "-"}</span><span><b>Phone:</b> {customerForm.phone || "-"}</span><span><b>Door Number:</b> {customerForm.door_number || "-"}</span><span><b>Street Name:</b> {customerForm.street_name || "-"}</span><span><b>Landmark:</b> {customerForm.landmark || "-"}</span><span><b>City:</b> {customerForm.city || "-"}</span><span><b>District:</b> {customerForm.district || "-"}</span><span><b>State:</b> {customerForm.state || "-"}</span><span><b>Country:</b> {customerForm.country || "-"}</span><span><b>Pincode:</b> {customerForm.pincode || "-"}</span></div></section>}
+
+        <div className={`mt-3 grid gap-3 xl:grid-cols-[1fr_1fr] ${billingStep !== 3 ? "hidden" : ""}`}>
           <section className="hidden rounded-lg border border-[#e5e7eb] bg-white p-3">
             <h2 className="text-sm font-bold">Order Notes</h2>
             <textarea
@@ -664,7 +678,7 @@ const NewBilling = () => {
           </section>
         </div>
 
-        <div className="mt-3 flex flex-col gap-3 rounded-lg border border-[#e5e7eb] bg-white p-3 md:flex-row md:items-end md:justify-between">
+        <div className={`mt-3 flex flex-col gap-3 rounded-lg border border-[#e5e7eb] bg-white p-3 md:flex-row md:items-end md:justify-between ${billingStep !== 3 ? "hidden" : ""}`}>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="text-[10px] font-semibold">
               Payment Method *
@@ -690,6 +704,7 @@ const NewBilling = () => {
             </div>
           </div>
           <div className="flex flex-wrap justify-end gap-3">
+            <button type="button" onClick={() => setBillingStep(2)} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]">Previous</button>
             <button
               type="button"
               onClick={() => navigate("/admin/billing")}
