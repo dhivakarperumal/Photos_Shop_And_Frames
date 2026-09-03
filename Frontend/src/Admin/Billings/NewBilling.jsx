@@ -24,13 +24,18 @@ const NewBilling = () => {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState("0");
   const [showProductModal, setShowProductModal] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [receivedAmount, setReceivedAmount] = useState("2000");
   const [discount, setDiscount] = useState("0");
   const [shippingCharge, setShippingCharge] = useState("0");
   const [packagingCharge, setPackagingCharge] = useState("0");
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
-  const total = Math.max(subtotal - Number(discount || 0) + Number(shippingCharge || 0) + Number(packagingCharge || 0), 0);
+  const itemDiscountTotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.discount || 0), 0), [items]);
+  const total = Math.max(subtotal - itemDiscountTotal - Number(discount || 0) + Number(shippingCharge || 0) + Number(packagingCharge || 0), 0);
   const change = Math.max(Number(receivedAmount || 0) - total, 0);
 
   useEffect(() => {
@@ -57,10 +62,38 @@ const NewBilling = () => {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await api.get("/users");
+        const userList = Array.isArray(response.data?.data) ? response.data.data : [];
+        setUsers(userList.filter((user) => String(user.role || "user").toLowerCase() === "user"));
+      } catch (error) {
+        console.error("Failed to load users for billing:", error);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
   const updateQuantity = (id, amount) => setItems((current) => current.map((item) => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item));
   const removeItem = (id) => setItems((current) => current.filter((item) => item.id !== id));
+  const updateItemDiscount = (id, value) => setItems((current) => current.map((item) => String(item.id) === String(id) ? { ...item, discount: Math.max(0, Number(value) || 0) } : item));
 
   const selectedProduct = productOptions.find((option) => String(option.id) === selectedProductId);
+  const filteredProductOptions = productOptions.filter((product) => {
+    const query = productSearch.trim().toLowerCase();
+    return !query || `${product.name} ${product.detail} ${product.category}`.toLowerCase().includes(query);
+  });
+  const filteredCustomers = users.filter((user) => {
+    const query = customerSearch.trim().toLowerCase();
+    return !query || `${user.username || ""} ${user.name || ""} ${user.email || ""} ${user.mobile_number || user.phone || ""}`.toLowerCase().includes(query);
+  }).slice(0, 8);
+
+  const selectCustomer = (user) => {
+    setSelectedCustomer(user);
+    setCustomerSearch(user.username || user.name || user.email || "");
+  };
 
   const addSelectedProduct = () => {
     const product = productOptions.find((option) => String(option.id) === selectedProductId);
@@ -84,35 +117,24 @@ const NewBilling = () => {
     });
     setSelectedProductId("");
     setSelectedVariantIndex("0");
+    setProductSearch("");
     setShowProductModal(false);
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] p-4 text-[#1f2937] md:p-6">
+    <div className="billing-page min-h-screen bg-[#f3f4f6] p-4 text-[#1f2937] md:p-6">
       <div className="mx-auto max-w-[1500px]">
-        <div className="mb-4"><h1 className="text-2xl font-bold">New Shop Billing</h1><p className="mt-1 text-xs text-[#6b7280]">Dashboard <span className="mx-2">&gt;</span> Billing <span className="mx-2">&gt;</span> Shop Billing <span className="mx-2">&gt;</span> New</p></div>
+      
 
-        <section className="mb-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="flex flex-wrap items-end gap-3"><label className="text-[10px] font-semibold">Select Product to Add<select value={selectedProductId} onChange={(event) => setSelectedProductId(event.target.value)} className="mt-1 h-9 w-64 appearance-none rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#ff8a4c]"><option value="">Select product...</option>{productOptions.map((product) => <option key={product.id} value={product.id}>{product.name} - {money(product.price)}</option>)}</select></label><button type="button" onClick={addSelectedProduct} disabled={!selectedProductId} className="h-9 rounded-md border border-[#ff9869] px-4 text-xs font-semibold text-[#ed6b26] disabled:cursor-not-allowed disabled:opacity-50"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Product</button><span className="text-[11px] text-[#6b7280]">Choose a product from your catalog and add it to this bill.</span></div></section>
-
-        {selectedProduct?.variants?.length > 0 && (
-          <section className="mb-3 rounded-lg border border-[#e5e7eb] bg-white p-3">
-            <label className="text-[10px] font-semibold">Select Frame Size
-              <select value={selectedVariantIndex} onChange={(event) => setSelectedVariantIndex(event.target.value)} className="mt-1 h-9 w-64 rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#ff8a4c]">
-                {selectedProduct.variants.map((variant, index) => (
-                  <option key={`${variant.size || "size"}-${index}`} value={index}>
-                    {variant.size || "Size"} - {money(variant.offer_price ?? variant.selling_price ?? variant.mrp ?? selectedProduct.price)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-        )}
+       
 
         <div className="mb-3 flex justify-end">
           <button type="button" onClick={() => setShowProductModal(true)} className="rounded-md border border-[#ff9869] px-4 py-2 text-xs font-semibold text-[#ed6b26]">
             <Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item
           </button>
         </div>
+
+        <section className="mb-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><h2 className="text-sm font-bold">Item Discounts</h2>{items.length ? <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => <label key={item.id} className="text-[10px] font-semibold">{item.name}<input type="number" min="0" max={item.price * item.quantity} step="0.01" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="mt-1 h-9 w-full rounded-md border border-[#e5e7eb] px-3 text-right text-xs outline-none focus:border-[#ff8a4c]" /></label>)}</div> : <p className="mt-2 text-xs text-[#6b7280]">Add a product to enter an item discount.</p>}</section>
 
         <div className="grid gap-3 xl:grid-cols-2">
           <section className="rounded-lg border border-[#e5e7eb] bg-white p-3"><h2 className="mb-4 text-sm font-bold">Order Details</h2><div className="grid gap-3 md:grid-cols-3"><label className="text-[10px] font-semibold">Order Date *<input type="date" defaultValue="2025-05-06" className={fieldClass} /></label><label className="text-[10px] font-semibold">Order Time *<input type="time" defaultValue="11:30" className={fieldClass} /></label><label className="text-[10px] font-semibold">Order Type<select className={fieldClass}><option>Shop Order</option><option>Online Order</option></select></label></div><div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]"><label className="text-[10px] font-semibold">Customer *<div className="relative"><Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6b7280]" /><input placeholder="Search by name / mobile number..." className={`${fieldClass} pl-8`} /></div></label><button type="button" className="mt-4 h-9 rounded-md border border-[#ff9869] px-3 text-xs font-semibold text-[#ed6b26]">+ New Customer</button></div><label className="mt-3 block max-w-md text-[10px] font-semibold">Mobile Number *<input placeholder="Enter mobile number" className={fieldClass} /></label></section>
@@ -126,10 +148,11 @@ const NewBilling = () => {
         <div className="mt-3 flex flex-col gap-3 rounded-lg border border-[#e5e7eb] bg-white p-3 md:flex-row md:items-end md:justify-between"><div className="grid gap-3 sm:grid-cols-3"><label className="text-[10px] font-semibold">Payment Method *<select className={fieldClass}><option>Cash</option><option>UPI</option><option>Card</option></select></label><label className="text-[10px] font-semibold">Received Amount (₹)<input value={receivedAmount} onChange={(event) => setReceivedAmount(event.target.value)} className={fieldClass} /></label><div className="text-[10px] font-semibold">Change (₹)<div className="mt-1 flex h-9 items-center rounded-md bg-[#e8f7ed] px-3 text-xs text-[#198754]">{change.toFixed(2)}</div></div></div><div className="flex flex-wrap justify-end gap-3"><button type="button" onClick={() => navigate("/admin/billing")} className="rounded-md border border-[#e5e7eb] px-5 py-2 text-xs font-semibold">Cancel</button><button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-md border border-[#ff9869] px-5 py-2 text-xs font-semibold text-[#ed6b26]"><Printer className="h-4 w-4" /> Print Preview</button><button type="button" className="inline-flex items-center gap-2 rounded-md bg-[#f56618] px-5 py-2 text-xs font-semibold text-white"><Printer className="h-4 w-4" /> Generate Bill</button></div></div>
 
         {showProductModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="add-item-title">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="add-item-title">
             <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between"><h2 id="add-item-title" className="text-base font-bold">Add Item</h2><button type="button" onClick={() => setShowProductModal(false)} className="text-sm text-[#6b7280]">Close</button></div>
-              <label className="block text-xs font-semibold">Select Product<select value={selectedProductId} onChange={(event) => { setSelectedProductId(event.target.value); setSelectedVariantIndex("0"); }} className={fieldClass}><option value="">Select product...</option>{productOptions.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
+              <label className="block text-xs font-semibold">Search Product<input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Search product name, code, or category..." className={fieldClass} /></label>
+              <label className="mt-3 block text-xs font-semibold">Select Product<select value={selectedProductId} onChange={(event) => { setSelectedProductId(event.target.value); setSelectedVariantIndex("0"); }} className={fieldClass}><option value="">Select product...</option>{filteredProductOptions.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
               {selectedProduct?.variants?.length > 0 && <label className="mt-3 block text-xs font-semibold">Select Frame Size<select value={selectedVariantIndex} onChange={(event) => setSelectedVariantIndex(event.target.value)} className={fieldClass}>{selectedProduct.variants.map((variant, index) => <option key={`${variant.size || "size"}-${index}`} value={index}>{variant.size || "Size"} - {money(variant.offer_price ?? variant.selling_price ?? variant.mrp ?? selectedProduct.price)}</option>)}</select></label>}
               <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setShowProductModal(false)} className="rounded-md border border-[#e5e7eb] px-4 py-2 text-xs font-semibold">Cancel</button><button type="button" onClick={addSelectedProduct} disabled={!selectedProductId} className="rounded-md bg-[#f56618] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50">Add Product</button></div>
             </div>
