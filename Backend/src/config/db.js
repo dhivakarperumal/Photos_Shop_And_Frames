@@ -240,6 +240,16 @@ async function ensureDatabaseSchema() {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
     }
     await connection.query(createOrdersTableQuery);
+    for (const column of [
+      "order_date DATE NULL",
+      "order_time VARCHAR(20) DEFAULT '00:00'",
+    ]) {
+      try {
+        await connection.query(`ALTER TABLE orders ADD COLUMN ${column}`);
+      } catch (error) {
+        if (error.code !== "ER_DUP_FIELDNAME") throw error;
+      }
+    }
     try {
       await connection.query(
         `ALTER TABLE orders ADD COLUMN billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order'`
