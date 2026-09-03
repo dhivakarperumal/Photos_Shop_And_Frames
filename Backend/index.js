@@ -109,7 +109,6 @@ app.use("/api/coupons", couponRouter);
 app.use("/api/customizations", customizationRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
-app.use("/api/orders", orderRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

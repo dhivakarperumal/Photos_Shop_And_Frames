@@ -18,6 +18,7 @@ const getCartByUser = async (userId) => {
       c.quantity,
       (c.price * c.quantity) AS total_price,
       c.slot_photos,
+      c.preview_image,
       c.created_at,
       c.updated_at,
       p.product_name,
@@ -59,6 +60,7 @@ const addToCart = async (cartData) => {
     price,
     quantity = 1,
     slot_photos = null,
+    preview_image = null,
   } = cartData;
 
   const pool = getDB();
@@ -79,8 +81,8 @@ const addToCart = async (cartData) => {
     const newQty = existing[0].quantity + Number(quantity);
 
     await pool.query(
-      `UPDATE carts SET quantity = ?, price = ?, updated_at = NOW() WHERE id = ?`,
-      [newQty, Number(price), existingId]
+      `UPDATE carts SET quantity = ?, price = ?, preview_image = COALESCE(?, preview_image), updated_at = NOW() WHERE id = ?`,
+      [newQty, Number(price), preview_image || null, existingId]
     );
 
     return {
@@ -91,6 +93,7 @@ const addToCart = async (cartData) => {
       size,
       price: Number(price),
       quantity: newQty,
+      preview_image,
     };
   }
 
@@ -102,8 +105,9 @@ const addToCart = async (cartData) => {
       size,
       price,
       quantity,
-      slot_photos
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      slot_photos,
+      preview_image
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const insertValues = [
@@ -114,6 +118,7 @@ const addToCart = async (cartData) => {
     Number(price),
     Number(quantity),
     slot_photos ? JSON.stringify(slot_photos) : null,
+    preview_image || null,
   ];
 
   const [result] = await pool.query(insertQuery, insertValues);
@@ -126,6 +131,7 @@ const addToCart = async (cartData) => {
     size,
     price: Number(price),
     quantity: Number(quantity),
+    preview_image,
   };
 };
 
