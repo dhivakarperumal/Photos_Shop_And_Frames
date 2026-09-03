@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Edit3, List, LayoutGrid, Printer, Search, ShoppingBag, Wallet } from "lucide-react";
+import { Check, ChevronDown, Edit3, Eye, List, LayoutGrid, Package, Printer, Search, ShoppingBag, Users, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 
@@ -41,6 +41,8 @@ const Billing = () => {
           time: order.created_at ? new Date(order.created_at).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "-",
           amount: Number(order.total_amount || 0),
           status: order.order_status || "Pending",
+          orderDate: order.order_date ? new Date(order.order_date).toISOString().slice(0, 10) : "",
+          createdDate: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : "",
           email: order.address?.email || "",
           address: order.address,
           orderItems: order.items || [],
@@ -70,6 +72,22 @@ const Billing = () => {
   const total = Math.max(subtotal - discount, 0);
   const change = Math.max(Number(receivedAmount || 0) - total, 0);
 
+  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const totalCustomers = new Set(orders.map((order) => order.customer).filter(Boolean)).size;
+  const totalProducts = orders.reduce((sum, order) => sum + Number(order.items || 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayOrders = orders.filter((order) => order.createdDate === today || order.orderDate === today);
+  const todayAmount = todayOrders.reduce((sum, order) => sum + Number(order.amount || 0), 0);
+  const summaryCards = [
+    { title: "Today's Order", value: todayOrders.length.toLocaleString(), change: "18.6%", icon: ShoppingBag, color: "#22c55e", wave: "#9be7b9" },
+    { title: "Today's Total Amount", value: formatCurrency(todayAmount), change: "22.4%", icon: Wallet, color: "#f59e0b", wave: "#f9d99b" },
+    { title: "Total Orders", value: orders.length.toLocaleString(), change: "18.6%", icon: ShoppingBag, color: "#06b6d4", wave: "#93dce8" },
+    { title: "Total Amount", value: formatCurrency(totalRevenue), change: "22.4%", icon: Wallet, color: "#a855f7", wave: "#d8b4f5" },
+    { title: "Total Customers", value: totalCustomers.toLocaleString(), change: "15.3%", icon: Users, color: "#06b6d4", wave: "#93dce8" },
+    { title: "Total Products", value: totalProducts.toLocaleString(), change: "10.7%", icon: Package, color: "#a855f7", wave: "#d8b4f5" },
+    { title: "Total Views", value: "0", change: "12.5%", icon: Eye, color: "#f97316", wave: "#ffc39e" },
+  ];
+
   return (
     <div className={`billing-page ${viewMode === "card" ? "card-mode" : ""} min-h-screen bg-[#f3f4f6] p-4 text-[#1f2937] md:p-6`}>
       <div className="mx-auto max-w-[1500px]">
@@ -82,7 +100,21 @@ const Billing = () => {
           <button type="button" onClick={() => navigate("/admin/billing/new")} className="inline-flex items-center gap-2 rounded-lg border border-[#ff8a4c] bg-white px-4 py-2.5 text-sm font-semibold text-[#ed6b26]"><span className="text-lg leading-none">+</span> New Billing</button>
         </div>
 
-        <div className="mb-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-3 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {summaryCards.filter((card) => !["Total Products", "Total Views"].includes(card.title)).map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.title} className="relative flex min-h-[145px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}><Icon className="h-7 w-7" /></div>
+                  <div className="min-w-0 pt-1"><p className="text-sm font-medium text-[#374151]">{card.title}</p><p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">{card.value}</p><p className="mt-5 text-xs font-medium text-[#00a76f]">↗ {card.change}</p><p className="mt-1 text-[11px] text-[#7c8798]">from last month</p></div>
+                </div>
+                <div className="absolute bottom-0 left-0 h-6 w-full" style={{ background: card.wave, clipPath: "ellipse(65% 75% at 55% 100%)" }} />
+              </div>
+            );
+          })}
+        </div>
+        <div className="hidden mb-3 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[{ label: "Total Amount", value: "₹ 1,29,850.00", note: "All time total billed amount", icon: Wallet, color: "#ff6b22", bg: "#fff0e7" }, { label: "Today's Order", value: "18", note: "Total orders today", icon: ShoppingBag, color: "#198754", bg: "#e8f7ed" }, { label: "Today's Amount", value: "₹ 24,680.00", note: "Total amount of today's orders", icon: Wallet, color: "#1769e0", bg: "#eaf1ff" }, { label: "Average Order Value", value: "₹ 1,371.11", note: "Average value today", icon: Check, color: "#6b21c9", bg: "#f1eaff" }].map((stat) => {
             const Icon = stat.icon;
             return <div key={stat.label} className="flex items-center justify-between rounded-lg border border-[#e5e7eb] bg-white p-4"><div><p className="text-xs font-medium text-[#374151]">{stat.label}</p><p className="mt-2 text-lg font-bold" style={{ color: stat.color }}>{stat.value}</p><p className="mt-2 text-[10px] text-[#6b7280]">{stat.note}</p></div><div className="flex h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: stat.bg, color: stat.color }}><Icon className="h-6 w-6" /></div></div>;
