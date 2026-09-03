@@ -159,32 +159,36 @@ const AdminAlbums = () => {
         value: String(totalAlbums),
         change: totalAlbums ? '+ 12.5%' : '0%',
         subtitle: totalAlbums ? 'from last month' : 'No albums yet',
-        accent: 'bg-[#e9f6ef]',
-        icon: <BookOpen className="h-7 w-7 text-[#1f7a4b]" />,
+        color: '#22c55e',
+        wave: '#9be7b9',
+        icon: BookOpen,
       },
       {
         title: 'Active Albums',
         value: String(activeAlbums),
         change: activeAlbums ? '+ 8.3%' : '0%',
         subtitle: activeAlbums ? 'from last month' : 'No active items',
-        accent: 'bg-[#edf7ff]',
-        icon: <FolderOpen className="h-7 w-7 text-[#1f5aa8]" />,
+        color: '#06b6d4',
+        wave: '#93dce8',
+        icon: FolderOpen,
       },
       {
         title: 'Low Stock',
         value: String(lowStock),
         change: lowStock ? 'Needs restock' : 'Healthy',
         subtitle: '',
-        accent: 'bg-[#f5ecff]',
-        icon: <Package className="h-7 w-7 text-[#7d5ad2]" />,
+        color: '#f97316',
+        wave: '#ffc39e',
+        icon: Package,
       },
       {
         title: 'Total Views',
         value: totalViews.toLocaleString(),
         change: '+ 15.2%',
         subtitle: 'from last month',
-        accent: 'bg-[#f6edff]',
-        icon: <BarChart3 className="h-7 w-7 text-[#7e54c8]" />,
+        color: '#a855f7',
+        wave: '#d8b4f5',
+        icon: BarChart3,
       },
     ];
   }, [albums]);
@@ -257,29 +261,27 @@ const AdminAlbums = () => {
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((card, index) => (
-            <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.accent}`}>
-                  {card.icon}
-                </div>
-                <div className="ml-auto text-right">
-                  <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {card.change}
+          {stats.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <div key={index} className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                <div className="flex flex-1 items-start gap-4">
+                  <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}>
+                    <Icon className="h-7 w-7" />
                   </div>
-                  {card.subtitle && (
-                    <div className="text-[10px] text-[#7c7c7c]">{card.subtitle}</div>
-                  )}
+                  <div className="min-w-0 pt-1">
+                    <p className="text-sm font-medium text-[#374151]">{card.title}</p>
+                    <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">{card.value}</p>
+                    <p className="mt-5 flex items-center gap-1 text-xs font-medium text-[#00a76f]">
+                      <ArrowUpRight className="h-3.5 w-3.5" /> {card.change}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#7c8798]">{card.subtitle || 'album overview'}</p>
+                  </div>
                 </div>
+                <div className="absolute bottom-0 left-0 h-6 w-full" style={{ background: card.wave, clipPath: 'ellipse(65% 75% at 55% 100%)' }} />
               </div>
-
-              <div className="mt-4">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
