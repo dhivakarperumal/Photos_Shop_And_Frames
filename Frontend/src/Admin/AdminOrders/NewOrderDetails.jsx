@@ -84,6 +84,7 @@ const NewOrderDetails = () => {
     courier_name: "",
   });
   const [showShippingPopup, setShowShippingPopup] = useState(false);
+  const [showCancellationPopup, setShowCancellationPopup] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -129,6 +130,7 @@ const NewOrderDetails = () => {
       setCancellationReason(nextReason.trim());
       setOrder((previous) => ({ ...previous, order_status: nextStatus, notes: nextReason.trim() }));
       setShowShippingPopup(false);
+      setShowCancellationPopup(false);
       toast.success("Order status updated");
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update order status");
@@ -165,7 +167,7 @@ const NewOrderDetails = () => {
           </div>
           <div className="flex flex-col items-end gap-2">
             <label className="text-xs font-bold text-[#66736e]" htmlFor="new-order-status">Update Status</label>
-            <select id="new-order-status" value={statusDraft} onChange={(event) => { const nextStatus = event.target.value; if (nextStatus === "SHIPPED") { setStatusDraft(nextStatus); setShowShippingPopup(true); return; } const reason = nextStatus === "CANCELLED" ? window.prompt("Enter cancellation reason") || "" : ""; setCancellationReason(reason); if (nextStatus !== "CANCELLED" || reason.trim()) handleStatusUpdate(nextStatus, reason); }} disabled={updatingStatus} className="h-10 min-w-48 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]">
+            <select id="new-order-status" value={statusDraft} onChange={(event) => { const nextStatus = event.target.value; if (nextStatus === "SHIPPED") { setStatusDraft(nextStatus); setShowShippingPopup(true); return; } if (nextStatus === "CANCELLED") { setStatusDraft(nextStatus); setCancellationReason(""); setShowCancellationPopup(true); return; } setCancellationReason(""); handleStatusUpdate(nextStatus, ""); }} disabled={updatingStatus} className="h-10 min-w-48 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]">
               {getVisibleStatusOptions(order.order_status).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               {!getVisibleStatusOptions(order.order_status).some(([value]) => value === statusDraft) && <option value={statusDraft}>{order.order_status}</option>}
             </select>
@@ -206,6 +208,19 @@ const NewOrderDetails = () => {
             <section className="rounded-2xl border border-[#e8dfd2] bg-white p-5 shadow-sm"><div className="mb-4 flex items-center gap-2 font-bold"><CalendarDays className="h-5 w-5 text-[#b07838]" /> Additional Information</div><p className="flex justify-between text-sm"><span>Billing type</span><strong>{order.billing_type || "-"}</strong></p>{order.notes && <p className="mt-4 rounded-lg bg-[#faf8f4] p-3 text-sm text-[#66736e]"><strong className="text-[#1d2925]">Notes:</strong> {order.notes}</p>}</section>
           </aside>
         </div>
+        {showCancellationPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Cancellation reason">
+            <div className="w-full max-w-sm rounded-2xl border border-[#e8dfd2] bg-white p-5 shadow-2xl">
+              <h2 className="text-lg font-black text-[#1a3c36]">Cancel Order</h2>
+              <p className="mt-1 text-xs text-[#66736e]">Enter a reason before cancelling this order.</p>
+              <textarea value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} placeholder="Cancellation reason" rows={4} autoFocus className="mt-4 w-full rounded-lg border border-[#d8cfc3] px-3 py-2 text-xs outline-none focus:border-[#1a3c36]" />
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => { setShowCancellationPopup(false); setStatusDraft(normalizeStatus(order.order_status)); }} className="rounded-lg border border-[#d8cfc3] px-3 py-2 text-xs font-bold text-[#66736e]">Cancel</button>
+                <button type="button" onClick={() => handleStatusUpdate("CANCELLED", cancellationReason)} disabled={updatingStatus || !cancellationReason.trim()} className="rounded-lg bg-[#b42318] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{updatingStatus ? "Updating..." : "Submit Cancelled"}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
