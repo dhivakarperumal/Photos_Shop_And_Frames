@@ -40,6 +40,8 @@ const createOrder = async (req, res) => {
           payment_status: order.payment_status || "Pending",
           order_status: order.order_status || "Pending",
           notes: order.notes || null,
+          created_by: order.created_by || order.user_id || order.customer_id || null,
+          updated_by: order.updated_by || order.user_id || order.customer_id || null,
         },
         items: Array.isArray(items) ? items : [],
       });
@@ -101,6 +103,8 @@ const createOrder = async (req, res) => {
       payment_status: payment_method === "Online" ? "Paid" : "Pending",
       order_status: "Pending",
       notes: notes || null,
+      created_by: user_id || req.user?.user_id || null,
+      updated_by: user_id || req.user?.user_id || null,
     };
 
     const newOrder = await orderModule.createOrder({
@@ -209,6 +213,7 @@ const updateOrderStatus = async (req, res) => {
     const updated = await orderModule.updateOrderStatus(orderId, {
       order_status,
       payment_status,
+      updated_by: req.user?.user_id || req.body.updated_by || null,
     });
 
     if (!updated) {

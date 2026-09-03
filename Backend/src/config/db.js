@@ -174,6 +174,8 @@ async function ensureDatabaseSchema() {
         payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
         order_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
         notes TEXT NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_user_id (user_id),
@@ -196,7 +198,10 @@ async function ensureDatabaseSchema() {
         slot_photos JSON NULL,
         product_image VARCHAR(500) NULL,
         frame_image VARCHAR(500) NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_order_id (order_id),
         KEY idx_product_id (product_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
