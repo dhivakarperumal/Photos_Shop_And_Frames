@@ -12,12 +12,14 @@ import {
   Image as ImageIcon,
   ImagePlus,
   Layers,
+  Move,
   Package,
   RotateCw,
   Share2,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  Sliders,
   Sparkles,
   Trash2,
   Truck,
@@ -29,6 +31,7 @@ import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
+import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
 
 /**
  * Generates an HTML5 canvas composite merging the frame template
@@ -38,7 +41,8 @@ const generateCompositeFrameBlobAndDataUrl = (
   frameImageSrc,
   slots = [],
   customerPhotos = {},
-  demoPhotos = {}
+  demoPhotos = {},
+  photoAdjustments = {}
 ) => {
   return new Promise((resolve) => {
     if (!frameImageSrc) return resolve({ blob: null, dataUrl: null });
@@ -71,6 +75,11 @@ const generateCompositeFrameBlobAndDataUrl = (
           const photoSrc = customerPhotos[slot.id] || demoPhotos[slot.id];
           if (!photoSrc) continue;
 
+          const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+          const panX = adj.panX || 0;
+          const panY = adj.panY || 0;
+          const scale = adj.scale || 1.0;
+
           await new Promise((slotResolve) => {
             const pImg = new Image();
             pImg.crossOrigin = "anonymous";
@@ -98,29 +107,34 @@ const generateCompositeFrameBlobAndDataUrl = (
               ctx.closePath();
               ctx.clip();
 
-              // Calculate object-fit
+              // Calculate object-fit with pan & zoom
               const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
               const slotRatio = sw / sh;
-              let dx = sx, dy = sy, dw = sw, dh = sh;
+              let baseW = sw, baseH = sh;
 
               if (slot.objectFit === "contain") {
                 if (imgRatio > slotRatio) {
-                  dh = sw / imgRatio;
-                  dy = sy + (sh - dh) / 2;
+                  baseW = sw;
+                  baseH = sw / imgRatio;
                 } else {
-                  dw = sh * imgRatio;
-                  dx = sx + (sw - dw) / 2;
+                  baseH = sh;
+                  baseW = sh * imgRatio;
                 }
               } else {
                 // cover
                 if (imgRatio > slotRatio) {
-                  dw = sh * imgRatio;
-                  dx = sx - (dw - sw) / 2;
+                  baseH = sh;
+                  baseW = sh * imgRatio;
                 } else {
-                  dh = sw / imgRatio;
-                  dy = sy - (dh - sh) / 2;
+                  baseW = sw;
+                  baseH = sw / imgRatio;
                 }
               }
+
+              const dw = baseW * scale;
+              const dh = baseH * scale;
+              const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
+              const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
 
               ctx.drawImage(pImg, dx, dy, dw, dh);
               ctx.restore();
@@ -171,6 +185,12 @@ const ProductDetails = () => {
   const [confirmActionType, setConfirmActionType] = useState("cart"); // "cart" | "buy"
   const [highlightMissingSlots, setHighlightMissingSlots] = useState(false);
 
+  // Photo Position Adjustments ({ [slotId]: { panX, panY, scale } })
+  const [photoAdjustments, setPhotoAdjustments] = useState({});
+  const [adjustingSlot, setAdjustingSlot] = useState(null);
+  const [activeDraggingSlot, setActiveDraggingSlot] = useState(null);
+  const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
+
   // View mode: 'editor' (interactive frame with slots) vs 'preview' (whole merged composite photo)
   const [viewMode, setViewMode] = useState("editor");
   const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
@@ -210,7 +230,7 @@ const ProductDetails = () => {
   const selectedVariant = sizeVariants[selectedVariantIndex] || {};
   const inStock = (selectedVariant.stock ?? 1) > 0;
 
-  // Refresh merged whole frame preview whenever customer photos change
+  // Refresh merged whole frame preview whenever customer photos or adjustments change
   useEffect(() => {
     if (!frameData.frame_image) return;
 
@@ -221,7 +241,8 @@ const ProductDetails = () => {
         frameData.frame_image,
         photoSlots,
         customerPhotos,
-        product?.slot_photos || {}
+        product?.slot_photos || {},
+        photoAdjustments
       );
       if (isMounted) {
         setMergedPreviewUrl(dataUrl);
@@ -233,7 +254,7 @@ const ProductDetails = () => {
     return () => {
       isMounted = false;
     };
-  }, [customerPhotos, frameData.frame_image, photoSlots, product]);
+  }, [customerPhotos, photoAdjustments, frameData.frame_image, photoSlots, product]);
 
   // Handle uploading user's personal photo into a slot
   const handleSlotUpload = async (slotId, event) => {
@@ -259,6 +280,10 @@ const ProductDetails = () => {
         ...prev,
         [slotId]: url,
       }));
+      setPhotoAdjustments((prev) => ({
+        ...prev,
+        [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+      }));
       setHighlightMissingSlots(false);
       toast.success("Photo uploaded to frame slot!");
     } catch (err) {
@@ -276,6 +301,73 @@ const ProductDetails = () => {
       delete updated[slotId];
       return updated;
     });
+    setPhotoAdjustments((prev) => {
+      const updated = { ...prev };
+      delete updated[slotId];
+      return updated;
+    });
+  };
+
+  // Direct In-Slot Drag Handlers
+  const handleSlotDragStart = (slotId, e) => {
+    const photo = customerPhotos[slotId] || product?.slot_photos?.[slotId];
+    if (!photo) return;
+
+    e.stopPropagation();
+    setActiveDraggingSlot(slotId);
+    const curr = photoAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    dragSlotStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPanX: curr.panX || 0,
+      startPanY: curr.panY || 0,
+      hasMoved: false,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handleSlotDragMove = (slotId, e) => {
+    if (activeDraggingSlot !== slotId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dx = e.clientX - dragSlotStartRef.current.x;
+    const dy = e.clientY - dragSlotStartRef.current.y;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragSlotStartRef.current.hasMoved = true;
+    }
+
+    const curr = photoAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    const maxPan = Math.max(40, ((curr.scale || 1.0) - 1) * 60 + 40);
+
+    const deltaPercentX = dx * 0.35;
+    const deltaPercentY = dy * 0.35;
+
+    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+
+    setPhotoAdjustments((prev) => ({
+      ...prev,
+      [slotId]: {
+        ...curr,
+        panX: Math.round(newPanX * 10) / 10,
+        panY: Math.round(newPanY * 10) / 10,
+      },
+    }));
+  };
+
+  const handleSlotDragEnd = (slotId, e) => {
+    if (activeDraggingSlot === slotId) {
+      setActiveDraggingSlot(null);
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (err) {}
+    }
   };
 
   /**
@@ -302,7 +394,8 @@ const ProductDetails = () => {
         frameData.frame_image,
         photoSlots,
         customerPhotos,
-        product?.slot_photos || {}
+        product?.slot_photos || {},
+        photoAdjustments
       );
 
       if (blob) {
@@ -335,6 +428,7 @@ const ProductDetails = () => {
         user_id: activeUserId,
         product_id: product.id,
         slot_photos: customerPhotos,
+        photo_adjustments: photoAdjustments,
         preview_image: wholeFramePhotoUrl,
       });
 
@@ -417,6 +511,7 @@ const ProductDetails = () => {
           quantity: Number(quantity),
           customization_id: savedCust?.customization_id || null,
           slot_photos: customerPhotos,
+          photo_adjustments: photoAdjustments,
           preview_image: savedCust?.preview_image || mergedPreviewUrl,
         });
 
@@ -497,6 +592,7 @@ const ProductDetails = () => {
       quantity: Number(quantity),
       customization_id: customizationId,
       slot_photos: customerPhotos,
+      photo_adjustments: photoAdjustments,
       product_image: compositeServerUrl || mergedPreviewUrl || product.product_images?.[0] || frameData.frame_image,
       frame_image: frameData.frame_image,
     },
@@ -624,11 +720,8 @@ const ProductDetails = () => {
                               onChange={(e) => handleSlotUpload(slot.id, e)}
                             />
 
-                            <button
-                              type="button"
-                              onClick={() => fileInputRefs.current[slot.id]?.click()}
-                              title={`Click to upload your photo for ${slot.name || `Position ${idx + 1}`}`}
-                              className={`group absolute overflow-hidden border-2 transition ${
+                            <div
+                              className={`group absolute overflow-hidden border-2 select-none transition ${
                                 userPhoto
                                   ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
                                   : highlightMissingSlots
@@ -644,39 +737,89 @@ const ProductDetails = () => {
                               }}
                             >
                               {activePhoto ? (
-                                <div className="relative h-full w-full">
-                                  <img
-                                    src={activePhoto}
-                                    alt={slot.name}
-                                    className={`h-full w-full ${!userPhoto ? "opacity-75" : ""}`}
-                                    style={{ objectFit: slot.objectFit || "cover" }}
-                                  />
+                                <div
+                                  onPointerDown={(e) => handleSlotDragStart(slot.id, e)}
+                                  onPointerMove={(e) => handleSlotDragMove(slot.id, e)}
+                                  onPointerUp={(e) => handleSlotDragEnd(slot.id, e)}
+                                  onPointerCancel={(e) => handleSlotDragEnd(slot.id, e)}
+                                  className={`relative h-full w-full overflow-hidden ${
+                                    activeDraggingSlot === slot.id ? "cursor-grabbing" : "cursor-grab"
+                                  }`}
+                                  title="Drag to reposition photo"
+                                >
+                                  {/* PHOTO WITH PAN & ZOOM TRANSFORM */}
+                                  {(() => {
+                                    const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    return (
+                                      <img
+                                        src={activePhoto}
+                                        alt={slot.name}
+                                        draggable={false}
+                                        className={`pointer-events-none absolute select-none ${!userPhoto ? "opacity-75" : ""}`}
+                                        style={{
+                                          top: "50%",
+                                          left: "50%",
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
+                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
+                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                        }}
+                                      />
+                                    );
+                                  })()}
+
                                   {userPhoto ? (
-                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow z-10 pointer-events-none">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
                                   ) : (
-                                    <div className="absolute top-1 left-1 rounded bg-[#b07838] px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
+                                    <div className="absolute top-1 left-1 rounded bg-[#b07838] px-1.5 py-0.5 text-[8px] font-bold text-white shadow z-10 pointer-events-none">
                                       {highlightMissingSlots ? "Upload Needed" : "Sample Photo"}
                                     </div>
                                   )}
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-                                    <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow flex items-center gap-1">
-                                      <UploadCloud className="h-3 w-3 text-[#b07838]" />
-                                      {userPhoto ? "Change Photo" : "Upload Your Photo"}
-                                    </span>
+
+                                  {/* HOVER OVERLAY: ADJUST & CHANGE */}
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAdjustingSlot(slot);
+                                      }}
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1"
+                                      title="Reposition & Zoom photo"
+                                    >
+                                      <Move className="h-3 w-3 text-[#b07838]" /> Adjust
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        fileInputRefs.current[slot.id]?.click();
+                                      }}
+                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                      title="Change photo file"
+                                    >
+                                      <UploadCloud className="h-3 w-3 text-white" /> {userPhoto ? "Change" : "Upload"}
+                                    </button>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRefs.current[slot.id]?.click()}
+                                  className="flex h-full w-full flex-col items-center justify-center p-1 text-center"
+                                >
                                   <UploadCloud className={`h-5 w-5 ${highlightMissingSlots ? "text-red-500" : "text-[#b07838]"}`} />
                                   <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
                                     {slot.name || `Slot ${idx + 1}`}
                                   </span>
                                   <span className="mt-0.5 text-[8px] font-semibold text-[#b07838]">Upload Photo</span>
-                                </div>
+                                </button>
                               )}
-                            </button>
+                            </div>
                           </React.Fragment>
                         );
                       })}
@@ -926,14 +1069,24 @@ const ProductDetails = () => {
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {userPhoto && (
-                              <button
-                                type="button"
-                                onClick={() => removeCustomerPhoto(slot.id)}
-                                title="Remove photo"
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdjustingSlot(slot)}
+                                  title="Drag and adjust photo position & zoom"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-[#faf8f5] px-2.5 py-1.5 text-xs font-semibold text-[#333] transition hover:bg-white hover:text-[#1a3c36]"
+                                >
+                                  <Move className="h-3.5 w-3.5 text-[#b07838]" /> Adjust
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomerPhoto(slot.id)}
+                                  title="Remove photo"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
                             )}
 
                             <button
@@ -1233,6 +1386,32 @@ const ProductDetails = () => {
           </div>
         </div>
       )}
+
+      {/* PHOTO ADJUST MODAL */}
+      <PhotoAdjustModal
+        isOpen={Boolean(adjustingSlot)}
+        onClose={() => setAdjustingSlot(null)}
+        photoSrc={
+          adjustingSlot
+            ? customerPhotos[adjustingSlot.id] || product?.slot_photos?.[adjustingSlot.id]
+            : null
+        }
+        slot={adjustingSlot}
+        initialAdjustment={
+          adjustingSlot
+            ? photoAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
+            : { panX: 0, panY: 0, scale: 1.0 }
+        }
+        onSave={(adj) => {
+          if (adjustingSlot) {
+            setPhotoAdjustments((prev) => ({
+              ...prev,
+              [adjustingSlot.id]: adj,
+            }));
+            toast.success(`Position adjusted for ${adjustingSlot.name || "slot"}!`);
+          }
+        }}
+      />
 
       {/* CHECKOUT MODAL */}
       <CheckoutModal

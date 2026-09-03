@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   ImagePlus,
   Layers,
+  Move,
   Package,
   Plus,
   RotateCw,
@@ -23,6 +24,7 @@ import {
 import api from "../../api";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
+import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
 
 const generateUuid = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -69,7 +71,7 @@ const colorOptions = [
  * Generate a composite image containing the frame background
  * and all uploaded slot photos properly positioned & clipped
  */
-const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos) => {
+const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotAdjustments = {}) => {
   return new Promise((resolve) => {
     if (!frameImageUrl) return resolve(null);
 
@@ -96,12 +98,17 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos) => {
           return parseFloat(val) || 0;
         };
 
-        // 2. Draw slot photos
+        // 2. Draw slot photos with pan & zoom
         for (const slot of slots || []) {
           const photoData = slotPhotos[slot.id];
           const photoSrc = photoData?.preview || photoData?.url;
 
           if (photoSrc) {
+            const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+            const panX = adj.panX || 0;
+            const panY = adj.panY || 0;
+            const scale = adj.scale || 1.0;
+
             await new Promise((slotResolve) => {
               const pImg = new Image();
               pImg.crossOrigin = "anonymous";
@@ -130,29 +137,34 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos) => {
                 ctx.closePath();
                 ctx.clip();
 
-                // Object-fit calculation (cover vs contain)
+                // Object-fit calculation (cover vs contain) with pan & zoom
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
                 const slotRatio = sw / sh;
-                let dx = sx, dy = sy, dw = sw, dh = sh;
+                let baseW = sw, baseH = sh;
 
                 if (slot.objectFit === "contain") {
                   if (imgRatio > slotRatio) {
-                    dh = sw / imgRatio;
-                    dy = sy + (sh - dh) / 2;
+                    baseW = sw;
+                    baseH = sw / imgRatio;
                   } else {
-                    dw = sh * imgRatio;
-                    dx = sx + (sw - dw) / 2;
+                    baseH = sh;
+                    baseW = sh * imgRatio;
                   }
                 } else {
                   // cover
                   if (imgRatio > slotRatio) {
-                    dw = sh * imgRatio;
-                    dx = sx - (dw - sw) / 2;
+                    baseH = sh;
+                    baseW = sh * imgRatio;
                   } else {
-                    dh = sw / imgRatio;
-                    dy = sy - (dh - sh) / 2;
+                    baseW = sw;
+                    baseH = sw / imgRatio;
                   }
                 }
+
+                const dw = baseW * scale;
+                const dh = baseH * scale;
+                const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
+                const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
 
                 ctx.drawImage(pImg, dx, dy, dw, dh);
                 ctx.restore();
@@ -222,9 +234,13 @@ const AddProducts = () => {
   const [loadingFrames, setLoadingFrames] = useState(false);
 
   // ==========================================
-  // SLOT DEMO PHOTOS
+  // SLOT DEMO PHOTOS & ADJUSTMENTS
   // ==========================================
   const [slotPhotos, setSlotPhotos] = useState({});
+  const [slotAdjustments, setSlotAdjustments] = useState({});
+  const [adjustingSlot, setAdjustingSlot] = useState(null);
+  const [activeDraggingSlot, setActiveDraggingSlot] = useState(null);
+  const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
   const photoInputRefs = useRef({});
   const [saving, setSaving] = useState(false);
 
@@ -288,10 +304,15 @@ const AddProducts = () => {
               const loadedPhotos = {};
               Object.entries(p.slot_photos).forEach(([slotId, url]) => {
                 if (url) {
-                  loadedPhotos[slotId] = { preview: url, url };
+                  const actualUrl = typeof url === "string" ? url : url.url || url.preview;
+                  loadedPhotos[slotId] = { preview: actualUrl, url: actualUrl };
                 }
               });
               setSlotPhotos(loadedPhotos);
+            }
+
+            if (p.slot_adjustments && typeof p.slot_adjustments === "object") {
+              setSlotAdjustments(p.slot_adjustments);
             }
           } else {
             toast.error("Product not found");
@@ -411,6 +432,10 @@ const AddProducts = () => {
       ...prev,
       [slotId]: { file, preview, url: "" },
     }));
+    setSlotAdjustments((prev) => ({
+      ...prev,
+      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+    }));
 
     // Upload to server
     const formData = new FormData();
@@ -439,6 +464,73 @@ const AddProducts = () => {
       delete updated[slotId];
       return updated;
     });
+    setSlotAdjustments((prev) => {
+      const updated = { ...prev };
+      delete updated[slotId];
+      return updated;
+    });
+  };
+
+  // Direct In-Slot Drag Handlers
+  const handleSlotDragStart = (slotId, e) => {
+    const photo = slotPhotos[slotId];
+    if (!photo) return;
+
+    e.stopPropagation();
+    setActiveDraggingSlot(slotId);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    dragSlotStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPanX: curr.panX || 0,
+      startPanY: curr.panY || 0,
+      hasMoved: false,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handleSlotDragMove = (slotId, e) => {
+    if (activeDraggingSlot !== slotId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dx = e.clientX - dragSlotStartRef.current.x;
+    const dy = e.clientY - dragSlotStartRef.current.y;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragSlotStartRef.current.hasMoved = true;
+    }
+
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    const maxPan = Math.max(40, ((curr.scale || 1.0) - 1) * 60 + 40);
+
+    const deltaPercentX = dx * 0.35;
+    const deltaPercentY = dy * 0.35;
+
+    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+
+    setSlotAdjustments((prev) => ({
+      ...prev,
+      [slotId]: {
+        ...curr,
+        panX: Math.round(newPanX * 10) / 10,
+        panY: Math.round(newPanY * 10) / 10,
+      },
+    }));
+  };
+
+  const handleSlotDragEnd = (slotId, e) => {
+    if (activeDraggingSlot === slotId) {
+      setActiveDraggingSlot(null);
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (err) {}
+    }
   };
 
   // ==========================================
@@ -488,7 +580,8 @@ const AddProducts = () => {
       const compositeBlob = await createCompositeFrameImage(
         selectedFrame.frame_image,
         selectedFrame.photo_slots || [],
-        slotPhotos
+        slotPhotos,
+        slotAdjustments
       );
 
       if (compositeBlob) {
@@ -538,6 +631,7 @@ const AddProducts = () => {
           photo_slots: selectedFrame.photo_slots || [],
         },
         slot_photos: slotPhotosMap,
+        slot_adjustments: slotAdjustments,
         product_images: [finalProductImage, selectedFrame.frame_image],
         status: "Active",
         created_by: currentUserId,
@@ -1046,11 +1140,8 @@ const AddProducts = () => {
                               onChange={(e) => handleSlotPhotoUpload(slot.id, e)}
                             />
 
-                            <button
-                              type="button"
-                              onClick={() => photoInputRefs.current[slot.id]?.click()}
-                              title={`Upload demo photo for: ${slot.name}`}
-                              className="absolute overflow-hidden border-2 border-dashed border-blue-500 bg-white/75 shadow-md backdrop-blur-[1px] transition hover:bg-white/95"
+                            <div
+                              className="absolute overflow-hidden border-2 border-dashed border-blue-500 bg-white/75 shadow-md backdrop-blur-[1px] select-none"
                               style={{
                                 top: slot.top,
                                 left: slot.left,
@@ -1060,21 +1151,78 @@ const AddProducts = () => {
                               }}
                             >
                               {uploaded ? (
-                                <img
-                                  src={uploaded.preview}
-                                  alt={slot.name}
-                                  className="h-full w-full"
-                                  style={{ objectFit: slot.objectFit || "cover" }}
-                                />
+                                <div
+                                  onPointerDown={(e) => handleSlotDragStart(slot.id, e)}
+                                  onPointerMove={(e) => handleSlotDragMove(slot.id, e)}
+                                  onPointerUp={(e) => handleSlotDragEnd(slot.id, e)}
+                                  onPointerCancel={(e) => handleSlotDragEnd(slot.id, e)}
+                                  className={`group relative h-full w-full overflow-hidden ${
+                                    activeDraggingSlot === slot.id ? "cursor-grabbing" : "cursor-grab"
+                                  }`}
+                                  title="Drag to reposition photo"
+                                >
+                                  {(() => {
+                                    const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    return (
+                                      <img
+                                        src={uploaded.preview}
+                                        alt={slot.name}
+                                        draggable={false}
+                                        className="pointer-events-none absolute select-none"
+                                        style={{
+                                          top: "50%",
+                                          left: "50%",
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
+                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
+                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                        }}
+                                      />
+                                    );
+                                  })()}
+
+                                  {/* HOVER OVERLAY: ADJUST & CHANGE */}
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAdjustingSlot(slot);
+                                      }}
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1"
+                                      title="Reposition & Zoom demo photo"
+                                    >
+                                      <Move className="h-3 w-3 text-[#b07838]" /> Adjust
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        photoInputRefs.current[slot.id]?.click();
+                                      }}
+                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                      title="Change photo file"
+                                    >
+                                      <UploadCloud className="h-3 w-3 text-white" /> Change
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => photoInputRefs.current[slot.id]?.click()}
+                                  title={`Upload demo photo for: ${slot.name}`}
+                                  className="flex h-full w-full flex-col items-center justify-center p-1 text-center hover:bg-white/95"
+                                >
                                   <span className="text-sm sm:text-lg">📷</span>
                                   <span className="mt-0.5 rounded bg-white/90 px-1 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
                                     {slot.name}
                                   </span>
-                                </div>
+                                </button>
                               )}
-                            </button>
+                            </div>
                           </React.Fragment>
                         );
                       })}
@@ -1109,6 +1257,16 @@ const AddProducts = () => {
                           </div>
 
                           <div className="flex items-center gap-2">
+                            {uploaded && (
+                              <button
+                                type="button"
+                                onClick={() => setAdjustingSlot(slot)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#1a3c36] hover:bg-[#faf7f3]"
+                                title="Drag and adjust photo position & zoom"
+                              >
+                                <Move className="h-3 w-3 text-[#b07838]" /> Adjust
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => photoInputRefs.current[slot.id]?.click()}
@@ -1126,6 +1284,10 @@ const AddProducts = () => {
                               </button>
                             )}
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                         </div>
                       );
                     })}
