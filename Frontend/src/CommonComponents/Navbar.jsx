@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../PrivateRouter/AuthContext";
+import { StoreContext } from "../PrivateRouter/StoreContext";
 import { isAdminRole } from "../PrivateRouter/roleUtils";
 import {
   FiChevronDown,
@@ -50,6 +51,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, userProfile, role } = useAuth();
+  const { cart = [] } = useContext(StoreContext) || {};
 
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
@@ -231,9 +233,18 @@ const Navbar = () => {
                   <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">3</span>
                 </button>
 
-                <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Cart">
+                <button
+                  type="button"
+                  onClick={() => navigate("/cart")}
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  aria-label="Cart"
+                >
                   <FiShoppingCart className="text-lg" />
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">2</span>
+                  {cart.length > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                      {cart.length}
+                    </span>
+                  )}
                 </button>
 
                 {isLoggedIn ? (
@@ -280,18 +291,12 @@ const Navbar = () => {
                           <button
                             type="button"
                             className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => setProfileDropdown(false)}
+                            onClick={() => {
+                              setProfileDropdown(false);
+                              navigate("/cart");
+                            }}
                           >
-                            <span>My Account</span>
-                            <FiUser className="text-base text-[#7a7a7a]" />
-                          </button>
-
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => setProfileDropdown(false)}
-                          >
-                            <span>My Order</span>
+                            <span>My Cart ({cart.length})</span>
                             <FiShoppingCart className="text-base text-[#7a7a7a]" />
                           </button>
 

@@ -49,22 +49,32 @@ export const StoreProvider = ({ children }) => {
         }
     };
 
+    const getActiveUserId = useCallback(() => {
+        if (user?.user_id) return user.user_id;
+        let guestId = localStorage.getItem("frame_shop_guest_id");
+        if (!guestId) {
+            guestId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            localStorage.setItem("frame_shop_guest_id", guestId);
+        }
+        return guestId;
+    }, [user?.user_id]);
+
     // ─── Fetch cart from backend ─────────────────────────────────
     const fetchCart = useCallback(async () => {
-        if (!user?.user_id) { setCart([]); return; }
+        const activeId = user?.user_id || localStorage.getItem("frame_shop_guest_id");
+        if (!activeId) { setCart([]); return; }
         try {
             setLoadingCart(true);
-            const res = await api.get(`/cart/${user.user_id}`);
-            const cartData = Array.isArray(res.data)
-                ? res.data
-                : Array.isArray(res.data?.data)
+            const res = await api.get(`/cart/${activeId}`);
+            const cartData = Array.isArray(res.data?.data)
                 ? res.data.data
                 : Array.isArray(res.data?.cart)
                 ? res.data.cart
+                : Array.isArray(res.data)
+                ? res.data
                 : [];
             setCart(cartData);
         } catch (err) {
-            // 404 = route not available on this backend (company management app)
             if (err?.response?.status === 404 || err?.response?.status === 405) {
                 setCart([]);
             } else {
@@ -90,7 +100,6 @@ export const StoreProvider = ({ children }) => {
                 : [];
             setWishlist(wishlistData);
         } catch (err) {
-            // 404 = route not available on this backend (company management app)
             if (err?.response?.status === 404 || err?.response?.status === 405) {
                 setWishlist([]);
             } else {
@@ -101,7 +110,7 @@ export const StoreProvider = ({ children }) => {
         }
     }, [user?.user_id]);
 
-    // Load cart + wishlist when user logs in
+    // Load cart + wishlist when user logs in or mounts
     useEffect(() => {
         fetchCart();
         fetchWishlist();
@@ -109,51 +118,46 @@ export const StoreProvider = ({ children }) => {
 
     // ─── CART ACTIONS ────────────────────────────────────────────
 
-    const addToCart = async (product, variant = null, size = null, qty = 1) => {
-        if (!user?.user_id) {
-            toast.error("Please login to add items to cart");
-            return;
-        }
+    const addToCart = async (product, variantOrOptions = null, sizeParam = null, qtyParam = 1) => {
+        const activeUserId = getActiveUserId();
 
-        const selectedVariant = variant || product.variants?.[0] || null;
-        const groceryVariantInfo = (selectedVariant?.quantity && selectedVariant?.unit) ? `${selectedVariant.quantity} ${selectedVariant.unit}` : null;
-        const selectedSize = size || groceryVariantInfo || selectedVariant?.selectedSizes?.[0] || "Free Size";
-        const variantColor = selectedVariant?.colorName || selectedVariant?.color || "Default";
-        
-        // Correctly parse images if they are stored as JSON strings
-        const productImages = typeof product.images === 'string' ? JSON.parse(product.images) : (product.images || []);
-        const variantImage = selectedVariant?.images?.[0] || productImages[0] || null;
-        
-        const price = parseFloat(selectedVariant?.sellingPrice || selectedVariant?.selling_price || product.offer_price || product.price || 0);
-        const categoryId = product.category_id || product.categoryId || null;
+        // Support both old signature (product, variant, size, qty) and new options object
+        let selectedSize = "Standard";
+        let price = 0;
+        let qty = 1;
+        let customizationId = null;
+        let slotPhotos = null;
 
-        if (budgetMode) {
-            const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-            const itemTotal = price * qty;
-            if (cartTotal + itemTotal > budgetAmount) {
-                toast.error("Cannot add to cart. Budget exceeded!");
-                return;
-            }
+        if (variantOrOptions && typeof variantOrOptions === "object" && !variantOrOptions.mrp && !variantOrOptions.sellingPrice && (variantOrOptions.size || variantOrOptions.slot_photos || variantOrOptions.customization_id)) {
+            selectedSize = variantOrOptions.size || (product.size_variants?.[0]?.size) || "Standard";
+            price = Number(variantOrOptions.price ?? product.size_variants?.[0]?.offer_price ?? product.offer_price ?? 0);
+            qty = Number(variantOrOptions.quantity || variantOrOptions.qty || 1);
+            customizationId = variantOrOptions.customization_id || null;
+            slotPhotos = variantOrOptions.slot_photos || null;
+        } else {
+            const selectedVariant = variantOrOptions || product.size_variants?.[0] || product.variants?.[0] || null;
+            selectedSize = sizeParam || selectedVariant?.size || selectedVariant?.selectedSizes?.[0] || "Standard";
+            price = parseFloat(selectedVariant?.offer_price || selectedVariant?.sellingPrice || product.offer_price || product.price || 0);
+            qty = Number(qtyParam) || 1;
         }
 
         try {
             await api.post("/cart", {
-                user_id: user.user_id,
+                user_id: activeUserId,
                 product_id: product.id || product.product_id,
-                category_id: categoryId,
-                variant_color: variantColor,
-                variant_size: selectedSize,
-                image: variantImage,
-                email: user.email || "",
+                customization_id: customizationId,
+                size: selectedSize,
                 price: price,
-                total_price: price * qty, 
                 quantity: qty,
+                slot_photos: slotPhotos,
             });
             toast.success("Added to cart!");
-            await fetchCart(); // Refresh from backend to get image + full details
+            await fetchCart();
+            return true;
         } catch (err) {
             console.error("Add to cart error:", err);
-            toast.error("Failed to add to cart");
+            toast.error(err?.response?.data?.message || "Failed to add to cart");
+            return false;
         }
     };
 
@@ -234,9 +238,10 @@ export const StoreProvider = ({ children }) => {
     };
 
     const clearCart = async () => {
-        if (!user?.user_id) { setCart([]); return; }
+        const activeUserId = getActiveUserId();
+        if (!activeUserId) { setCart([]); return; }
         try {
-            await api.delete(`/cart/clear/${user.user_id}`);
+            await api.delete(`/cart/clear/${activeUserId}`);
             setCart([]);
         } catch (err) {
             console.error("Clear cart error:", err);

@@ -4,9 +4,13 @@ import { createHashRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import Home from './Componets/Home/Home.jsx'
+import Shop from './Componets/Shop/Shop.jsx'
+import ProductDetails from './Componets/Shop/ProductDetails.jsx'
+import Cart from './Componets/Cart/Cart.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
+import AdminOrders from './Admin/AdminOrders/AdminOrders.jsx'
 
 import AdminDashboard from './Admin/AdminDashboard.jsx'
 import AdminProducts from './Admin/AdminProducts/AdminProducts.jsx'
@@ -59,6 +63,22 @@ const router = createHashRouter([
       {
         path: 'register',
         element: <Register />,
+      },
+      {
+        path: 'shop',
+        element: <Shop />,
+      },
+      {
+        path: 'products/:id',
+        element: <ProductDetails />,
+      },
+      {
+        path: 'product/:id',
+        element: <ProductDetails />,
+      },
+      {
+        path: 'cart',
+        element: <Cart />,
       },
 
       {
@@ -180,6 +200,22 @@ const router = createHashRouter([
           {
             path: 'reviews',
             element: <AdminReviews />,
+          },
+          {
+            path: 'orders',
+            element: <AdminOrders />,
+          },
+          {
+            path: 'orders/new',
+            element: <AdminOrders defaultStatus="Pending" />,
+          },
+          {
+            path: 'orders/delivery',
+            element: <AdminOrders defaultStatus="Shipped" />,
+          },
+          {
+            path: 'orders/cancelled',
+            element: <AdminOrders defaultStatus="Cancelled" />,
           },
         ],
       },

@@ -1,4 +1,4 @@
-﻿const path = require("path");
+const path = require("path");
 const mysql = require("mysql2/promise");
 require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 
@@ -122,6 +122,85 @@ async function ensureDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
+    const createCustomizedPhotosTableQuery = `
+      CREATE TABLE IF NOT EXISTS customized_photos (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        customization_id VARCHAR(255) NOT NULL UNIQUE,
+        user_id VARCHAR(255) NULL,
+        product_id INT(11) NOT NULL,
+        slot_photos JSON NOT NULL,
+        preview_image VARCHAR(500) NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_customization_id (customization_id),
+        KEY idx_user_id (user_id),
+        KEY idx_product_id (product_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    const createCartsTableQuery = `
+      CREATE TABLE IF NOT EXISTS carts (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        product_id INT(11) NOT NULL,
+        customization_id VARCHAR(255) NULL,
+        size VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        quantity INT(11) NOT NULL DEFAULT 1,
+        slot_photos JSON NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_user_id (user_id),
+        KEY idx_product_id (product_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    const createOrdersTableQuery = `
+      CREATE TABLE IF NOT EXISTS orders (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL UNIQUE,
+        user_id VARCHAR(255) NULL,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_email VARCHAR(255) NOT NULL,
+        customer_phone VARCHAR(50) NOT NULL,
+        shipping_address TEXT NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        state VARCHAR(100) NOT NULL,
+        pincode VARCHAR(20) NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        payment_method VARCHAR(50) DEFAULT 'Cash On Delivery',
+        payment_status VARCHAR(50) DEFAULT 'Pending',
+        order_status VARCHAR(50) DEFAULT 'Pending',
+        notes TEXT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_order_id (order_id),
+        KEY idx_user_id (user_id),
+        KEY idx_order_status (order_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    const createOrderItemsTableQuery = `
+      CREATE TABLE IF NOT EXISTS order_items (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL,
+        product_id INT(11) NOT NULL,
+        product_name VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NULL,
+        size VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        quantity INT(11) NOT NULL DEFAULT 1,
+        total_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        customization_id VARCHAR(255) NULL,
+        slot_photos JSON NULL,
+        product_image VARCHAR(500) NULL,
+        frame_image VARCHAR(500) NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_order_id (order_id),
+        KEY idx_product_id (product_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     const createOrdersTableQuery = `
       CREATE TABLE IF NOT EXISTS orders (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -161,6 +240,10 @@ async function ensureDatabaseSchema() {
     await connection.query(createUsersTableQuery);
     await connection.query(createCategoriesTableQuery);
     await connection.query(createAlbumsTableQuery);
+    await connection.query(createCustomizedPhotosTableQuery);
+    await connection.query(createCartsTableQuery);
+    await connection.query(createOrdersTableQuery);
+    await connection.query(createOrderItemsTableQuery);
     await connection.query(createOrdersTableQuery);
     await connection.query(createOrderItemsTableQuery);
     await connection.query(createAddressesTableQuery);
