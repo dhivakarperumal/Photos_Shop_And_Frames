@@ -219,6 +219,13 @@ async function ensureDatabaseSchema() {
     await connection.query(createAlbumsTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
+    try {
+      await connection.query(
+        `ALTER TABLE carts ADD COLUMN preview_image VARCHAR(500) NULL`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createOrdersTableQuery);
     try {
       await connection.query(
