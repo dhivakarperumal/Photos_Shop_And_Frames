@@ -3,12 +3,6 @@ import { ChevronDown, Minus, Plus, Printer, Search, Trash2 } from "lucide-react"
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 
-const initialItems = [
-  { id: 1, name: "Family Photo Frame", detail: "12 x 18 Inch", category: "Frames", price: 599, quantity: 1, discount: 0 },
-  { id: 2, name: "Premium Wedding Album", detail: "12 x 18 Inch, 40 Pages", category: "Albums", price: 999, quantity: 1, discount: 0 },
-  { id: 3, name: "Birthday Photo Mug", detail: "White Ceramic", category: "Gifts", price: 299, quantity: 1, discount: 0 },
-];
-
 const money = (value) => `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 const fieldClass = "mt-1 h-9 w-full rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#ff8a4c]";
 
@@ -25,8 +19,8 @@ const parseVariants = (value) => {
 
 const NewBilling = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState(initialItems);
-  const [productOptions, setProductOptions] = useState(initialItems);
+  const [items, setItems] = useState([]);
+  const [productOptions, setProductOptions] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState("0");
   const [showProductModal, setShowProductModal] = useState(false);
