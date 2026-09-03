@@ -102,6 +102,8 @@ const navItems = [
     icon: Users,
   },
 
+  { path: "/admin/orders", label: "Get Orders", icon: List },
+
   {
     path: "/admin/billing",
     label: "Billing",
