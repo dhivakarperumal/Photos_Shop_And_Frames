@@ -14,6 +14,18 @@ const generateOrderId = () => {
   return `ORD-${year}${month}${day}-${randomChars}`;
 };
 
+const parseSizeVariants = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 const createOrder = async ({ orderData, items = [], address = null }) => {
   const pool = getDB();
   const connection = await pool.getConnection();
@@ -90,15 +102,59 @@ const createOrder = async ({ orderData, items = [], address = null }) => {
     `;
 
     for (const item of items) {
+      const productId = Number.parseInt(item.product_id ?? item.id, 10) || 0;
+      const selectedSize = String(item.size || item.variant_size || "Standard").trim();
+      const quantity = Number(item.quantity || 1);
+
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new Error(`Invalid quantity for product ${productId}`);
+      }
+
+      const [productRows] = await connection.query(
+        `SELECT size_variants FROM products WHERE id = ? FOR UPDATE`,
+        [productId],
+      );
+
+      if (!productRows.length) {
+        throw new Error(`Product ${productId} was not found`);
+      }
+
+      const variants = parseSizeVariants(productRows[0].size_variants);
+      const variantIndex = variants.findIndex(
+        (variant) =>
+          String(variant.size || "").trim().toLowerCase() === selectedSize.toLowerCase(),
+      );
+
+      if (variantIndex < 0) {
+        throw new Error(`Selected size "${selectedSize}" is not available for product ${productId}`);
+      }
+
+      const availableStock = Number(variants[variantIndex].stock ?? 0);
+      if (availableStock < quantity) {
+        throw new Error(
+          `Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for size "${selectedSize}"`,
+        );
+      }
+
+      variants[variantIndex] = {
+        ...variants[variantIndex],
+        stock: availableStock - quantity,
+      };
+
+      await connection.query(
+        `UPDATE products SET size_variants = ?, updated_at = NOW() WHERE id = ?`,
+        [JSON.stringify(variants), productId],
+      );
+
       const itemValues = [
         orderId,
-        Number.parseInt(item.product_id ?? item.id, 10) || 0,
+        productId,
         item.product_name || "Custom Frame",
         item.category || "Photo Frames",
-        item.size || "Standard",
+        selectedSize,
         Number(item.price || item.unit_price || 0),
-        Number(item.quantity || 1),
-        Number(item.total_price || (Number(item.price || item.unit_price || 0) * Number(item.quantity || 1))),
+        quantity,
+        Number(item.total_price || (Number(item.price || item.unit_price || 0) * quantity)),
         item.customization_id || null,
         item.slot_photos ? (typeof item.slot_photos === "string" ? item.slot_photos : JSON.stringify(item.slot_photos)) : null,
         item.product_image || null,

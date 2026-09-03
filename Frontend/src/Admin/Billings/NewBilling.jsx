@@ -363,6 +363,7 @@ const NewBilling = () => {
           product_id: item.product_id || item.id,
           product_name: item.name,
           product_code: item.productCode,
+          size: item.detail || "Standard",
           product_image: item.image || "",
           quantity: item.quantity,
           unit_price: item.price,
