@@ -62,11 +62,7 @@ const navItems = [
     exact: true,
   },
 
-  {
-    path: "/admin/frames",
-    label: "Frames",
-    icon: Layers,
-  },
+
 
   /* ---- PRODUCTS ---- */
   {
@@ -79,29 +75,10 @@ const navItems = [
     ],
   },
 
-  {
-    path: "/admin/photo-printing",
-    label: "Photo Printing",
-    icon: Printer,
-  },
 
-  {
-    path: "/admin/custom-frames",
-    label: "Custom Frames",
-    icon: Zap,
-  },
 
-  {
-    path: "/admin/gifts",
-    label: "Gifts",
-    icon: Gift,
-  },
 
-  {
-    path: "/admin/albums",
-    label: "Albums",
-    icon: Album,
-  },
+
 
   {
     label: "Orders",
@@ -114,11 +91,7 @@ const navItems = [
     ],
   },
 
-  {
-    path: "/admin/gifts",
-    label: "Gifts",
-    icon: Gift,
-  },
+ 
 
   {
     path: "/admin/customers",
