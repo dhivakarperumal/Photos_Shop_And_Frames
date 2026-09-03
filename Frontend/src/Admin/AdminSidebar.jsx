@@ -69,8 +69,8 @@ const navItems = [
     label: "Products",
     icon: Package,
     children: [
-      { path: "/admin/products", label: "All Products", icon: Package },
       { path: "/admin/frames", label: "Frames", icon: Image },
+      { path: "/admin/products", label: "All Products", icon: Package },
       { path: "/admin/products/categories", label: "Category", icon: Layers },
       { path: "/admin/products/stock-details", label: "Stock Details", icon: ClipboardList },
     ],
@@ -290,67 +290,13 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                       {item.children.map((sub) => {
                         const SubIcon = sub.icon;
                         const isActive =
-                          location.pathname === sub.path ||
-
-                          // Products
-                          (sub.path === "/admin/products" &&
-                            location.pathname === "/admin/products/add") ||
-
-                          // Product Categories
-                          (sub.path === "/admin/products/categories" &&
-                            location.pathname === "/admin/products/categories/add") ||
-
-                          // All Projects
-                          (sub.path === "/admin/projects" &&
-                            (
-                              location.pathname === "/admin/projects/add" ||
-                              (location.pathname.startsWith("/admin/projects/view/") && !location.pathname.startsWith("/admin/projects/assignments/view/")) ||
-                              location.pathname.startsWith("/admin/projects/edit/")
-                            )
-                          ) ||
-
-                          // Assigned Projects
-                          (sub.path === "/admin/projects/assignments" &&
-                            location.pathname.startsWith("/admin/projects/assignments/view/")
-                          ) ||
-
-                          // All Employees
-                          (sub.path === "/admin/employees" &&
-                            (
-                              location.pathname === "/admin/employees/add" ||
-                              location.pathname.startsWith("/admin/employees/view/") ||
-                              location.pathname.startsWith("/admin/employees/edit/")
-                            )) ||
-
-                          (sub.path === "/admin/attendance" &&
-                            (
-                              location.pathname.startsWith("/admin/attendance/view/") ||
-                              location.pathname.startsWith("/admin/attendance/edit/")
-                            )) ||
-
-                          // Leave Management
-                          (sub.path === "/admin/employees/leave" &&
-                            location.pathname.startsWith("/admin/leave-history/")) ||
-
-                          // All Trainees
-                          (sub.path === "/admin/trainees" &&
-                            (
-                              location.pathname === "/admin/trainees/add" ||
-                              location.pathname.startsWith("/admin/trainees/view/") ||
-                              location.pathname.startsWith("/admin/trainees/edit/")
-                            )) ||
-
-                          // Pending Trainees
-                          (sub.path === "/admin/trainees/pending" &&
-                            location.pathname === "/admin/trainees/pending") ||
-
-                          // Trainee Attendance
-                          (sub.path === "/admin/trainees/attendance" &&
-                            location.pathname.startsWith("/admin/trainees/attendance/view/")) ||
-
-                          // Trainee Tasks
-                          (sub.path === "/admin/trainees/tasks/assign" &&
-                            location.pathname.startsWith("/admin/trainees/tasks/view/"));
+                          isRouteActive(sub.path) &&
+                          !item.children.some(
+                            (other) =>
+                              other.path !== sub.path &&
+                              other.path.length > sub.path.length &&
+                              isRouteActive(other.path),
+                          );
 
 
                         return (

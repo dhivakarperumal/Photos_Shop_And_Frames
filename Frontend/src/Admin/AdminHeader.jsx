@@ -7,7 +7,7 @@ import {
   CalendarCheck, Receipt, ShoppingCart, BarChart3, Dumbbell, Send,
   Boxes, Plus, PhoneCall, HeartPulse, FolderKanban, CheckSquare,
   DollarSign, CalendarOff, BookOpen, GraduationCap, CalendarDays,
-  CalendarClock, TrendingUp,
+  CalendarClock, TrendingUp, Tag,
 } from "lucide-react";
 import api from "../api";
 import { useAuth } from "../PrivateRouter/AuthContext";
@@ -32,9 +32,23 @@ const pageInfo = {
   "/admin/members":                 { title: "Members",               icon: Users },
   "/admin/payments":                { title: "Payments",              icon: CreditCard },
   "/admin/billing":                 { title: "Billing",               icon: Receipt },
+  "/admin/billing/new":             { title: "New Billing",            icon: Plus },
   "/admin/orders":                  { title: "Orders",                icon: ShoppingCart },
   "/admin/getorders":               { title: "Get Orders",             icon: ShoppingCart },
   "/admin/frames":                  { title: "Frames",                 icon: Boxes },
+  "/admin/frames/add":              { title: "Add Frame",              icon: Plus },
+  "/admin/products/categories":     { title: "Categories",              icon: Package },
+  "/admin/products/categories/add": { title: "Add Category",             icon: Plus },
+  "/admin/products/stock-details":  { title: "Stock Details",           icon: Package },
+  "/admin/products":                { title: "Products",               icon: Package },
+  "/admin/products/add":             { title: "Add Product",             icon: Plus },
+  "/admin/customers":               { title: "Customers",              icon: Users },
+  "/admin/reviews":                 { title: "Reviews",                icon: HeartPulse },
+  "/admin/banners":                 { title: "Banners",                icon: Boxes },
+  "/admin/videos":                  { title: "Videos Management",       icon: Boxes },
+  "/admin/albums":                  { title: "Albums",                 icon: BookOpen },
+  "/admin/gallery":                 { title: "Gallery",                icon: Boxes },
+  "/admin/coupons":                 { title: "Coupons & Offers",        icon: Tag },
   "/admin/settings":                { title: "Settings",              icon: Settings },
   "/admin/settings/profile":        { title: "Profile",               icon: User },
   "/admin/send-message":            { title: "Bulk Messaging",        icon: Send },
@@ -412,11 +426,15 @@ const Header = ({ onMenuClick }) => {
             <div className="flex flex-wrap gap-2">
               {[
                 { label: "Products", path: "/admin/products" },
+                { label: "Add Product", path: "/admin/products/add" },
                 { label: "Categories", path: "/admin/products/categories" },
+                { label: "Add Category", path: "/admin/products/categories/add" },
                 { label: "Stock", path: "/admin/products/stock-details" },
                 { label: "Orders", path: "/admin/orders" },
                 { label: "Billing", path: "/admin/billing" },
+                { label: "New Billing", path: "/admin/billing/new" },
                     { label: "Frames", path: "/admin/frames" },
+                    { label: "Add Frame", path: "/admin/frames/add" },
                 { label: "Customers", path: "/admin/customers" },
               ].map((l) => (
                 <Link
