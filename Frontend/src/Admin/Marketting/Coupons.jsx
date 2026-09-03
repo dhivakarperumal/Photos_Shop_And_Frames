@@ -178,6 +178,11 @@ const Coupons = () => {
   const totalCount = coupons.length;
   const activeCount = coupons.filter(c => c.status === 'active').length;
   const inactiveCount = coupons.filter(c => c.status === 'inactive').length;
+  const couponStats = [
+    { title: 'Total Coupons', value: totalCount, note: 'All discount codes', icon: FiTag, color: '#22c55e', wave: '#9be7b9' },
+    { title: 'Active Coupons', value: activeCount, note: 'Currently available', icon: FiCheckCircle, color: '#06b6d4', wave: '#93dce8' },
+    { title: 'Inactive Coupons', value: inactiveCount, note: 'Currently disabled', icon: FiXCircle, color: '#f97316', wave: '#ffc39e' },
+  ];
 
   return (
     <div className="space-y-6 pb-10 font-sans text-gray-900">
@@ -199,36 +204,26 @@ const Coupons = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white border border-slate-100 border-l-4 border-l-blue-500 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100/50 flex-shrink-0">
-            <FiTag className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Total Coupons</p>
-            <h4 className="text-2xl font-black text-slate-800 mt-1 tracking-tight">{totalCount}</h4>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-100 border-l-4 border-l-emerald-500 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/50 flex-shrink-0">
-            <FiCheckCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Active Coupons</p>
-            <h4 className="text-2xl font-black text-slate-800 mt-1 tracking-tight">{activeCount}</h4>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-100 border-l-4 border-l-rose-500 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 border border-rose-100/50 flex-shrink-0">
-            <FiXCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[10px] text-rose-600 font-bold uppercase tracking-widest">Inactive Coupons</p>
-            <h4 className="text-2xl font-black text-slate-800 mt-1 tracking-tight">{inactiveCount}</h4>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {couponStats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.title} className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+              <div className="flex flex-1 items-start gap-4">
+                <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: stat.color }}>
+                  <Icon className="h-7 w-7" />
+                </div>
+                <div className="min-w-0 pt-1">
+                  <p className="text-sm font-medium text-[#374151]">{stat.title}</p>
+                  <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">{stat.value}</p>
+                  <p className="mt-5 text-xs font-medium text-[#00a76f]">↗ {stat.note}</p>
+                  <p className="mt-1 text-[11px] text-[#7c8798]">coupon overview</p>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 h-6 w-full" style={{ background: stat.wave, clipPath: "ellipse(65% 75% at 55% 100%)" }} />
+            </div>
+          );
+        })}
       </div>
 
       {/* Toolbar: Search and Refresh */}

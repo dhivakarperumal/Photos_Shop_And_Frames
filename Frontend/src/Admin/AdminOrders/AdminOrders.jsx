@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Calendar,
   CheckCircle,
@@ -24,7 +25,7 @@ import {
 import api from "../../api";
 import toast from "react-hot-toast";
 
-const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null }) => {
+const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -213,13 +214,23 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null }) => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={fetchOrders}
-            className="inline-flex items-center gap-2 self-start rounded-xl border border-[#d8cfc3] bg-white px-4 py-2 text-xs font-bold text-[#444] shadow-xs transition hover:bg-[#faf7f3]"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Refresh Orders
-          </button>
+          <div className="flex flex-wrap items-center gap-2 self-start">
+            {showNewOrderButton && (
+              <Link
+                to="/admin/billing/new"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#235048]"
+              >
+                <Plus className="h-3.5 w-3.5" /> Get New Order
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={fetchOrders}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#d8cfc3] bg-white px-4 py-2 text-xs font-bold text-[#444] shadow-xs transition hover:bg-[#faf7f3]"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh Orders
+            </button>
+          </div>
         </div>
 
         {/* METRICS ROW */}

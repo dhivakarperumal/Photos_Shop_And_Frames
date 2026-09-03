@@ -452,9 +452,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="text-center mt-8 text-xs text-gray-400">
-        © 2024 PixelFrame. All rights reserved.
-      </div>
+      
     </div>
   );
 };

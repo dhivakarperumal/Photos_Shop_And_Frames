@@ -75,7 +75,7 @@ const AdminLayout = () => {
 
         {/* Footer */}
        {!isPrintPage && (
-         <footer className="glass-footer text-center py-4 mt-10 text-sm text-white/70 print:hidden">
+         <footer className="glass-footer bg-gray-100 text-center py-4  text-sm  print:hidden">
            © {new Date().getFullYear()} Q-Techx Solutions. All rights reserved.
          </footer>
        )}

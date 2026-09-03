@@ -207,7 +207,7 @@ const router = createHashRouter([
           },
           {
             path: 'getorders',
-            element: <AdminOrders />,
+            element: <AdminOrders showNewOrderButton />,
           },
           {
             path: 'orders/new',

@@ -76,41 +76,41 @@ const GalleryManagement = () => {
       title: "Total Albums",
       value: totalAlbums,
       subtext: "All gallery albums",
-      icon: <Package className="h-6 w-6" />,
-      accent: "bg-[#eaf5f0]",
-      iconColor: "text-[#2d7b5a]",
+      icon: Package,
+      color: "#22c55e",
+      wave: "#9be7b9",
     },
     {
       title: "Total Photos",
       value: totalPhotos,
       subtext: "Across all albums",
-      icon: <ImageIcon className="h-6 w-6" />,
-      accent: "bg-[#e8f1f8]",
-      iconColor: "text-[#4f88b2]",
+      icon: ImageIcon,
+      color: "#06b6d4",
+      wave: "#93dce8",
     },
     {
       title: "Total Views",
       value: "0", // Views not tracked yet
       subtext: "Album & photo views",
-      icon: <MonitorPlay className="h-6 w-6" />,
-      accent: "bg-[#f1e7f7]",
-      iconColor: "text-[#7d5a93]",
+      icon: MonitorPlay,
+      color: "#a855f7",
+      wave: "#d8b4f5",
     },
     {
       title: "Active Albums",
       value: activeAlbums,
       subtext: "Currently active",
-      icon: <Users className="h-6 w-6" />,
-      accent: "bg-[#fdf3e7]",
-      iconColor: "text-[#d4a843]",
+      icon: Users,
+      color: "#f59e0b",
+      wave: "#f9d99b",
     },
     {
       title: "Inactive Albums",
       value: inactiveAlbums,
       subtext: "Currently inactive",
-      icon: <Star className="h-6 w-6" />,
-      accent: "bg-[#fff0f0]",
-      iconColor: "text-[#d04d4d]",
+      icon: Star,
+      color: "#f97316",
+      wave: "#ffc39e",
     },
   ];
 
@@ -182,29 +182,25 @@ const GalleryManagement = () => {
 
         {/* ── STAT CARDS ── */}
         <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {statCards.map((card, idx) => (
-            <div
-              key={idx}
-              className="rounded-2xl border border-[#e7e0d8] bg-white p-5 shadow-sm flex items-center gap-4"
-            >
-              <div
-                className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl ${card.accent} ${card.iconColor}`}
-              >
-                {card.icon}
+          {statCards.map((card, idx) => {
+            const Icon = card.icon;
+            return (
+              <div key={idx} className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm">
+                <div className="flex flex-1 items-start gap-4">
+                  <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}>
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <div className="min-w-0 pt-1">
+                    <p className="text-sm font-medium text-[#374151]">{card.title}</p>
+                    <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">{card.value}</p>
+                    <p className="mt-5 text-xs font-medium text-[#00a76f]">↗ {card.subtext}</p>
+                    <p className="mt-1 text-[11px] text-[#7c8798]">gallery overview</p>
+                  </div>
+                </div>
+                <div className="absolute bottom-0 left-0 h-6 w-full" style={{ background: card.wave, clipPath: "ellipse(65% 75% at 55% 100%)" }} />
               </div>
-              <div>
-                <div className="text-[12px] font-bold text-[#1f1d1b] leading-tight">
-                  {card.title}
-                </div>
-                <div className="mt-1 text-[1.6rem] font-bold leading-none tracking-tight text-[#1e1e1e]">
-                  {card.value}
-                </div>
-                <div className="mt-1.5 text-[11px] text-[#2d7b5a] font-medium">
-                  {card.subtext}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* ── MAIN CONTENT AREA ── */}
