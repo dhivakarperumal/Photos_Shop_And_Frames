@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import {
   Calendar,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   Eye,
@@ -43,7 +45,7 @@ const orderStatuses = [
 const statusName = (status) =>
   orderStatuses.find((option) => option.id === status)?.name || status;
 
-const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false }) => {
+const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -51,6 +53,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [statusDraft, setStatusDraft] = useState("");
   const [shippingDetails, setShippingDetails] = useState({
     shipped_at: "",
@@ -69,22 +72,36 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      params.billing_type = "Online Order";
+      if (todayOnly) {
+        params.today = "1";
+      } else {
+        params.billing_type = "Online Order";
+      }
 
       const res = await api.get("/orders", { params });
       if (res.data?.success && Array.isArray(res.data.data)) {
         const nextOrders = res.data.data.filter((order) => {
-          if (allowedStatuses && !allowedStatuses.includes(order.order_status)) return false;
+          const normalizedStatus = String(order.order_status || "").toLowerCase();
+          if (todayOnly && ["completed", "delivered"].includes(normalizedStatus)) return false;
+          if (
+            allowedStatuses &&
+            !allowedStatuses.some(
+              (status) => status.toLowerCase() === normalizedStatus
+            )
+          ) return false;
           return activeStatus === "All" || order.order_status === activeStatus;
         });
         setOrders(nextOrders);
+        setCurrentPage(1);
       } else {
         setOrders([]);
+        setCurrentPage(1);
       }
     } catch (err) {
       console.error("Fetch orders error:", err);
       toast.error("Failed to load orders");
       setOrders([]);
+      setCurrentPage(1);
     } finally {
       setLoading(false);
     }
@@ -92,7 +109,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   useEffect(() => {
     fetchOrders();
-  }, [activeStatus, allowedStatuses]);
+  }, [activeStatus, allowedStatuses, todayOnly]);
+
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -315,22 +336,24 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
         {/* SEARCH & FILTER BAR */}
         <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
           {/* STATUS TABS */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {statusOptions.map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => setActiveStatus(st)}
-                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
-                  activeStatus === st
-                    ? "bg-[#1a3c36] text-white shadow-xs"
-                    : "bg-[#f4efe7] text-[#666] hover:bg-[#eae4d9]"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
-          </div>
+          {!todayOnly && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {statusOptions.map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setActiveStatus(st)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                    activeStatus === st
+                      ? "bg-[#1a3c36] text-white shadow-xs"
+                      : "bg-[#f4efe7] text-[#666] hover:bg-[#eae4d9]"
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* SEARCH */}
           <form onSubmit={handleSearch} className="relative w-full sm:w-72">
@@ -359,8 +382,9 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
               <p className="text-xs text-[#888]">When customers buy frames, orders appear here with customized photos.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-xs">
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-[#f0e8dc] bg-[#faf8f4] font-bold text-[#555]">
                     <th className="px-4 py-3.5">Order ID</th>
@@ -374,7 +398,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f2ebdF]">
-                  {orders.map((order) => {
+                  {paginatedOrders.map((order) => {
                     const dateStr = order.created_at
                       ? new Date(order.created_at).toLocaleDateString("en-IN", {
                           day: "numeric",
@@ -505,8 +529,39 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+              <div className="flex flex-col gap-3 border-t border-[#f0e8dc] px-4 py-3 text-xs text-[#777] sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, orders.length)} of {orders.length} orders
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#1a3c36] transition hover:bg-[#eef5f3] disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Previous page"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-16 text-center font-semibold text-[#444]">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#1a3c36] transition hover:bg-[#eef5f3] disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Next page"
+                  aria-label="Next page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -148,6 +148,10 @@ const getAllOrders = async (filters = {}) => {
     values.push(filters.billing_type);
   }
 
+  if (filters.today === "1" || filters.today === "true") {
+    query += ` AND o.created_at >= CURDATE() AND o.created_at < CURDATE() + INTERVAL 1 DAY`;
+  }
+
   if (filters.search) {
     query += ` AND (o.order_id LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.customer_email LIKE ?)`;
     const searchPattern = `%${filters.search}%`;

@@ -148,8 +148,8 @@ const createOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
-    const { status, search, billing_type } = req.query;
-    const orders = await orderModule.getAllOrders({ status, search, billing_type });
+    const { status, search, billing_type, today } = req.query;
+    const orders = await orderModule.getAllOrders({ status, search, billing_type, today });
 
     res.status(200).json({
       success: true,
