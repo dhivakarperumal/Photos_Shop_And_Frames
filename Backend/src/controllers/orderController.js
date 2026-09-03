@@ -211,7 +211,7 @@ const getOrdersByUser = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { order_status, payment_status, shipped_at, docket_number, courier_name } = req.body;
+    const { order_status, payment_status, shipped_at, docket_number, courier_name, notes } = req.body;
 
     const validStatuses = [
       "NEW", "CONFIRMED", "PROCESSING", "PACKING", "SHIPPED", "READY", "OUT_FOR_DELIVERY",
@@ -231,6 +231,7 @@ const updateOrderStatus = async (req, res) => {
       shipped_at,
       docket_number,
       courier_name,
+      notes,
       updated_by: req.user?.user_id || req.body.updated_by || null,
     });
 

@@ -227,7 +227,7 @@ const getOrdersByUser = async (userId) => {
 
 const updateOrderStatus = async (orderId, updateData) => {
   const pool = getDB();
-  const { order_status, payment_status, shipped_at, docket_number, courier_name, updated_by } = updateData;
+  const { order_status, payment_status, shipped_at, docket_number, courier_name, notes, updated_by } = updateData;
 
   let query = `UPDATE orders SET updated_at = NOW()`;
   const values = [];
@@ -247,6 +247,10 @@ const updateOrderStatus = async (orderId, updateData) => {
     values.push(shipped_at || null, docket_number || null, courier_name || null);
   } else if (order_status === "Cancelled" || order_status === "CANCELLED") {
     query += `, shipped_at = NULL, docket_number = NULL, courier_name = NULL`;
+    if (notes?.trim()) {
+      query += `, notes = ?`;
+      values.push(notes.trim());
+    }
   }
 
   if (updated_by) {

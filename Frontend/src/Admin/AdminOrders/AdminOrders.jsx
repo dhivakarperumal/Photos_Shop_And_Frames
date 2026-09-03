@@ -53,6 +53,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [statusDraft, setStatusDraft] = useState("");
   const [shippingDetails, setShippingDetails] = useState({
@@ -127,6 +128,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       if (res.data?.success && res.data.data) {
         setSelectedOrder(res.data.data);
         setStatusDraft(res.data.data.order_status || "Pending");
+        setCancellationReason(res.data.data.notes || "");
         setShippingDetails({
           shipped_at: res.data.data.shipped_at
             ? new Date(res.data.data.shipped_at).toISOString().slice(0, 16)
@@ -146,17 +148,22 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   };
 
   const handleStatusChange = async (orderId, newStatus, details = shippingDetails) => {
+    if ((newStatus === "Cancelled" || newStatus === "CANCELLED") && !cancellationReason.trim()) {
+      toast.error("Please enter a cancellation reason");
+      return;
+    }
     try {
       setUpdatingStatus(true);
       const res = await api.patch(`/orders/${orderId}/status`, {
         order_status: newStatus,
         ...details,
+        notes: cancellationReason.trim(),
       });
 
       if (res.data?.success) {
         toast.success(`Order status updated to ${statusName(newStatus)}`);
         if (selectedOrder) {
-          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus }));
+          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus, notes: cancellationReason.trim() }));
         }
         setOrders((prev) =>
           prev.map((o) =>
@@ -450,6 +457,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                               onClick={() => {
                                 setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
                                 setStatusDraft(order.order_status);
+                                setCancellationReason(order.notes || "");
                               }}
                               className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
                               title="Click to update order status"
@@ -474,7 +482,12 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                   </div>
                                   <select
                                     value={statusDraft}
-                                    onChange={(event) => setStatusDraft(event.target.value)}
+                                    onChange={(event) => {
+                                      setStatusDraft(event.target.value);
+                                      if (event.target.value !== "Cancelled" && event.target.value !== "CANCELLED") {
+                                        setCancellationReason("");
+                                      }
+                                    }}
                                     disabled={updatingStatus}
                                     className="h-10 w-full rounded-md border border-[#d8cfc3] bg-white px-3 text-xs font-semibold text-[#1a3c36] outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                                   >
@@ -492,10 +505,21 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                       <input value={shippingDetails.courier_name} onChange={(event) => setShippingDetails((prev) => ({ ...prev, courier_name: event.target.value }))} placeholder="Courier name" className="h-9 w-full rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
                                     </div>
                                   )}
+                                  {(statusDraft === "Cancelled" || statusDraft === "CANCELLED") && (
+                                    <textarea
+                                      value={cancellationReason}
+                                      onChange={(event) => setCancellationReason(event.target.value)}
+                                      placeholder="Enter cancellation reason"
+                                      rows={3}
+                                      required
+                                      className="mt-3 w-full rounded-md border border-[#d8cfc3] px-2 py-2 text-xs outline-none focus:border-[#1a3c36]"
+                                      aria-label="Cancellation reason"
+                                    />
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => handleStatusChange(order.order_id, statusDraft, shippingDetails)}
-                                    disabled={updatingStatus || !statusDraft || statusDraft === order.order_status}
+                                    disabled={updatingStatus || !statusDraft || statusDraft === order.order_status || ((statusDraft === "Cancelled" || statusDraft === "CANCELLED") && !cancellationReason.trim())}
                                     className="mt-3 w-full rounded-md bg-[#1a3c36] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#235048] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     {updatingStatus ? "Updating..." : "Update Status"}
@@ -611,7 +635,12 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                   <label className="text-xs font-bold text-[#666]">Change Status:</label>
                   <select
                     value={statusDraft || selectedOrder.order_status}
-                    onChange={(e) => setStatusDraft(e.target.value)}
+                    onChange={(e) => {
+                      setStatusDraft(e.target.value);
+                      if (e.target.value !== "Cancelled" && e.target.value !== "CANCELLED") {
+                        setCancellationReason("");
+                      }
+                    }}
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
@@ -630,7 +659,22 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                       <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft, shippingDetails)} disabled={updatingStatus || statusDraft === selectedOrder.order_status} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50 sm:col-span-3">{updatingStatus ? "Updating..." : "Update Shipped Status"}</button>
                     </div>
                   )}
+                  {(statusDraft === "Cancelled" || statusDraft === "CANCELLED") && (
+                    <div className="mt-3 w-full">
+                      <textarea
+                        value={cancellationReason}
+                        onChange={(e) => setCancellationReason(e.target.value)}
+                        placeholder="Enter cancellation reason"
+                        rows={3}
+                        required
+                        className="w-full rounded-md border border-[#d8cfc3] px-2 py-2 text-xs outline-none focus:border-[#1a3c36]"
+                        aria-label="Cancellation reason"
+                      />
+                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus || !cancellationReason.trim()} className="mt-2 rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">{updatingStatus ? "Updating..." : "Update Cancelled Status"}</button>
+                    </div>
+                  )}
                   {statusDraft !== "Shipped" && statusDraft !== "SHIPPED" && statusDraft !== selectedOrder.order_status && (
+                    statusDraft !== "Cancelled" && statusDraft !== "CANCELLED" &&
                     <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">Update</button>
                   )}
                 </div>
