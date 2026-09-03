@@ -52,16 +52,18 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
   if (type === "tasks") viewAllLink = "/admin/tasks";
   if (type === "projects") viewAllLink = "/admin/projects";
   if (type === "leaves") viewAllLink = "/admin/employees/leave";
+  if (type === "orders") viewAllLink = "/admin/orders";
+  if (type === "lowStock") viewAllLink = "/admin/products/stock-details";
 
   return (
-    <div className="absolute right-0 top-full mt-3 w-80 bg-[#13141a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+    <div className="absolute right-0 top-full mt-3 w-80 rounded-2xl border border-gray-200 bg-white shadow-2xl z-50 overflow-hidden flex flex-col">
       {/* header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
-        <span className="text-sm font-bold text-white flex items-center gap-2">{icon} {title}</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <span className="text-sm font-bold text-gray-900 flex items-center gap-2">{icon} {title}</span>
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${accent}`}>{items.length} Active</span>
       </div>
       {/* list */}
-      <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
+      <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
         {items.length ? items.map((item, i) => {
           let link = "/admin", label = "", sub = "";
           if (type === "tasks")    { 
@@ -71,20 +73,22 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
           }
           if (type === "projects") { link = "/admin/projects";        label = item.name;     sub = `Due: ${item.due}`; }
           if (type === "leaves")   { link = "/admin/employees/leave"; label = item.employee; sub = `${item.type}${item.date ? ' · ' + item.date : ''}`; }
+          if (type === "orders")   { link = `/admin/billing/${item.id}`; label = item.id; sub = `${item.customer} · ${item.status}`; }
+          if (type === "lowStock") { link = "/admin/products/stock-details"; label = item.name; sub = `${item.stock} units remaining`; }
           return (
-            <Link key={i} to={link} onClick={onClose} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition group">
-              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">{icon}</div>
+            <Link key={i} to={link} onClick={onClose} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition group">
+              <div className="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">{icon}</div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-primary transition">{label}</p>
-                <p className="text-[10px] text-white/40 mt-0.5">{sub}</p>
+                <p className="text-xs font-semibold text-gray-900 group-hover:text-primary transition">{label}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>
               </div>
             </Link>
           );
         }) : (
-          <div className="py-8 text-center text-white/30 text-xs">No active items</div>
+          <div className="py-8 text-center text-gray-400 text-xs">No active items</div>
         )}
       </div>
-      <Link to={viewAllLink} onClick={onClose} className="block text-center py-2.5 border-t border-white/10 text-[11px] font-bold text-primary hover:bg-primary/10 transition uppercase tracking-widest">
+      <Link to={viewAllLink} onClick={onClose} className="block text-center py-2.5 border-t border-gray-100 text-[11px] font-bold text-primary hover:bg-primary/10 transition uppercase tracking-widest">
         View All
       </Link>
     </div>
@@ -96,7 +100,7 @@ const Header = ({ onMenuClick }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [alerts, setAlerts] = useState({ tasks: [], leaves: [] });
+  const [alerts, setAlerts] = useState({ tasks: [], leaves: [], orders: [], lowStock: [] });
   const [currentTime, setCurrentTime] = useState(dayjs());
 
   const dropdownRef = useRef(null);
@@ -122,6 +126,8 @@ const Header = ({ onMenuClick }) => {
     const fetchAlerts = async () => {
       let leaveAlerts = [];
       let taskAlerts  = [];
+      let orderAlerts = [];
+      let lowStockAlerts = [];
 
       // ── 1. Pending Leaves from employee_leaves table ──
       try {
@@ -158,7 +164,31 @@ const Header = ({ onMenuClick }) => {
         console.error('[Header] Tasks fetch error:', e?.response?.status, e.message);
       }
 
-      setAlerts({ tasks: taskAlerts, leaves: leaveAlerts });
+      try {
+        const { data } = await api.get('/orders');
+        orderAlerts = (data?.data || [])
+          .filter((order) => !['completed', 'delivered', 'cancelled'].includes(String(order.order_status || '').toLowerCase()))
+          .map((order) => ({
+            id: order.order_id,
+            customer: order.address?.customer_name || order.customer_id || 'Customer',
+            status: order.order_status || 'Pending',
+          }));
+      } catch (e) {
+        console.error('[Header] Order notification error:', e?.response?.status, e.message);
+      }
+
+      try {
+        const { data } = await api.get('/products');
+        lowStockAlerts = (data?.data || []).flatMap((product) => {
+          const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
+          const stock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+          return stock <= 15 ? [{ name: product.product_name || 'Unnamed Product', stock }] : [];
+        });
+      } catch (e) {
+        console.error('[Header] Low stock notification error:', e?.response?.status, e.message);
+      }
+
+      setAlerts({ tasks: taskAlerts, leaves: leaveAlerts, orders: orderAlerts, lowStock: lowStockAlerts });
     };
 
     fetchAlerts();
@@ -183,9 +213,16 @@ const Header = ({ onMenuClick }) => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    let target = "/admin/members";
-    if (location.pathname.includes("projects"))  target = "/admin/projects";
-    if (location.pathname.includes("employees")) target = "/admin/employees";
+    const query = searchQuery.trim().toLowerCase();
+    let target = "/admin/products";
+    if (query.includes("order")) target = "/admin/orders";
+    if (query.includes("bill")) target = "/admin/billing";
+    if (query.includes("customer") || query.includes("user")) target = "/admin/customers";
+    if (query.includes("stock")) target = "/admin/products/stock-details";
+    if (query.includes("categor")) target = "/admin/products/categories";
+    if (query.includes("frame")) target = "/admin/frames";
+    if (query.includes("album")) target = "/admin/albums";
+    if (query.includes("review")) target = "/admin/reviews";
     navigate(`${target}?search=${encodeURIComponent(searchQuery)}`);
     setShowSearch(false);
     setSearchQuery("");
@@ -261,23 +298,23 @@ const Header = ({ onMenuClick }) => {
             {/* Divider */}
             <div className="w-px h-6 bg-gray-200 mx-1" />
 
-            {/* Task Updates - live from employee_task_assignments */}
+            {/* Order notifications */}
             <div className="relative">
-              <IconBtn name="tasks" badge={alerts.tasks.length} badgeColor="bg-blue-500" title="Task Updates">
-                <CheckSquare size={18} />
+              <IconBtn name="orders" badge={alerts.orders.length} badgeColor="bg-orange-500" title="Order Notifications">
+                <ShoppingCart size={18} />
               </IconBtn>
-              {activeDropdown === "tasks" && (
-                <AlertDropdown title="Task Updates" items={alerts.tasks} icon={<CheckSquare size={13} className="text-blue-400" />} type="tasks" onClose={() => setActiveDropdown(null)} accent="bg-blue-500/20 text-blue-400" />
+              {activeDropdown === "orders" && (
+                <AlertDropdown title="Order Notifications" items={alerts.orders} icon={<ShoppingCart size={13} className="text-orange-400" />} type="orders" onClose={() => setActiveDropdown(null)} accent="bg-orange-500/20 text-orange-400" />
               )}
             </div>
 
-            {/* Leave Requests - live from employee_leaves table */}
+            {/* Low stock notifications */}
             <div className="relative">
-              <IconBtn name="leaves" badge={alerts.leaves.length} badgeColor="bg-yellow-500" title="Pending Leave Requests">
-                <CalendarOff size={18} />
+              <IconBtn name="lowStock" badge={alerts.lowStock.length} badgeColor="bg-red-500" title="Low Stock Notifications">
+                <Package size={18} />
               </IconBtn>
-              {activeDropdown === "leaves" && (
-                <AlertDropdown title="Leave Requests" items={alerts.leaves} icon={<CalendarOff size={13} className="text-yellow-400" />} type="leaves" onClose={() => setActiveDropdown(null)} accent="bg-yellow-500/20 text-yellow-400" />
+              {activeDropdown === "lowStock" && (
+                <AlertDropdown title="Low Stock Notifications" items={alerts.lowStock} icon={<Package size={13} className="text-red-400" />} type="lowStock" onClose={() => setActiveDropdown(null)} accent="bg-red-500/20 text-red-400" />
               )}
             </div>
 
@@ -343,46 +380,47 @@ const Header = ({ onMenuClick }) => {
       </header>
 
       {showSearch && (
-        <div ref={searchRef} className="absolute right-4 top-20 z-50 w-[min(92vw,420px)] rounded-2xl border border-gray-200 bg-[#111827] text-white shadow-2xl">
-          <form onSubmit={handleSearch} className="p-3 border-b border-white/10">
-            <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-3 py-2">
-              <Search size={15} className="text-white/50" />
+        <div ref={searchRef} className="absolute right-4 top-20 z-50 w-[min(92vw,420px)] rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl">
+          <form onSubmit={handleSearch} className="p-3 border-b border-gray-100">
+            <div className="flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+              <Search size={15} className="text-gray-400" />
               <input
                 ref={inputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search employees, projects, tasks..."
-                className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+                placeholder="Search products, orders, billing..."
+                className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="p-1 rounded-md hover:bg-white/10"
+                  className="p-1 rounded-md hover:bg-gray-200"
                   aria-label="Clear search"
                 >
-                  <X size={14} className="text-white/60" />
+                  <X size={14} className="text-gray-500" />
                 </button>
               )}
             </div>
           </form>
 
           <div className="px-5 py-3">
-            <p className="text-[11px] text-white/30 uppercase tracking-widest mb-2">Quick Links</p>
+            <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2">Quick Links</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: "Employees", path: "/admin/employees" },
-                { label: "Projects", path: "/admin/projects" },
-                { label: "Attendance", path: "/admin/attendance" },
-                { label: "Payroll", path: "/admin/payroll" },
-                { label: "Reports", path: "/admin/reports" },
+                { label: "Products", path: "/admin/products" },
+                { label: "Categories", path: "/admin/products/categories" },
+                { label: "Stock", path: "/admin/products/stock-details" },
+                { label: "Orders", path: "/admin/orders" },
+                { label: "Billing", path: "/admin/billing" },
+                { label: "Customers", path: "/admin/customers" },
               ].map((l) => (
                 <Link
                   key={l.path}
                   to={l.path}
                   onClick={() => setShowSearch(false)}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/60 text-xs transition border border-white/8"
+                  className="px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-primary/10 hover:text-primary text-gray-600 text-xs transition border border-gray-200"
                 >
                   {l.label}
                 </Link>
@@ -390,9 +428,9 @@ const Header = ({ onMenuClick }) => {
             </div>
           </div>
 
-          <div className="px-5 py-2 text-[10px] text-white/20 flex justify-between border-t border-white/5">
-            <span>Press <kbd className="bg-white/10 px-1 rounded">Enter</kbd> to search</span>
-            <span>Press <kbd className="bg-white/10 px-1 rounded">Esc</kbd> to close</span>
+          <div className="px-5 py-2 text-[10px] text-gray-400 flex justify-between border-t border-gray-100">
+            <span>Press <kbd className="bg-gray-100 px-1 rounded">Enter</kbd> to search</span>
+            <span>Press <kbd className="bg-gray-100 px-1 rounded">Esc</kbd> to close</span>
           </div>
         </div>
       )}

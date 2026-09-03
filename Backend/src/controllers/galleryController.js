@@ -25,7 +25,9 @@ const createAlbum = async (req, res) => {
       cover_image,
       meta_title,
       meta_description,
-      photos
+      photos,
+      created_by,
+      updated_by
     } = req.body;
 
     if (!title) {
@@ -41,7 +43,9 @@ const createAlbum = async (req, res) => {
       description,
       cover_image,
       meta_title,
-      meta_description
+      meta_description,
+      created_by: created_by || req.user?.user_id || null,
+      updated_by: updated_by || req.user?.user_id || created_by || null,
     };
 
     const result = await galleryModule.createAlbum(albumData, photos);
@@ -89,7 +93,11 @@ const getAlbumById = async (req, res) => {
 
 const updateAlbum = async (req, res) => {
   try {
-    const album = await galleryModule.updateAlbum(req.params.albumId, req.body, req.body.photos);
+    const album = await galleryModule.updateAlbum(
+      req.params.albumId,
+      { ...req.body, updated_by: req.body.updated_by || req.user?.user_id || null },
+      req.body.photos,
+    );
     if (!album) return res.status(404).json({ success: false, message: "Gallery album not found" });
     return res.status(200).json({ success: true, message: "Gallery album updated successfully", data: album });
   } catch (error) {

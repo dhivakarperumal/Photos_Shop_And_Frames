@@ -58,6 +58,23 @@ async function addColumns() {
       }
     }
 
+    for (const column of [
+      "created_by VARCHAR(255) NULL",
+      "updated_by VARCHAR(255) NULL",
+    ]) {
+      const columnName = column.split(" ")[0];
+      try {
+        await connection.query(`ALTER TABLE orders ADD COLUMN ${column}`);
+        console.log(`✅ Added ${columnName} to orders table`);
+      } catch (error) {
+        if (error.code === "ER_DUP_FIELDNAME") {
+          console.log(`ℹ️  ${columnName} already exists in orders table`);
+        } else {
+          throw error;
+        }
+      }
+    }
+
     // Add columns to order_items table
     console.log("\nAdding columns to order_items table...");
     try {
@@ -70,6 +87,45 @@ async function addColumns() {
         console.log("ℹ️  product_image already exists in order_items table");
       } else {
         throw error;
+      }
+    }
+
+    for (const column of [
+      "created_by VARCHAR(255) NULL",
+      "updated_by VARCHAR(255) NULL",
+      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+      "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+    ]) {
+      const columnName = column.split(" ")[0];
+      try {
+        await connection.query(`ALTER TABLE order_items ADD COLUMN ${column}`);
+        console.log(`✅ Added ${columnName} to order_items table`);
+      } catch (error) {
+        if (error.code === "ER_DUP_FIELDNAME") {
+          console.log(`ℹ️  ${columnName} already exists in order_items table`);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    for (const table of ["gallery_albums", "customized_photos", "coupons", "carts", "banners"]) {
+      console.log(`\nAdding audit columns to ${table} table...`);
+      for (const column of [
+        "created_by VARCHAR(255) NULL",
+        "updated_by VARCHAR(255) NULL",
+      ]) {
+        const columnName = column.split(" ")[0];
+        try {
+          await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column}`);
+          console.log(`✅ Added ${columnName} to ${table} table`);
+        } catch (error) {
+          if (error.code === "ER_DUP_FIELDNAME") {
+            console.log(`ℹ️  ${columnName} already exists in ${table} table`);
+          } else {
+            throw error;
+          }
+        }
       }
     }
 

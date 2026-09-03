@@ -62,9 +62,9 @@ const statusClass = {
 const mapOrder = (order) => ({
   id: order.order_id,
   customer:
-    order.address?.customer_name || order.customer_id || "Customer",
-  phone: order.address?.mobile_number || "",
-  items: Number(order.total_items || order.items?.length || 0),
+    order.customer_name || order.address?.customer_name || order.customer_id || "Customer",
+  phone: order.customer_phone || order.address?.mobile_number || "",
+  items: Number(order.total_items || order.item_count || order.items?.length || 0),
   date: order.order_date
     ? new Date(order.order_date).toLocaleDateString("en-GB")
     : "-",
@@ -83,9 +83,19 @@ const mapOrder = (order) => ({
   createdDate: order.created_at
     ? new Date(order.created_at).toISOString().slice(0, 10)
     : "",
-  email: order.address?.email || "",
-  address: order.address,
-  orderItems: order.items || [],
+  email: order.customer_email || order.address?.email || "",
+  address: order.address || {
+    customer_name: order.customer_name,
+    mobile_number: order.customer_phone,
+    address_line1: order.shipping_address,
+    city: order.city,
+    state: order.state,
+    pincode: order.pincode,
+  },
+  orderItems: (order.items || []).map((item) => ({
+    ...item,
+    unit_price: item.unit_price ?? item.price,
+  })),
   billingType: order.billing_type || "Shop Billing",
   paymentMethod: order.payment_method || "Cash",
   subtotal: Number(order.subtotal || 0),
@@ -103,15 +113,8 @@ const OrderDetails = () => {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        const response = await api.get("/orders");
-        const savedOrders = Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
-        const matchedOrder = savedOrders
-          .map(mapOrder)
-          .find((item) => item.id === orderId);
-
-        setOrder(matchedOrder || null);
+        const response = await api.get(`/orders/${orderId}`);
+        setOrder(response.data?.data ? mapOrder(response.data.data) : null);
       } catch (error) {
         console.error("Failed to load order details:", error);
         setOrder(null);

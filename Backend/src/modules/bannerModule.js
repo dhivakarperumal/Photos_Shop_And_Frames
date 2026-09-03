@@ -13,6 +13,8 @@ const ensureBannersTable = async () => {
       link VARCHAR(500) DEFAULT '',
       type VARCHAR(50) NOT NULL DEFAULT 'hero',
       active TINYINT(1) NOT NULL DEFAULT 1,
+      created_by VARCHAR(255) NULL,
+      updated_by VARCHAR(255) NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -42,11 +44,13 @@ const createBanner = async (bannerData) => {
     link = "",
     type = "hero",
     active = true,
+    created_by = null,
+    updated_by = created_by,
   } = bannerData;
 
   const query = `
-    INSERT INTO banners (title, subtitle, description, image, mobile_image, link, type, active)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO banners (title, subtitle, description, image, mobile_image, link, type, active, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const [result] = await pool.query(query, [
@@ -58,6 +62,8 @@ const createBanner = async (bannerData) => {
     link || "",
     type || "hero",
     active ? 1 : 0,
+    created_by,
+    updated_by,
   ]);
 
   return {
@@ -85,11 +91,12 @@ const updateBanner = async (id, bannerData) => {
     link = "",
     type = "hero",
     active = true,
+    updated_by = null,
   } = bannerData;
 
   const query = `
     UPDATE banners
-    SET title = ?, subtitle = ?, description = ?, image = ?, mobile_image = ?, link = ?, type = ?, active = ?
+    SET title = ?, subtitle = ?, description = ?, image = ?, mobile_image = ?, link = ?, type = ?, active = ?, updated_by = ?
     WHERE id = ?
   `;
 
@@ -102,6 +109,7 @@ const updateBanner = async (id, bannerData) => {
     link || "",
     type || "hero",
     active ? 1 : 0,
+    updated_by,
     id,
   ]);
 

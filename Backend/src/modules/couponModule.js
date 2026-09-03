@@ -20,6 +20,8 @@ const ensureCouponsTable = async () => {
       applicable_product_ids JSON,
       applicable_category_ids JSON,
       applicable_subcategory_ids JSON,
+      created_by VARCHAR(255) NULL,
+      updated_by VARCHAR(255) NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -74,6 +76,8 @@ const createCoupon = async (couponData = {}) => {
     applicable_product_ids = [],
     applicable_category_ids = [],
     applicable_subcategory_ids = [],
+    created_by = null,
+    updated_by = created_by,
   } = couponData;
 
   if (!code || !name) {
@@ -97,8 +101,10 @@ const createCoupon = async (couponData = {}) => {
         coupon_scope,
         applicable_product_ids,
         applicable_category_ids,
-        applicable_subcategory_ids
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        applicable_subcategory_ids,
+        created_by,
+        updated_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       String(code).trim(),
@@ -116,6 +122,8 @@ const createCoupon = async (couponData = {}) => {
       JSON.stringify(Array.isArray(applicable_product_ids) ? applicable_product_ids : []),
       JSON.stringify(Array.isArray(applicable_category_ids) ? applicable_category_ids : []),
       JSON.stringify(Array.isArray(applicable_subcategory_ids) ? applicable_subcategory_ids : []),
+      created_by,
+      updated_by,
     ]
   );
 
@@ -152,6 +160,7 @@ const updateCoupon = async (id, couponData = {}) => {
     applicable_product_ids = [],
     applicable_category_ids = [],
     applicable_subcategory_ids = [],
+    updated_by = null,
   } = couponData;
 
   const [result] = await pool.query(
@@ -171,7 +180,8 @@ const updateCoupon = async (id, couponData = {}) => {
           coupon_scope = ?,
           applicable_product_ids = ?,
           applicable_category_ids = ?,
-          applicable_subcategory_ids = ?
+          applicable_subcategory_ids = ?,
+          updated_by = ?
       WHERE id = ?
     `,
     [
@@ -190,6 +200,7 @@ const updateCoupon = async (id, couponData = {}) => {
       JSON.stringify(Array.isArray(applicable_product_ids) ? applicable_product_ids : []),
       JSON.stringify(Array.isArray(applicable_category_ids) ? applicable_category_ids : []),
       JSON.stringify(Array.isArray(applicable_subcategory_ids) ? applicable_subcategory_ids : []),
+      updated_by,
       id,
     ]
   );

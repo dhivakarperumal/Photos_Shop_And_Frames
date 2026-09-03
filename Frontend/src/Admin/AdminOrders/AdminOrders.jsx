@@ -42,6 +42,7 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
+      params.billing_type = "Online Order";
 
       const res = await api.get("/orders", { params });
       if (res.data?.success && Array.isArray(res.data.data)) {

@@ -130,6 +130,8 @@ async function ensureDatabaseSchema() {
         product_id INT(11) NOT NULL,
         slot_photos JSON NOT NULL,
         preview_image VARCHAR(500) NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_customization_id (customization_id),
@@ -149,6 +151,8 @@ async function ensureDatabaseSchema() {
         quantity INT(11) NOT NULL DEFAULT 1,
         slot_photos JSON NULL,
         preview_image VARCHAR(500) NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_user_id (user_id),
@@ -165,6 +169,7 @@ async function ensureDatabaseSchema() {
         customer_email VARCHAR(255) NULL,
         customer_phone VARCHAR(50) NOT NULL,
         shipping_address TEXT NOT NULL,
+        billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order',
         city VARCHAR(100) NULL,
         state VARCHAR(100) NULL,
         pincode VARCHAR(20) NULL,
@@ -173,6 +178,8 @@ async function ensureDatabaseSchema() {
         payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
         order_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
         notes TEXT NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_user_id (user_id),
@@ -195,7 +202,10 @@ async function ensureDatabaseSchema() {
         slot_photos JSON NULL,
         product_image VARCHAR(500) NULL,
         frame_image VARCHAR(500) NULL,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY idx_order_id (order_id),
         KEY idx_product_id (product_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -218,7 +228,21 @@ async function ensureDatabaseSchema() {
     await connection.query(createAlbumsTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
+    try {
+      await connection.query(
+        `ALTER TABLE carts ADD COLUMN preview_image VARCHAR(500) NULL`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createOrdersTableQuery);
+    try {
+      await connection.query(
+        `ALTER TABLE orders ADD COLUMN billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order'`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createOrderItemsTableQuery);
     await connection.query(createAddressesTableQuery);
     console.log("✅ Database schema ready.");

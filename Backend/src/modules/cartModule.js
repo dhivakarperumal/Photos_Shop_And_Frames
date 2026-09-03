@@ -61,6 +61,8 @@ const addToCart = async (cartData) => {
     quantity = 1,
     slot_photos = null,
     preview_image = null,
+    created_by = null,
+    updated_by = created_by,
   } = cartData;
 
   const pool = getDB();
@@ -81,8 +83,8 @@ const addToCart = async (cartData) => {
     const newQty = existing[0].quantity + Number(quantity);
 
     await pool.query(
-      `UPDATE carts SET quantity = ?, price = ?, preview_image = COALESCE(?, preview_image), updated_at = NOW() WHERE id = ?`,
-      [newQty, Number(price), preview_image || null, existingId]
+      `UPDATE carts SET quantity = ?, price = ?, preview_image = COALESCE(?, preview_image), updated_by = ?, updated_at = NOW() WHERE id = ?`,
+      [newQty, Number(price), preview_image || null, updated_by, existingId]
     );
 
     return {
@@ -106,8 +108,10 @@ const addToCart = async (cartData) => {
       price,
       quantity,
       slot_photos,
-      preview_image
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      preview_image,
+      created_by,
+      updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const insertValues = [
@@ -119,6 +123,8 @@ const addToCart = async (cartData) => {
     Number(quantity),
     slot_photos ? JSON.stringify(slot_photos) : null,
     preview_image || null,
+    created_by,
+    updated_by,
   ];
 
   const [result] = await pool.query(insertQuery, insertValues);
@@ -135,7 +141,7 @@ const addToCart = async (cartData) => {
   };
 };
 
-const updateCartItem = async (cartItemId, quantity, price) => {
+const updateCartItem = async (cartItemId, quantity, price, updatedBy = null) => {
   const pool = getDB();
   let query = `UPDATE carts SET quantity = ?`;
   const values = [Number(quantity)];
@@ -145,8 +151,8 @@ const updateCartItem = async (cartItemId, quantity, price) => {
     values.push(Number(price));
   }
 
-  query += `, updated_at = NOW() WHERE id = ?`;
-  values.push(cartItemId);
+  query += `, updated_by = ?, updated_at = NOW() WHERE id = ?`;
+  values.push(updatedBy, cartItemId);
 
   const [result] = await pool.query(query, values);
   return result.affectedRows > 0;

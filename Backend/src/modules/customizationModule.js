@@ -12,6 +12,8 @@ const createCustomization = async (data) => {
     product_id,
     slot_photos = {},
     preview_image = null,
+    created_by = null,
+    updated_by = created_by,
   } = data;
 
   const pool = getDB();
@@ -21,8 +23,10 @@ const createCustomization = async (data) => {
       user_id,
       product_id,
       slot_photos,
-      preview_image
-    ) VALUES (?, ?, ?, ?, ?)
+      preview_image,
+      created_by,
+      updated_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -31,6 +35,8 @@ const createCustomization = async (data) => {
     Number(product_id),
     JSON.stringify(slot_photos || {}),
     preview_image || null,
+    created_by,
+    updated_by,
   ];
 
   const [result] = await pool.query(query, values);

@@ -27,6 +27,7 @@ const createOrder = async (req, res) => {
       const legacyResult = await orderModule.createOrder({
         orderData: {
           user_id: order.user_id || order.customer_id || null,
+          billing_type: order.billing_type || "Shop Billing",
           customer_name: address?.customer_name || order.customer_name || "Customer",
           customer_email: order.customer_email || "",
           customer_phone: address?.mobile_number || order.customer_phone || "",
@@ -39,6 +40,8 @@ const createOrder = async (req, res) => {
           payment_status: order.payment_status || "Pending",
           order_status: order.order_status || "Pending",
           notes: order.notes || null,
+          created_by: order.created_by || order.user_id || order.customer_id || null,
+          updated_by: order.updated_by || order.user_id || order.customer_id || null,
         },
         items: Array.isArray(items) ? items : [],
       });
@@ -87,6 +90,7 @@ const createOrder = async (req, res) => {
 
     const orderPayload = {
       user_id: user_id || req.user?.user_id || null,
+      billing_type: "Online Order",
       customer_name: customer_name.trim(),
       customer_email: (customer_email || "").trim(),
       customer_phone: customer_phone.trim(),
@@ -99,6 +103,8 @@ const createOrder = async (req, res) => {
       payment_status: payment_method === "Online" ? "Paid" : "Pending",
       order_status: "Pending",
       notes: notes || null,
+      created_by: user_id || req.user?.user_id || null,
+      updated_by: user_id || req.user?.user_id || null,
     };
 
     const newOrder = await orderModule.createOrder({
@@ -131,8 +137,8 @@ const createOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
-    const { status, search } = req.query;
-    const orders = await orderModule.getAllOrders({ status, search });
+    const { status, search, billing_type } = req.query;
+    const orders = await orderModule.getAllOrders({ status, search, billing_type });
 
     res.status(200).json({
       success: true,
@@ -207,6 +213,7 @@ const updateOrderStatus = async (req, res) => {
     const updated = await orderModule.updateOrderStatus(orderId, {
       order_status,
       payment_status,
+      updated_by: req.user?.user_id || req.body.updated_by || null,
     });
 
     if (!updated) {

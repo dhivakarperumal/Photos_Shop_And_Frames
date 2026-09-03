@@ -19,7 +19,11 @@ const getAllCoupons = async (req, res) => {
 
 const createCoupon = async (req, res) => {
   try {
-    const coupon = await couponModule.createCoupon(req.body);
+    const coupon = await couponModule.createCoupon({
+      ...req.body,
+      created_by: req.body.created_by || req.user?.user_id || null,
+      updated_by: req.body.updated_by || req.user?.user_id || req.body.created_by || null,
+    });
     res.status(201).json({
       success: true,
       message: "Coupon created successfully",
@@ -37,7 +41,10 @@ const createCoupon = async (req, res) => {
 const updateCoupon = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await couponModule.updateCoupon(id, req.body);
+    const result = await couponModule.updateCoupon(id, {
+      ...req.body,
+      updated_by: req.body.updated_by || req.user?.user_id || null,
+    });
     res.status(200).json({
       success: true,
       message: "Coupon updated successfully",
