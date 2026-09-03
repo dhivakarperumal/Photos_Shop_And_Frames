@@ -244,6 +244,13 @@ async function ensureDatabaseSchema() {
     } catch (error) {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
     }
+    try {
+      await connection.query(
+        `ALTER TABLE orders ADD COLUMN order_date DATE NULL`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createOrderItemsTableQuery);
     await connection.query(createAddressesTableQuery);
     console.log("✅ Database schema ready.");
