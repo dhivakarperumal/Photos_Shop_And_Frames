@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { 
   Calendar, 
   ShoppingBag, 
   IndianRupee, 
   Users, 
   Package, 
-  Eye, 
   TrendingUp, 
   ChevronDown,
   ShoppingCart,
@@ -55,13 +54,90 @@ const orderStatusData = [
   { name: 'Returned', value: 80, color: '#9ca3af' }
 ];
 
+const dateKey = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-CA');
+};
+
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const AdminDashboard = () => {
   const [dashboardCounts, setDashboardCounts] = useState({
     orders: 0,
     revenue: 0,
     customers: 0,
     products: 0,
+    lowStock: 0,
+    delivered: 0,
+    todayOrders: 0,
+    cancelled: 0,
   });
+  const [orders, setOrders] = useState([]);
+  const [dateFilter, setDateFilter] = useState('this-month');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
+  const filterLabel = {
+    all: 'All Dates',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    'this-week': 'This Week',
+    'this-month': 'This Month',
+    'last-month': 'Last Month',
+    custom: 'Custom Range',
+  }[dateFilter];
+
+  const filteredOrders = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let from;
+    let to;
+
+    if (dateFilter === 'today') {
+      from = today;
+      to = today;
+    } else if (dateFilter === 'yesterday') {
+      from = new Date(today);
+      from.setDate(from.getDate() - 1);
+      to = from;
+    } else if (dateFilter === 'this-week') {
+      from = new Date(today);
+      from.setDate(from.getDate() - ((from.getDay() + 6) % 7));
+      to = today;
+    } else if (dateFilter === 'this-month') {
+      from = new Date(today.getFullYear(), today.getMonth(), 1);
+      to = today;
+    } else if (dateFilter === 'last-month') {
+      from = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      to = new Date(today.getFullYear(), today.getMonth(), 0);
+    } else if (dateFilter === 'custom' && customFrom && customTo) {
+      from = new Date(`${customFrom}T00:00:00`);
+      to = new Date(`${customTo}T00:00:00`);
+    }
+
+    if (!from || !to || from > to) return dateFilter === 'all' ? orders : [];
+    const fromKey = formatDateInput(from);
+    const toKey = formatDateInput(to);
+    return orders.filter((order) => {
+      const orderKey = dateKey(order.order_date || order.created_at);
+      return orderKey >= fromKey && orderKey <= toKey;
+    });
+  }, [customFrom, customTo, dateFilter, orders]);
+
+  const filteredOrderCounts = useMemo(() => ({
+    orders: filteredOrders.length,
+    revenue: filteredOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+    delivered: filteredOrders.filter((order) => ['delivered', 'completed'].includes(String(order.order_status || '').toLowerCase())).length,
+    todayOrders: filteredOrders.filter((order) => dateKey(order.order_date || order.created_at) === dateKey(new Date())).length,
+    cancelled: filteredOrders.filter((order) => String(order.order_status || '').toLowerCase() === 'cancelled').length,
+  }), [filteredOrders]);
 
   useEffect(() => {
     const fetchDashboardCounts = async () => {
@@ -74,13 +150,19 @@ const AdminDashboard = () => {
         const orders = Array.isArray(ordersResponse.data?.data) ? ordersResponse.data.data : [];
         const users = Array.isArray(usersResponse.data?.data) ? usersResponse.data.data : [];
         const products = Array.isArray(productsResponse.data?.data) ? productsResponse.data.data : [];
+        const lowStock = products.filter((product) => {
+          const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
+          const stock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+          return stock <= 15;
+        }).length;
 
-        setDashboardCounts({
-          orders: orders.length,
-          revenue: orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+        setOrders(orders);
+        setDashboardCounts((current) => ({
+          ...current,
           customers: users.filter((user) => !['admin', 'super admin'].includes(String(user.role || '').toLowerCase())).length,
           products: products.length,
-        });
+          lowStock,
+        }));
       } catch (error) {
         console.error('Failed to load dashboard counts:', error);
       }
@@ -97,21 +179,51 @@ const AdminDashboard = () => {
           <h1 className="text-2xl font-bold text-gray-900">Hello, Admin! 👋</h1>
           <p className="text-gray-500 text-sm mt-1">Here's what's happening with your store today.</p>
         </div>
-        <button className="flex items-center space-x-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm shadow-sm">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <label className="flex items-center space-x-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm">
           <Calendar size={16} className="text-gray-500" />
-          <span>01 May 2024 - 31 May 2024</span>
+          <select
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="bg-transparent text-sm text-gray-800 outline-none"
+          >
+            <option value="all">All Dates</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="this-week">This Week</option>
+            <option value="this-month">This Month</option>
+            <option value="last-month">Last Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
           <ChevronDown size={16} className="text-gray-500" />
-        </button>
+          </label>
+          {dateFilter === 'custom' && (
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <label className="flex items-center gap-1">
+                From
+                <input type="date" value={customFrom} onChange={(event) => setCustomFrom(event.target.value)} className="rounded border border-gray-200 bg-white px-2 py-2" />
+              </label>
+              <label className="flex items-center gap-1">
+                To
+                <input type="date" value={customTo} onChange={(event) => setCustomTo(event.target.value)} className="rounded border border-gray-200 bg-white px-2 py-2" />
+              </label>
+            </div>
+          )}
+          <span className="sr-only">{filterLabel}</span>
+        </div>
       </div>
 
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { title: 'Total Orders', value: dashboardCounts.orders.toLocaleString(), inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#22c55e]' }, // Bright Green
-          { title: 'Total Revenue', value: `₹${dashboardCounts.revenue.toLocaleString('en-IN')}`, inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, iconBg: 'bg-[#f59e0b]' }, // Bright Amber
+          { title: 'Total Orders', value: filteredOrderCounts.orders.toLocaleString(), inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#22c55e]' }, // Bright Green
+          { title: 'Total Revenue', value: `₹${filteredOrderCounts.revenue.toLocaleString('en-IN')}`, inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, iconBg: 'bg-[#f59e0b]' }, // Bright Amber
           { title: 'Total Customers', value: dashboardCounts.customers.toLocaleString(), inc: '15.3%', icon: <Users size={24} className="text-white" />, iconBg: 'bg-[#06b6d4]' }, // Bright Cyan
           { title: 'Total Products', value: dashboardCounts.products.toLocaleString(), inc: '10.7%', icon: <Package size={24} className="text-white" />, iconBg: 'bg-[#a855f7]' }, // Bright Purple
-          { title: 'Total Views', value: '12,580', inc: '12.5%', icon: <Eye size={24} className="text-white" />, iconBg: 'bg-[#f97316]' }, // Bright Orange
+          { title: 'Low Stock', value: dashboardCounts.lowStock.toLocaleString(), inc: 'Needs attention', icon: <Package size={24} className="text-white" />, iconBg: 'bg-[#f97316]' },
+          { title: 'Delivered', value: filteredOrderCounts.delivered.toLocaleString(), inc: 'Completed orders', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#166534]' },
+          { title: "Today's Orders", value: filteredOrderCounts.todayOrders.toLocaleString(), inc: 'Since midnight', icon: <Calendar size={24} className="text-white" />, iconBg: 'bg-[#3b82f6]' },
+          { title: 'Cancelled Orders', value: filteredOrderCounts.cancelled.toLocaleString(), inc: 'Cancelled orders', icon: <ShoppingCart size={24} className="text-white" />, iconBg: 'bg-[#dc2626]' },
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm relative overflow-hidden flex flex-col h-full">
             <div className="flex items-start space-x-4 flex-1">

@@ -52,6 +52,8 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
   if (type === "tasks") viewAllLink = "/admin/tasks";
   if (type === "projects") viewAllLink = "/admin/projects";
   if (type === "leaves") viewAllLink = "/admin/employees/leave";
+  if (type === "orders") viewAllLink = "/admin/orders";
+  if (type === "lowStock") viewAllLink = "/admin/products/stock-details";
 
   return (
     <div className="absolute right-0 top-full mt-3 w-80 bg-[#13141a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
@@ -71,6 +73,8 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
           }
           if (type === "projects") { link = "/admin/projects";        label = item.name;     sub = `Due: ${item.due}`; }
           if (type === "leaves")   { link = "/admin/employees/leave"; label = item.employee; sub = `${item.type}${item.date ? ' · ' + item.date : ''}`; }
+          if (type === "orders")   { link = `/admin/billing/${item.id}`; label = item.id; sub = `${item.customer} · ${item.status}`; }
+          if (type === "lowStock") { link = "/admin/products/stock-details"; label = item.name; sub = `${item.stock} units remaining`; }
           return (
             <Link key={i} to={link} onClick={onClose} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition group">
               <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">{icon}</div>
@@ -96,7 +100,7 @@ const Header = ({ onMenuClick }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [alerts, setAlerts] = useState({ tasks: [], leaves: [] });
+  const [alerts, setAlerts] = useState({ tasks: [], leaves: [], orders: [], lowStock: [] });
   const [currentTime, setCurrentTime] = useState(dayjs());
 
   const dropdownRef = useRef(null);
@@ -122,6 +126,8 @@ const Header = ({ onMenuClick }) => {
     const fetchAlerts = async () => {
       let leaveAlerts = [];
       let taskAlerts  = [];
+      let orderAlerts = [];
+      let lowStockAlerts = [];
 
       // ── 1. Pending Leaves from employee_leaves table ──
       try {
@@ -158,7 +164,31 @@ const Header = ({ onMenuClick }) => {
         console.error('[Header] Tasks fetch error:', e?.response?.status, e.message);
       }
 
-      setAlerts({ tasks: taskAlerts, leaves: leaveAlerts });
+      try {
+        const { data } = await api.get('/orders');
+        orderAlerts = (data?.data || [])
+          .filter((order) => !['completed', 'delivered', 'cancelled'].includes(String(order.order_status || '').toLowerCase()))
+          .map((order) => ({
+            id: order.order_id,
+            customer: order.address?.customer_name || order.customer_id || 'Customer',
+            status: order.order_status || 'Pending',
+          }));
+      } catch (e) {
+        console.error('[Header] Order notification error:', e?.response?.status, e.message);
+      }
+
+      try {
+        const { data } = await api.get('/products');
+        lowStockAlerts = (data?.data || []).flatMap((product) => {
+          const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
+          const stock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+          return stock <= 15 ? [{ name: product.product_name || 'Unnamed Product', stock }] : [];
+        });
+      } catch (e) {
+        console.error('[Header] Low stock notification error:', e?.response?.status, e.message);
+      }
+
+      setAlerts({ tasks: taskAlerts, leaves: leaveAlerts, orders: orderAlerts, lowStock: lowStockAlerts });
     };
 
     fetchAlerts();
@@ -261,23 +291,23 @@ const Header = ({ onMenuClick }) => {
             {/* Divider */}
             <div className="w-px h-6 bg-gray-200 mx-1" />
 
-            {/* Task Updates - live from employee_task_assignments */}
+            {/* Order notifications */}
             <div className="relative">
-              <IconBtn name="tasks" badge={alerts.tasks.length} badgeColor="bg-blue-500" title="Task Updates">
-                <CheckSquare size={18} />
+              <IconBtn name="orders" badge={alerts.orders.length} badgeColor="bg-orange-500" title="Order Notifications">
+                <ShoppingCart size={18} />
               </IconBtn>
-              {activeDropdown === "tasks" && (
-                <AlertDropdown title="Task Updates" items={alerts.tasks} icon={<CheckSquare size={13} className="text-blue-400" />} type="tasks" onClose={() => setActiveDropdown(null)} accent="bg-blue-500/20 text-blue-400" />
+              {activeDropdown === "orders" && (
+                <AlertDropdown title="Order Notifications" items={alerts.orders} icon={<ShoppingCart size={13} className="text-orange-400" />} type="orders" onClose={() => setActiveDropdown(null)} accent="bg-orange-500/20 text-orange-400" />
               )}
             </div>
 
-            {/* Leave Requests - live from employee_leaves table */}
+            {/* Low stock notifications */}
             <div className="relative">
-              <IconBtn name="leaves" badge={alerts.leaves.length} badgeColor="bg-yellow-500" title="Pending Leave Requests">
-                <CalendarOff size={18} />
+              <IconBtn name="lowStock" badge={alerts.lowStock.length} badgeColor="bg-red-500" title="Low Stock Notifications">
+                <Package size={18} />
               </IconBtn>
-              {activeDropdown === "leaves" && (
-                <AlertDropdown title="Leave Requests" items={alerts.leaves} icon={<CalendarOff size={13} className="text-yellow-400" />} type="leaves" onClose={() => setActiveDropdown(null)} accent="bg-yellow-500/20 text-yellow-400" />
+              {activeDropdown === "lowStock" && (
+                <AlertDropdown title="Low Stock Notifications" items={alerts.lowStock} icon={<Package size={13} className="text-red-400" />} type="lowStock" onClose={() => setActiveDropdown(null)} accent="bg-red-500/20 text-red-400" />
               )}
             </div>
 

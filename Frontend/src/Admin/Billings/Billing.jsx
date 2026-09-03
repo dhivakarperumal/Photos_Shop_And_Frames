@@ -49,7 +49,7 @@ const Billing = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeStatus, setActiveStatus] = useState(ALL_ORDERS);
   const [viewMode, setViewMode] = useState("table");
-  const [receivedAmount, setReceivedAmount] = useState("1300");
+  const [receivedAmount, setReceivedAmount] = useState("");
 
   useEffect(() => {
     const fetchOrders = async () => {
