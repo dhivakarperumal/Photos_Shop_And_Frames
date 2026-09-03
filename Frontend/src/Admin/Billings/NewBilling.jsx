@@ -404,9 +404,10 @@ const NewBilling = () => {
         </div>
 
         <div className="grid gap-3 xl:grid-cols-2">
-          <section className="rounded-lg border mt-5 border-[#e5e7eb] bg-white p-3">
-            <h2 className=" text-sm font-bold">Order Details</h2>
-            <div className="grid gap-3 md:grid-cols-3">
+          <div className="mt-5 space-y-3">
+            <section className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+              <h2 className="mb-4 text-sm font-bold text-[#1f2937]">Order Details</h2>
+              <div className="grid gap-3 md:grid-cols-3">
               <label className="text-[10px] font-semibold">
                 Order Date *
                 <input
@@ -432,10 +433,57 @@ const NewBilling = () => {
                   <option>Online Order</option>
                 </select>
               </label>
-            </div>
-            <section className="mb-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><h2 className="text-sm font-bold">Select Customer</h2><div className="relative mt-3 max-w-xl"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7280]" /><input value={customerSearch} onChange={(event) => { setCustomerSearch(event.target.value); setSelectedCustomer(null); }} placeholder="Search by name, email, or mobile number..." className="h-10 w-full rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#ff8a4c]" />{customerSearch && !selectedCustomer && <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white shadow-lg">{filteredCustomers.length ? filteredCustomers.map((user) => <button type="button" key={user.user_id || user.id || user.email} onClick={() => selectCustomer(user)} className="block w-full border-b border-[#f0f1f3] px-3 py-2 text-left text-xs hover:bg-[#fff4ed]"><span className="font-semibold">{user.username || user.name || "Unnamed User"}</span><span className="ml-2 text-[#6b7280]">{user.email || user.mobile_number || user.phone || ""}</span></button>) : <p className="px-3 py-3 text-xs text-[#6b7280]">No users found.</p>}</div>}</div>{selectedCustomer && <div className="mt-3 grid gap-2 rounded-md bg-[#fffaf7] p-3 text-xs sm:grid-cols-3"><span><b>Name:</b> {selectedCustomer.username || selectedCustomer.name}</span><span><b>Email:</b> {selectedCustomer.email || "-"}</span><span><b>Phone:</b> {selectedCustomer.mobile_number || selectedCustomer.phone || "-"}</span></div>}</section>
+              </div>
+            </section>
 
-          </section>
+            <section className="rounded-lg border border-[#e5e7eb] bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-bold text-[#1f2937]">Select Customer</h2>
+                  <p className="mt-1 text-[10px] text-[#6b7280]">Search and select an existing customer</p>
+                </div>
+                {selectedCustomer && <span className="rounded-full bg-[#e8f7ed] px-2.5 py-1 text-[10px] font-semibold text-[#198754]">Selected</span>}
+              </div>
+              <div className="relative mt-4">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7280]" />
+                <input
+                  value={customerSearch}
+                  onChange={(event) => {
+                    setCustomerSearch(event.target.value);
+                    setSelectedCustomer(null);
+                  }}
+                  placeholder="Search by name, email, or mobile number..."
+                  className="h-10 w-full rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#ff8a4c]"
+                />
+                {customerSearch && !selectedCustomer && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white shadow-lg">
+                    {filteredCustomers.length ? (
+                      filteredCustomers.map((user) => (
+                        <button
+                          type="button"
+                          key={user.user_id || user.id || user.email}
+                          onClick={() => selectCustomer(user)}
+                          className="block w-full border-b border-[#f0f1f3] px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#fff4ed]"
+                        >
+                          <span className="font-semibold">{user.username || user.name || "Unnamed User"}</span>
+                          <span className="ml-2 text-[#6b7280]">{user.email || user.mobile_number || user.phone || ""}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-3 text-xs text-[#6b7280]">No users found.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {selectedCustomer && (
+                <div className="mt-3 grid gap-2 rounded-md border border-[#e5e7eb] bg-white p-3 text-xs sm:grid-cols-3">
+                  <span><b>Name:</b> {selectedCustomer.username || selectedCustomer.name || "-"}</span>
+                  <span><b>Email:</b> {selectedCustomer.email || "-"}</span>
+                  <span><b>Phone:</b> {selectedCustomer.mobile_number || selectedCustomer.phone || "-"}</span>
+                </div>
+              )}
+            </section>
+          </div>
           <section className="rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3">
             <h2 className="mb-4 text-sm font-bold">Customer Details</h2>
             <div className="grid gap-3 md:grid-cols-2">
