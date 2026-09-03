@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { StoreContext } from "../PrivateRouter/StoreContext";
 import { useAuth } from "../PrivateRouter/AuthContext";
-import CheckoutModal from "../Componets/Checkout/CheckoutModal";
 
 const CartSidebar = () => {
   const navigate = useNavigate();
@@ -22,12 +21,9 @@ const CartSidebar = () => {
     removeFromCart,
     clearCart,
     loadingCart,
-    fetchCart,
     isCartOpen,
     closeCart,
   } = useContext(StoreContext);
-
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Lock body scroll when cart sidebar is open
   useEffect(() => {
@@ -44,13 +40,13 @@ const CartSidebar = () => {
   // Handle escape key to close drawer
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape" && isCartOpen && !isCheckoutOpen) {
+      if (e.key === "Escape" && isCartOpen) {
         closeCart();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isCartOpen, isCheckoutOpen, closeCart]);
+  }, [isCartOpen, closeCart]);
 
   const totalAmount = cart.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
@@ -65,18 +61,17 @@ const CartSidebar = () => {
   if (!isCartOpen) return null;
 
   return (
-    <>
+    <div
+      className="fixed inset-0 z-[999999] flex justify-end bg-black/65 backdrop-blur-xs transition-opacity duration-300"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* BACKDROP CLICK DISMISS */}
       <div
-        className="fixed inset-0 z-[9990] flex justify-end bg-black/60 backdrop-blur-xs transition-opacity duration-300"
-        aria-modal="true"
-        role="dialog"
-      >
-        {/* BACKDROP CLICK DISMISS */}
-        <div
-          className="absolute inset-0"
-          onClick={closeCart}
-          aria-hidden="true"
-        />
+        className="absolute inset-0"
+        onClick={closeCart}
+        aria-hidden="true"
+      />
 
         {/* SIDEBAR PANEL */}
         <div className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-out sm:max-w-lg">
@@ -281,7 +276,10 @@ const CartSidebar = () => {
               <div className="mt-4 flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsCheckoutOpen(true)}
+                  onClick={() => {
+                    closeCart();
+                    navigate("/checkout");
+                  }}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1a3c36] py-3 text-xs font-bold text-white shadow-md transition hover:bg-[#235048]"
                 >
                   Proceed to Checkout <ArrowRight className="h-4 w-4" />
@@ -302,20 +300,6 @@ const CartSidebar = () => {
           )}
         </div>
       </div>
-
-      {/* EMBEDDED CHECKOUT MODAL */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        items={cart}
-        user={user}
-        clearCartAfterOrder={true}
-        onOrderPlaced={() => {
-          fetchCart();
-          closeCart();
-        }}
-      />
-    </>
   );
 };
 

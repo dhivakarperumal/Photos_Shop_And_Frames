@@ -7,6 +7,7 @@ import Home from './Componets/Home/Home.jsx'
 import Shop from './Componets/Shop/Shop.jsx'
 import ProductDetails from './Componets/Shop/ProductDetails.jsx'
 import Cart from './Componets/Cart/Cart.jsx'
+import Checkout from './Componets/Checkout/Checkout.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
@@ -79,6 +80,10 @@ const router = createHashRouter([
       {
         path: 'cart',
         element: <Cart />,
+      },
+      {
+        path: 'checkout',
+        element: <Checkout />,
       },
 
       {

@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import { Phone } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiArrowUp } from "react-icons/fi";
 import ChatBot from "./ChatBot";
+import { StoreContext } from "../PrivateRouter/StoreContext";
 import "./FloatingSupport.css";
 
 const FloatingSupport = () => {
+  const { isCartOpen } = useContext(StoreContext) || {};
   const [chatOpen, setChatOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const { pathname, hash } = useLocation();
@@ -54,6 +56,11 @@ const FloatingSupport = () => {
     document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
     document.body.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // If cart sidebar is open, hide floating support so it never interferes
+  if (isCartOpen) {
+    return null;
+  }
 
   // If neither should show on this route, render nothing
   if (!showUserUIWidgets && !showChatBot) {
