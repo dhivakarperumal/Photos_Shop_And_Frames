@@ -1,4 +1,5 @@
 const { getDB } = require("../config/db");
+const { randomUUID } = require("crypto");
 
 /**
  * Generates a clean human-readable Order ID
@@ -13,7 +14,7 @@ const generateOrderId = () => {
   return `ORD-${year}${month}${day}-${randomChars}`;
 };
 
-const createOrder = async ({ orderData, items = [] }) => {
+const createOrder = async ({ orderData, items = [], address = null }) => {
   const pool = getDB();
   const connection = await pool.getConnection();
 
@@ -107,6 +108,65 @@ const createOrder = async ({ orderData, items = [] }) => {
       ];
 
       await connection.query(insertItemQuery, itemValues);
+    }
+
+    if (address) {
+      const customerId = address.customer_id || null;
+      const userId = address.user_id || null;
+      const addressValues = [
+        customerId,
+        userId,
+        String(address.customer_name || orderData.customer_name || "").trim(),
+        String(address.mobile_number || orderData.customer_phone || "").trim(),
+        String(address.address_line1 || "").trim(),
+        String(address.address_line2 || "").trim(),
+        String(address.city || orderData.city || "").trim(),
+        String(address.district || "").trim(),
+        String(address.state || orderData.state || "").trim(),
+        String(address.country || "").trim(),
+        String(address.pincode || orderData.pincode || "").trim(),
+        String(address.landmark || "").trim(),
+      ];
+      const addressFieldValues = addressValues.slice(2).map((value) => value.toLowerCase());
+
+      const [existingAddresses] = await connection.query(
+        `SELECT id FROM addresses
+         WHERE ((? IS NOT NULL AND customer_id = ?)
+            OR (? IS NULL AND user_id = ?))
+           AND LOWER(COALESCE(customer_name, '')) = ?
+           AND LOWER(COALESCE(mobile_number, '')) = ?
+           AND LOWER(COALESCE(address_line1, '')) = ?
+           AND LOWER(COALESCE(address_line2, '')) = ?
+           AND LOWER(COALESCE(city, '')) = ?
+           AND LOWER(COALESCE(district, '')) = ?
+           AND LOWER(COALESCE(state, '')) = ?
+           AND LOWER(COALESCE(country, '')) = ?
+           AND LOWER(COALESCE(pincode, '')) = ?
+           AND LOWER(COALESCE(landmark, '')) = ?
+         LIMIT 1`,
+        [customerId, customerId, customerId, userId, ...addressFieldValues],
+      );
+
+      if (!existingAddresses.length) {
+        await connection.query(
+          `INSERT INTO addresses (
+            address_id, user_id, customer_id, order_id, address_type,
+            customer_name, mobile_number, address_line1, address_line2,
+            city, district, state, country, pincode, landmark,
+            created_by, updated_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            `ADDR-${randomUUID()}`,
+            address.user_id || null,
+            address.customer_id || null,
+            orderId,
+            address.address_type || "Shipping",
+            ...addressValues.slice(2),
+            orderData.created_by || orderData.user_id || null,
+            orderData.updated_by || orderData.user_id || null,
+          ],
+        );
+      }
     }
 
     await connection.commit();

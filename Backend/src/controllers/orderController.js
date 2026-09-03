@@ -16,11 +16,11 @@ const createOrder = async (req, res) => {
       total_amount,
       payment_method,
       notes,
+      address: submittedAddress,
       items = [],
       clear_cart = false,
       // Legacy / billing format support
       order,
-      address,
     } = req.body;
 
     // Handle legacy format if passed
@@ -29,31 +29,41 @@ const createOrder = async (req, res) => {
         orderData: {
           user_id: order.user_id || order.customer_id || null,
           billing_type: order.billing_type || "Shop Billing",
-          customer_name: address?.customer_name || order.customer_name || "Customer",
+          customer_name: submittedAddress?.customer_name || order.customer_name || "Customer",
           customer_email: order.customer_email || "",
-          customer_phone: address?.mobile_number || order.customer_phone || "",
+          customer_phone: submittedAddress?.mobile_number || order.customer_phone || "",
           order_date: order.order_date || null,
           shipping_address: [
-            address?.door_number,
-            address?.street_name,
-            address?.landmark,
+            submittedAddress?.door_number,
+            submittedAddress?.street_name,
+            submittedAddress?.landmark,
           ].filter(Boolean).join(", ") ||
-            [address?.address_line1, address?.address_line2]
+            [submittedAddress?.address_line1, submittedAddress?.address_line2]
               .filter(Boolean)
               .join(", ") ||
             "Store Pickup",
-          city: address?.city || "",
-          state: address?.state || "",
-          pincode: address?.pincode || "",
+          city: submittedAddress?.city || "",
+          state: submittedAddress?.state || "",
+          pincode: submittedAddress?.pincode || "",
           total_amount: order.total_amount || 0,
           payment_method: order.payment_method || "Cash",
           payment_status: order.payment_status || "Pending",
-          order_status: order.order_status || "Pending",
+          order_status: order.order_status || "Completed",
           notes: order.notes || null,
           created_by: order.created_by || order.user_id || order.customer_id || null,
           updated_by: order.updated_by || order.user_id || order.customer_id || null,
         },
         items: Array.isArray(items) ? items : [],
+        address: submittedAddress
+          ? {
+              ...submittedAddress,
+              address_line1:
+                submittedAddress.address_line1 ||
+                [submittedAddress.door_number, submittedAddress.street_name]
+                  .filter(Boolean)
+                  .join(", "),
+            }
+          : null,
       });
       return res.status(201).json({
         success: true,
@@ -112,7 +122,7 @@ const createOrder = async (req, res) => {
       total_amount: calculatedTotal,
       payment_method: payment_method || "Cash On Delivery",
       payment_status: payment_method === "Online" ? "Paid" : "Pending",
-      order_status: "Pending",
+      order_status: "Order Placed",
       notes: notes || null,
       created_by: user_id || req.user?.user_id || null,
       updated_by: user_id || req.user?.user_id || null,
@@ -121,6 +131,20 @@ const createOrder = async (req, res) => {
     const newOrder = await orderModule.createOrder({
       orderData: orderPayload,
       items,
+      address: submittedAddress
+        ? {
+            ...submittedAddress,
+            customer_id: submittedAddress.customer_id || user_id || null,
+            user_id: submittedAddress.user_id || user_id || null,
+            customer_name: submittedAddress.customer_name || customer_name.trim(),
+            mobile_number: submittedAddress.mobile_number || customer_phone.trim(),
+            address_line1:
+              submittedAddress.address_line1 ||
+              [submittedAddress.door_number, submittedAddress.street_name]
+                .filter(Boolean)
+                .join(", "),
+          }
+        : null,
     });
 
     // Optionally clear user's cart if this order was placed from cart checkout
@@ -216,7 +240,7 @@ const updateOrderStatus = async (req, res) => {
     const validStatuses = [
       "NEW", "CONFIRMED", "PROCESSING", "READY", "OUT_FOR_DELIVERY",
       "DELIVERED", "CANCELLED", "ON_HOLD", "RETURNED",
-      "Pending", "Processing", "Shipped", "Delivered", "Cancelled",
+      "Pending", "Order Placed", "Processing", "Shipped", "Delivered", "Cancelled",
     ];
     if (order_status && !validStatuses.includes(order_status)) {
       return res.status(400).json({

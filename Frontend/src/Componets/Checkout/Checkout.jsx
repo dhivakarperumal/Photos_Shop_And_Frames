@@ -57,9 +57,13 @@ const Checkout = () => {
     customer_name: user?.displayName || user?.name || user?.username || "",
     customer_email: user?.email || "",
     customer_phone: user?.phone || user?.mobile_number || "",
-    shipping_address: "",
+    door_number: user?.door_number || user?.house_number || "",
+    street_name: user?.street_name || user?.address_line1 || "",
+    landmark: user?.landmark || "",
     city: "",
+    district: "",
     state: "Tamil Nadu",
+    country: "",
     pincode: "",
     payment_method: "Cash On Delivery",
     notes: "",
@@ -73,6 +77,14 @@ const Checkout = () => {
         customer_name: prev.customer_name || user?.displayName || user?.name || user?.username || "",
         customer_email: prev.customer_email || user?.email || "",
         customer_phone: prev.customer_phone || user?.phone || user?.mobile_number || "",
+        door_number: prev.door_number || user?.door_number || user?.house_number || "",
+        street_name: prev.street_name || user?.street_name || user?.address_line1 || "",
+        landmark: prev.landmark || user?.landmark || "",
+        city: prev.city || user?.city || "",
+        district: prev.district || user?.district || "",
+        state: prev.state || user?.state || "Tamil Nadu",
+        country: prev.country || user?.country || "",
+        pincode: prev.pincode || user?.pincode || user?.postal_code || "",
       }));
     }
   }, [user]);
@@ -98,8 +110,8 @@ const Checkout = () => {
       toast.error("Please enter your phone number");
       return;
     }
-    if (!formData.shipping_address.trim()) {
-      toast.error("Please enter your delivery address");
+    if (!formData.street_name.trim()) {
+      toast.error("Please enter your street name");
       return;
     }
     if (!formData.city.trim()) {
@@ -118,10 +130,30 @@ const Checkout = () => {
         customer_name: formData.customer_name.trim(),
         customer_email: formData.customer_email.trim(),
         customer_phone: formData.customer_phone.trim(),
-        shipping_address: formData.shipping_address.trim(),
+          shipping_address: [
+            formData.door_number,
+            formData.street_name,
+            formData.landmark,
+          ].filter(Boolean).join(", "),
         city: formData.city.trim(),
+          district: formData.district.trim(),
         state: formData.state.trim(),
+          country: formData.country.trim(),
         pincode: formData.pincode.trim(),
+          address: {
+            user_id: user?.user_id || user?.id || localStorage.getItem("frame_shop_guest_id") || null,
+            customer_id: user?.user_id || user?.id || localStorage.getItem("frame_shop_guest_id") || null,
+            customer_name: formData.customer_name.trim(),
+            mobile_number: formData.customer_phone.trim(),
+            door_number: formData.door_number.trim(),
+            street_name: formData.street_name.trim(),
+            landmark: formData.landmark.trim(),
+            city: formData.city.trim(),
+            district: formData.district.trim(),
+            state: formData.state.trim(),
+            country: formData.country.trim(),
+            pincode: formData.pincode.trim(),
+          },
         total_amount: totalAmount,
         payment_method: formData.payment_method,
         notes: formData.notes.trim() || null,
@@ -349,24 +381,20 @@ const Checkout = () => {
                   </div>
                 </div>
 
-                {/* STREET ADDRESS */}
-                <div>
-                  <label className="mb-1 block font-semibold text-[#444]">
-                    Street Address / House No. <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="shipping_address"
-                    value={formData.shipping_address}
-                    onChange={handleChange}
-                    required
-                    rows="3"
-                    placeholder="Door no, Building name, Street, Landmark"
-                    className="w-full rounded-xl border border-[#ded5c8] bg-white p-3 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
-                  />
-                </div>
-
-                {/* CITY, STATE, PINCODE */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {/* CUSTOMER ADDRESS FIELDS */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#444]">Door Number</label>
+                    <input type="text" name="door_number" value={formData.door_number} onChange={handleChange} placeholder="e.g. 12A" className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#444]">Street Name <span className="text-red-500">*</span></label>
+                    <input type="text" name="street_name" value={formData.street_name} onChange={handleChange} required placeholder="Street or area name" className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]" />
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#444]">Landmark</label>
+                    <input type="text" name="landmark" value={formData.landmark} onChange={handleChange} placeholder="Nearby landmark" className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]" />
+                  </div>
                   <div>
                     <label className="mb-1 block font-semibold text-[#444]">
                       City <span className="text-red-500">*</span>
@@ -381,7 +409,10 @@ const Checkout = () => {
                       className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                     />
                   </div>
-
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#444]">District</label>
+                    <input type="text" name="district" value={formData.district} onChange={handleChange} placeholder="District" className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]" />
+                  </div>
                   <div>
                     <label className="mb-1 block font-semibold text-[#444]">
                       State <span className="text-red-500">*</span>
@@ -400,6 +431,10 @@ const Checkout = () => {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#444]">Country</label>
+                    <input type="text" name="country" value={formData.country} onChange={handleChange} placeholder="Country" className="h-10 w-full rounded-xl border border-[#ded5c8] bg-white px-3.5 text-xs text-[#222] outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]" />
+                  </div>
                   <div>
                     <label className="mb-1 block font-semibold text-[#444]">
                       PIN Code <span className="text-red-500">*</span>

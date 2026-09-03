@@ -173,7 +173,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const statusOptions = allowedStatuses
     ? ["All", ...allowedStatuses]
-    : ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+    : ["All", "Pending", "Order Placed", "Processing", "Shipped", "Delivered", "Cancelled"];
 
   // Metrics
   const totalOrdersCount = orders.length;
@@ -533,7 +533,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
-                    {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map(
+                    {["Pending", "Order Placed", "Processing", "Shipped", "Delivered", "Cancelled"].map(
                       (st) => (
                         <option key={st} value={st}>
                           {st}
