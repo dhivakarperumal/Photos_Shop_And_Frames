@@ -30,6 +30,7 @@ import AdminCustomers from './Admin/AdminCustomers.jsx'
 import CustomerDetails from './Admin/CustomerDetails.jsx'
 import Billing from './Admin/Billings/Billing.jsx'
 import NewBilling from './Admin/Billings/NewBilling.jsx'
+import OrderDetails from './Admin/Billings/OrderDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
 
@@ -171,6 +172,10 @@ const router = createHashRouter([
           {
             path: 'billing/new',
             element: <NewBilling />,
+          },
+          {
+            path: 'billing/:orderId',
+            element: <OrderDetails />,
           },
           {
             path: 'reviews',

@@ -27,6 +27,46 @@ const parseVariants = (value) => {
   }
 };
 
+const normalizeImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  if (
+    value.startsWith("data:") ||
+    value.startsWith("blob:") ||
+    value.startsWith("http://") ||
+    value.startsWith("https://")
+  ) {
+    return value;
+  }
+
+  const rawApiUrl = import.meta.env.VITE_API_URL || "/api";
+  const baseUrl = rawApiUrl.replace(/\/api\/?$/, "");
+  return `${baseUrl}${value.startsWith("/") ? value : `/${value}`}`;
+};
+
+const getProductImage = (product) => {
+  const imageList = Array.isArray(product?.product_images)
+    ? product.product_images
+    : typeof product?.product_images === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(product.product_images || "[]");
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
+
+  const rawImage =
+    imageList[0] ||
+    product?.frame_data?.frame_image ||
+    product?.image ||
+    product?.images?.[0] ||
+    "";
+
+  return normalizeImageUrl(rawImage);
+};
+
 const NewBilling = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -81,6 +121,7 @@ const NewBilling = () => {
           category: product.category || "General",
           price: Number(product.selling_price ?? product.price ?? 0),
           variants: parseVariants(product.size_variants),
+          image: getProductImage(product),
           quantity: 1,
           discount: 0,
         }));
@@ -171,6 +212,7 @@ const NewBilling = () => {
       ...product,
       id: `${product.id}-${selectedVariantIndex}`,
       detail: variant?.size || product.detail,
+      image: product.image || "",
       price: Number(
         variant?.offer_price ??
           variant?.selling_price ??
@@ -332,7 +374,7 @@ const NewBilling = () => {
           </section>
         </div>
 
-        <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md border border-[#ff9869] px-3 py-2 text-xs font-semibold text-[#ed6b26]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3 font-semibold">{item.name}<div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
+        <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md border border-[#ff9869] px-3 py-2 text-xs font-semibold text-[#ed6b26]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">
           <section className="hidden rounded-lg border border-[#e5e7eb] bg-white p-3">
@@ -485,6 +527,29 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
+              <div className="mt-3 max-h-52 space-y-2 overflow-y-auto">
+                {filteredProductOptions.map((product) => (
+                  <button
+                    type="button"
+                    key={product.id}
+                    onClick={() => {
+                      setSelectedProductId(product.id);
+                      setSelectedVariantIndex("0");
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-md border px-2 py-2 text-left text-xs transition ${selectedProductId === product.id ? "border-[#ff8a4c] bg-[#fff7f2]" : "border-[#e5e7eb] bg-white hover:bg-[#fffaf7]"}`}
+                  >
+                    <img
+                      src={product.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"}
+                      alt={product.name}
+                      className="h-10 w-10 rounded-md object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-[#1f2937]">{product.name}</div>
+                      <div className="truncate text-[#6b7280]">{product.category}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
               <label className="mt-3 block text-xs font-semibold">
                 Select Product
                 <select
