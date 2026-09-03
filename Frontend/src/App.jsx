@@ -7,6 +7,7 @@ import Footer from "./CommonComponents/Footer";
 import ScrollToTop from "./CommonComponents/ScrollToTop";
 import FloatingSupport from "./CommonComponents/FloatingSupport";
 import Loader from "./CommonComponents/Loader";
+import CartSidebar from "./CommonComponents/CartSidebar";
 import { useAuth } from "./PrivateRouter/AuthContext";
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
         <ScrollToTop />
         <FloatingSupport />
       </div>
+      <CartSidebar />
       <Outlet />
       <Toaster
         position="top-right"

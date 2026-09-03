@@ -25,7 +25,9 @@ const getCartByUser = async (userId) => {
       p.category,
       p.product_images,
       p.frame_data,
-      p.orientation
+      p.orientation,
+      p.size_variants,
+      p.stock_quantity
     FROM carts c
     LEFT JOIN products p ON c.product_id = p.id
     WHERE c.user_id = ?
@@ -48,6 +50,10 @@ const getCartByUser = async (userId) => {
       typeof row.frame_data === "string"
         ? JSON.parse(row.frame_data)
         : row.frame_data || null,
+    size_variants:
+      typeof row.size_variants === "string"
+        ? JSON.parse(row.size_variants)
+        : row.size_variants || [],
   }));
 };
 

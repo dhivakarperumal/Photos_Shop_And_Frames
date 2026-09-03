@@ -167,7 +167,7 @@ const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart, wishlist } = useContext(StoreContext);
+  const { addToCart, wishlist, openCart } = useContext(StoreContext);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -523,6 +523,7 @@ const ProductDetails = () => {
         if (success !== false) {
           setIsConfirmModalOpen(false);
           toast.success("Custom frame confirmed & added to cart!");
+          if (openCart) openCart();
         }
       } catch (err) {
         console.error("Confirmed add to cart error:", err);
