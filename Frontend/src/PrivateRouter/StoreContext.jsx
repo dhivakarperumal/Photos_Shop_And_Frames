@@ -21,6 +21,11 @@ export const StoreProvider = ({ children }) => {
     const [budgetMode, setBudgetMode] = useState(user?.budget_mode || false);
     const [budgetAmount, setBudgetAmount] = useState(user?.budget_amount || 0);
 
+    // Global Cart Sidebar Drawer state
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const openCart = useCallback(() => setIsCartOpen(true), []);
+    const closeCart = useCallback(() => setIsCartOpen(false), []);
+
     useEffect(() => {
         if (user) {
             setBudgetMode(user.budget_mode || false);
@@ -127,13 +132,15 @@ export const StoreProvider = ({ children }) => {
         let qty = 1;
         let customizationId = null;
         let slotPhotos = null;
+        let previewImage = null;
 
-        if (variantOrOptions && typeof variantOrOptions === "object" && !variantOrOptions.mrp && !variantOrOptions.sellingPrice && (variantOrOptions.size || variantOrOptions.slot_photos || variantOrOptions.customization_id)) {
+        if (variantOrOptions && typeof variantOrOptions === "object" && !variantOrOptions.mrp && !variantOrOptions.sellingPrice && (variantOrOptions.size || variantOrOptions.slot_photos || variantOrOptions.customization_id || variantOrOptions.preview_image)) {
             selectedSize = variantOrOptions.size || (product.size_variants?.[0]?.size) || "Standard";
             price = Number(variantOrOptions.price ?? product.size_variants?.[0]?.offer_price ?? product.offer_price ?? 0);
             qty = Number(variantOrOptions.quantity || variantOrOptions.qty || 1);
             customizationId = variantOrOptions.customization_id || null;
             slotPhotos = variantOrOptions.slot_photos || null;
+            previewImage = variantOrOptions.preview_image || null;
         } else {
             const selectedVariant = variantOrOptions || product.size_variants?.[0] || product.variants?.[0] || null;
             selectedSize = sizeParam || selectedVariant?.size || selectedVariant?.selectedSizes?.[0] || "Standard";
@@ -150,9 +157,11 @@ export const StoreProvider = ({ children }) => {
                 price: price,
                 quantity: qty,
                 slot_photos: slotPhotos,
+                preview_image: previewImage,
             });
             toast.success("Added to cart!");
             await fetchCart();
+            openCart();
             return true;
         } catch (err) {
             console.error("Add to cart error:", err);
@@ -196,13 +205,21 @@ export const StoreProvider = ({ children }) => {
         const targetItem = cart.find(i => i.id === cartItemId);
         if (!targetItem) return;
 
-        const availableStock = parseFloat(targetItem.total_stock ?? targetItem.stock_quantity ?? 0);
-        if (qty > availableStock) {
-            toast.error(
-                availableStock > 0
-                    ? `Only ${availableStock} item${availableStock === 1 ? '' : 's'} available in stock.`
-                    : "This item is out of stock."
+        // Resolve available stock safely from size_variants or stock_quantity
+        let availableStock = 99; // default fallback
+        if (targetItem.size_variants && Array.isArray(targetItem.size_variants) && targetItem.size_variants.length > 0) {
+            const matched = targetItem.size_variants.find(
+                (v) => String(v.size || "").trim().toLowerCase() === String(targetItem.size || "").trim().toLowerCase()
             );
+            if (matched && matched.stock !== undefined && matched.stock !== null && matched.stock !== "") {
+                availableStock = Number(matched.stock);
+            }
+        } else if (targetItem.stock_quantity !== undefined && targetItem.stock_quantity !== null && targetItem.stock_quantity !== "") {
+            availableStock = Number(targetItem.stock_quantity);
+        }
+
+        if (availableStock > 0 && qty > availableStock) {
+            toast.error(`Only ${availableStock} item${availableStock === 1 ? '' : 's'} available in stock.`);
             return;
         }
 
@@ -218,20 +235,31 @@ export const StoreProvider = ({ children }) => {
             }
         }
 
+        // Optimistic UI update for instantaneous responsiveness
+        const prevQuantity = targetItem.quantity;
+        setCart(prev => prev.map(item =>
+            item.id === cartItemId ? {
+                ...item,
+                quantity: qty,
+                total_price: Number(item.price || 0) * qty
+            } : item
+        ));
+
         try {
             await api.put(`/cart/${cartItemId}`, {
                 quantity: qty,
                 price: targetItem.price
             });
+        } catch (err) {
+            console.error("Update qty error:", err);
+            // Revert on error
             setCart(prev => prev.map(item =>
                 item.id === cartItemId ? {
                     ...item,
-                    quantity: qty,
-                    total_price: item.price * qty
+                    quantity: prevQuantity,
+                    total_price: Number(item.price || 0) * prevQuantity
                 } : item
             ));
-        } catch (err) {
-            console.error("Update qty error:", err);
             const message = err?.response?.data?.message || "Failed to update quantity";
             toast.error(message);
         }
@@ -302,6 +330,7 @@ export const StoreProvider = ({ children }) => {
             toggleWishlist,
             loadingCart, loadingWishlist,
             fetchCart, fetchWishlist,
+            isCartOpen, setIsCartOpen, openCart, closeCart,
             productsCache, setProductsCache,
             videosCache, setVideosCache,
             bannersCache, setBannersCache,

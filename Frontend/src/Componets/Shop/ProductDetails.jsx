@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
   CheckCircle2,
@@ -8,24 +9,29 @@ import {
   Eye,
   EyeOff,
   Heart,
+  Image as ImageIcon,
   ImagePlus,
   Layers,
+  Move,
   Package,
   RotateCw,
   Share2,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  Sliders,
   Sparkles,
   Trash2,
   Truck,
   UploadCloud,
+  X,
 } from "lucide-react";
 import api from "../../api";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
+import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
 
 /**
  * Generates an HTML5 canvas composite merging the frame template
@@ -35,7 +41,8 @@ const generateCompositeFrameBlobAndDataUrl = (
   frameImageSrc,
   slots = [],
   customerPhotos = {},
-  demoPhotos = {}
+  demoPhotos = {},
+  photoAdjustments = {}
 ) => {
   return new Promise((resolve) => {
     if (!frameImageSrc) return resolve({ blob: null, dataUrl: null });
@@ -68,6 +75,11 @@ const generateCompositeFrameBlobAndDataUrl = (
           const photoSrc = customerPhotos[slot.id] || demoPhotos[slot.id];
           if (!photoSrc) continue;
 
+          const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+          const panX = adj.panX || 0;
+          const panY = adj.panY || 0;
+          const scale = adj.scale || 1.0;
+
           await new Promise((slotResolve) => {
             const pImg = new Image();
             pImg.crossOrigin = "anonymous";
@@ -95,29 +107,34 @@ const generateCompositeFrameBlobAndDataUrl = (
               ctx.closePath();
               ctx.clip();
 
-              // Calculate object-fit
+              // Calculate object-fit with pan & zoom
               const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
               const slotRatio = sw / sh;
-              let dx = sx, dy = sy, dw = sw, dh = sh;
+              let baseW = sw, baseH = sh;
 
               if (slot.objectFit === "contain") {
                 if (imgRatio > slotRatio) {
-                  dh = sw / imgRatio;
-                  dy = sy + (sh - dh) / 2;
+                  baseW = sw;
+                  baseH = sw / imgRatio;
                 } else {
-                  dw = sh * imgRatio;
-                  dx = sx + (sw - dw) / 2;
+                  baseH = sh;
+                  baseW = sh * imgRatio;
                 }
               } else {
                 // cover
                 if (imgRatio > slotRatio) {
-                  dw = sh * imgRatio;
-                  dx = sx - (dw - sw) / 2;
+                  baseH = sh;
+                  baseW = sh * imgRatio;
                 } else {
-                  dh = sw / imgRatio;
-                  dy = sy - (dh - sh) / 2;
+                  baseW = sw;
+                  baseH = sw / imgRatio;
                 }
               }
+
+              const dw = baseW * scale;
+              const dh = baseH * scale;
+              const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
+              const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
 
               ctx.drawImage(pImg, dx, dy, dw, dh);
               ctx.restore();
@@ -150,7 +167,7 @@ const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart, wishlist } = useContext(StoreContext);
+  const { addToCart, wishlist, openCart } = useContext(StoreContext);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -162,6 +179,17 @@ const ProductDetails = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [customizationId, setCustomizationId] = useState(null);
+
+  // Confirmation Modal state & Action type
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmActionType, setConfirmActionType] = useState("cart"); // "cart" | "buy"
+  const [highlightMissingSlots, setHighlightMissingSlots] = useState(false);
+
+  // Photo Position Adjustments ({ [slotId]: { panX, panY, scale } })
+  const [photoAdjustments, setPhotoAdjustments] = useState({});
+  const [adjustingSlot, setAdjustingSlot] = useState(null);
+  const [activeDraggingSlot, setActiveDraggingSlot] = useState(null);
+  const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
 
   // View mode: 'editor' (interactive frame with slots) vs 'preview' (whole merged composite photo)
   const [viewMode, setViewMode] = useState("editor");
@@ -181,6 +209,11 @@ const ProductDetails = () => {
           setProduct(prod);
           if (prod.size_variants && prod.size_variants.length > 0) {
             setSelectedVariantIndex(0);
+          }
+          if (prod.frame_data?.slot_adjustments) {
+            setPhotoAdjustments(prod.frame_data.slot_adjustments);
+          } else if (prod.slot_adjustments) {
+            setPhotoAdjustments(prod.slot_adjustments);
           }
         } else {
           toast.error("Product not found");
@@ -202,7 +235,7 @@ const ProductDetails = () => {
   const selectedVariant = sizeVariants[selectedVariantIndex] || {};
   const inStock = (selectedVariant.stock ?? 1) > 0;
 
-  // Refresh merged whole frame preview whenever customer photos change
+  // Refresh merged whole frame preview whenever customer photos or adjustments change
   useEffect(() => {
     if (!frameData.frame_image) return;
 
@@ -213,7 +246,8 @@ const ProductDetails = () => {
         frameData.frame_image,
         photoSlots,
         customerPhotos,
-        product?.slot_photos || {}
+        product?.slot_photos || {},
+        photoAdjustments
       );
       if (isMounted) {
         setMergedPreviewUrl(dataUrl);
@@ -225,7 +259,7 @@ const ProductDetails = () => {
     return () => {
       isMounted = false;
     };
-  }, [customerPhotos, frameData.frame_image, photoSlots, product]);
+  }, [customerPhotos, photoAdjustments, frameData.frame_image, photoSlots, product]);
 
   // Handle uploading user's personal photo into a slot
   const handleSlotUpload = async (slotId, event) => {
@@ -251,6 +285,11 @@ const ProductDetails = () => {
         ...prev,
         [slotId]: url,
       }));
+      setPhotoAdjustments((prev) => ({
+        ...prev,
+        [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+      }));
+      setHighlightMissingSlots(false);
       toast.success("Photo uploaded to frame slot!");
     } catch (err) {
       console.error("Slot upload error:", err);
@@ -267,6 +306,73 @@ const ProductDetails = () => {
       delete updated[slotId];
       return updated;
     });
+    setPhotoAdjustments((prev) => {
+      const updated = { ...prev };
+      delete updated[slotId];
+      return updated;
+    });
+  };
+
+  // Direct In-Slot Drag Handlers
+  const handleSlotDragStart = (slotId, e) => {
+    const photo = customerPhotos[slotId] || product?.slot_photos?.[slotId];
+    if (!photo) return;
+
+    e.stopPropagation();
+    setActiveDraggingSlot(slotId);
+    const curr = photoAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    dragSlotStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPanX: curr.panX || 0,
+      startPanY: curr.panY || 0,
+      hasMoved: false,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const handleSlotDragMove = (slotId, e) => {
+    if (activeDraggingSlot !== slotId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dx = e.clientX - dragSlotStartRef.current.x;
+    const dy = e.clientY - dragSlotStartRef.current.y;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragSlotStartRef.current.hasMoved = true;
+    }
+
+    const curr = photoAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    const maxPan = Math.max(40, ((curr.scale || 1.0) - 1) * 60 + 40);
+
+    const deltaPercentX = dx * 0.35;
+    const deltaPercentY = dy * 0.35;
+
+    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+
+    setPhotoAdjustments((prev) => ({
+      ...prev,
+      [slotId]: {
+        ...curr,
+        panX: Math.round(newPanX * 10) / 10,
+        panY: Math.round(newPanY * 10) / 10,
+      },
+    }));
+  };
+
+  const handleSlotDragEnd = (slotId, e) => {
+    if (activeDraggingSlot === slotId) {
+      setActiveDraggingSlot(null);
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch (err) {}
+    }
   };
 
   /**
@@ -293,7 +399,8 @@ const ProductDetails = () => {
         frameData.frame_image,
         photoSlots,
         customerPhotos,
-        product?.slot_photos || {}
+        product?.slot_photos || {},
+        photoAdjustments
       );
 
       if (blob) {
@@ -326,6 +433,7 @@ const ProductDetails = () => {
         user_id: activeUserId,
         product_id: product.id,
         slot_photos: customerPhotos,
+        photo_adjustments: photoAdjustments,
         preview_image: wholeFramePhotoUrl,
       });
 
@@ -349,42 +457,96 @@ const ProductDetails = () => {
     }
   };
 
-  const handleAddToCart = async () => {
-    if (!product) return;
-    if (!inStock) {
-      toast.error("Selected size variant is out of stock.");
-      return;
-    }
-
-    setAddingToCart(true);
-    try {
-      const savedCust = await ensureCustomizationSaved();
-
-      await addToCart(product, {
-        size: selectedVariant.size || "Standard",
-        price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
-        quantity: Number(quantity),
-        customization_id: savedCust?.customization_id || null,
-        slot_photos: customerPhotos,
-        preview_image: savedCust?.preview_image || mergedPreviewUrl,
-      });
-    } finally {
-      setAddingToCart(false);
-    }
+  const getMissingSlots = () => {
+    if (!photoSlots || photoSlots.length === 0) return [];
+    return photoSlots.filter((slot) => !customerPhotos[slot.id]);
   };
 
-  const handleBuyNow = async () => {
+  const handleAddToCart = () => {
     if (!product) return;
     if (!inStock) {
       toast.error("Selected size variant is out of stock.");
       return;
     }
 
-    const savedCust = await ensureCustomizationSaved();
-    if (savedCust?.preview_image) {
-      setCompositeServerUrl(savedCust.preview_image);
+    const missing = getMissingSlots();
+    if (missing.length > 0) {
+      setHighlightMissingSlots(true);
+      setViewMode("editor");
+      toast.error(
+        `Please upload photos for all ${photoSlots.length} available positions before adding to cart (${photoSlots.length - missing.length}/${photoSlots.length} uploaded).`
+      );
+      return;
     }
-    setIsCheckoutOpen(true);
+
+    setConfirmActionType("cart");
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (!inStock) {
+      toast.error("Selected size variant is out of stock.");
+      return;
+    }
+
+    const missing = getMissingSlots();
+    if (missing.length > 0) {
+      setHighlightMissingSlots(true);
+      setViewMode("editor");
+      toast.error(
+        `Please upload photos for all ${photoSlots.length} available positions before checkout (${photoSlots.length - missing.length}/${photoSlots.length} uploaded).`
+      );
+      return;
+    }
+
+    setConfirmActionType("buy");
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmedAction = async () => {
+    if (confirmActionType === "cart") {
+      setAddingToCart(true);
+      try {
+        const savedCust = await ensureCustomizationSaved();
+
+        const success = await addToCart(product, {
+          size: selectedVariant.size || "Standard",
+          price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
+          quantity: Number(quantity),
+          customization_id: savedCust?.customization_id || null,
+          slot_photos: customerPhotos,
+          photo_adjustments: photoAdjustments,
+          preview_image: savedCust?.preview_image || mergedPreviewUrl,
+        });
+
+        if (success !== false) {
+          setIsConfirmModalOpen(false);
+          toast.success("Custom frame confirmed & added to cart!");
+          if (openCart) openCart();
+        }
+      } catch (err) {
+        console.error("Confirmed add to cart error:", err);
+        toast.error("Failed to add customized frame to cart");
+      } finally {
+        setAddingToCart(false);
+      }
+    } else if (confirmActionType === "buy") {
+      setSavingCustomization(true);
+      try {
+        const savedCust = await ensureCustomizationSaved();
+        if (savedCust?.preview_image) {
+          setCompositeServerUrl(savedCust.preview_image);
+        }
+        setIsConfirmModalOpen(false);
+        setIsCheckoutOpen(true);
+      } catch (err) {
+        console.error("Confirmed buy now error:", err);
+        toast.error("Failed to prepare checkout");
+      } finally {
+        setSavingCustomization(false);
+      }
+    }
   };
 
   if (loading) {
@@ -436,6 +598,7 @@ const ProductDetails = () => {
       quantity: Number(quantity),
       customization_id: customizationId,
       slot_photos: customerPhotos,
+      photo_adjustments: photoAdjustments,
       product_image: compositeServerUrl || mergedPreviewUrl || product.product_images?.[0] || frameData.frame_image,
       frame_image: frameData.frame_image,
     },
@@ -563,13 +726,12 @@ const ProductDetails = () => {
                               onChange={(e) => handleSlotUpload(slot.id, e)}
                             />
 
-                            <button
-                              type="button"
-                              onClick={() => fileInputRefs.current[slot.id]?.click()}
-                              title={`Click to upload your photo for ${slot.name || `Position ${idx + 1}`}`}
-                              className={`group absolute overflow-hidden border-2 transition ${
+                            <div
+                              className={`group absolute overflow-hidden border-2 select-none transition ${
                                 userPhoto
                                   ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
+                                  : highlightMissingSlots
+                                  ? "border-2 border-red-500 bg-red-100/50 ring-4 ring-red-400/50 animate-pulse"
                                   : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
                               }`}
                               style={{
@@ -581,33 +743,89 @@ const ProductDetails = () => {
                               }}
                             >
                               {activePhoto ? (
-                                <div className="relative h-full w-full">
-                                  <img
-                                    src={activePhoto}
-                                    alt={slot.name}
-                                    className="h-full w-full"
-                                    style={{ objectFit: slot.objectFit || "cover" }}
-                                  />
-                                  {userPhoto && (
-                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                                <div
+                                  onPointerDown={(e) => handleSlotDragStart(slot.id, e)}
+                                  onPointerMove={(e) => handleSlotDragMove(slot.id, e)}
+                                  onPointerUp={(e) => handleSlotDragEnd(slot.id, e)}
+                                  onPointerCancel={(e) => handleSlotDragEnd(slot.id, e)}
+                                  className={`relative h-full w-full overflow-hidden ${
+                                    activeDraggingSlot === slot.id ? "cursor-grabbing" : "cursor-grab"
+                                  }`}
+                                  title="Drag to reposition photo"
+                                >
+                                  {/* PHOTO WITH PAN & ZOOM TRANSFORM */}
+                                  {(() => {
+                                    const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    return (
+                                      <img
+                                        src={activePhoto}
+                                        alt={slot.name}
+                                        draggable={false}
+                                        className={`pointer-events-none absolute select-none ${!userPhoto ? "opacity-75" : ""}`}
+                                        style={{
+                                          top: "50%",
+                                          left: "50%",
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
+                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
+                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                        }}
+                                      />
+                                    );
+                                  })()}
+
+                                  {userPhoto ? (
+                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow z-10 pointer-events-none">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
+                                  ) : (
+                                    <div className="absolute top-1 left-1 rounded bg-[#b07838] px-1.5 py-0.5 text-[8px] font-bold text-white shadow z-10 pointer-events-none">
+                                      {highlightMissingSlots ? "Upload Needed" : "Sample Photo"}
+                                    </div>
                                   )}
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-                                    <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow">
-                                      Change Photo
-                                    </span>
+
+                                  {/* HOVER OVERLAY: ADJUST & CHANGE */}
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setAdjustingSlot(slot);
+                                      }}
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1"
+                                      title="Reposition & Zoom photo"
+                                    >
+                                      <Move className="h-3 w-3 text-[#b07838]" /> Adjust
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        fileInputRefs.current[slot.id]?.click();
+                                      }}
+                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                      title="Change photo file"
+                                    >
+                                      <UploadCloud className="h-3 w-3 text-white" /> {userPhoto ? "Change" : "Upload"}
+                                    </button>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
-                                  <UploadCloud className="h-5 w-5 text-[#b07838]" />
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRefs.current[slot.id]?.click()}
+                                  className="flex h-full w-full flex-col items-center justify-center p-1 text-center"
+                                >
+                                  <UploadCloud className={`h-5 w-5 ${highlightMissingSlots ? "text-red-500" : "text-[#b07838]"}`} />
                                   <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
                                     {slot.name || `Slot ${idx + 1}`}
                                   </span>
-                                </div>
+                                  <span className="mt-0.5 text-[8px] font-semibold text-[#b07838]">Upload Photo</span>
+                                </button>
                               )}
-                            </button>
+                            </div>
                           </React.Fragment>
                         );
                       })}
@@ -752,20 +970,50 @@ const ProductDetails = () => {
               </div>
 
               {/* ================= PHOTO CUSTOMIZATION SECTION ================= */}
-              <div className="mt-6 rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-4">
+              <div className={`mt-6 rounded-2xl border p-4 transition ${
+                highlightMissingSlots && customPhotoCount < totalSlotsCount
+                  ? "border-red-300 bg-red-50/40 ring-2 ring-red-400/30"
+                  : "border-[#ebdcc8] bg-[#fdfbf8]"
+              }`}>
                 <div className="flex items-center justify-between border-b border-[#eee3d3] pb-3">
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
                       Customize Your Photos
                     </h3>
                     <p className="text-[11px] text-[#666]">
-                      Upload photos for each position in this frame
+                      {customPhotoCount === totalSlotsCount
+                        ? "All customer photos uploaded! Ready to add to cart."
+                        : `Upload photos for all ${totalSlotsCount} positions in this frame`}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#fff4e3] px-2.5 py-0.5 text-xs font-bold text-[#b07838]">
-                    {customPhotoCount} / {totalSlotsCount}
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    customPhotoCount === totalSlotsCount
+                      ? "bg-[#edf7f1] text-[#1b794b]"
+                      : "bg-[#fff4e3] text-[#b07838]"
+                  }`}>
+                    {customPhotoCount} / {totalSlotsCount} Uploaded
                   </span>
                 </div>
+
+                {/* PROGRESS BAR */}
+                {totalSlotsCount > 0 && (
+                  <div className="mt-3">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#eee5d8]">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          customPhotoCount === totalSlotsCount ? "bg-[#1b794b]" : "bg-[#b07838]"
+                        }`}
+                        style={{ width: `${(customPhotoCount / totalSlotsCount) * 100}%` }}
+                      />
+                    </div>
+                    {highlightMissingSlots && customPhotoCount < totalSlotsCount && (
+                      <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        Please upload your photo for all {totalSlotsCount} positions before adding to cart or buy now.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {photoSlots.length === 0 ? (
                   <p className="py-4 text-center text-xs text-[#888]">
@@ -776,13 +1024,20 @@ const ProductDetails = () => {
                     {photoSlots.map((slot, index) => {
                       const userPhoto = customerPhotos[slot.id];
                       const isUploading = uploadingSlot === slot.id;
+                      const isMissing = !userPhoto;
 
                       return (
                         <div
                           key={slot.id || index}
-                          className="flex items-center gap-3 rounded-xl border border-[#ede3d5] bg-white p-2.5 shadow-xs"
+                          className={`flex items-center gap-3 rounded-xl border p-2.5 shadow-xs transition ${
+                            userPhoto
+                              ? "border-[#cce8db] bg-[#f9fdfa]"
+                              : highlightMissingSlots
+                              ? "border-red-300 bg-white ring-2 ring-red-200"
+                              : "border-[#ede3d5] bg-white"
+                          }`}
                         >
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
+                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
                             {userPhoto ? (
                               <img
                                 src={userPhoto}
@@ -790,7 +1045,12 @@ const ProductDetails = () => {
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              <ImagePlus className="h-5 w-5 text-[#b9aa98]" />
+                              <ImagePlus className={`h-5 w-5 ${highlightMissingSlots ? "text-red-400" : "text-[#b9aa98]"}`} />
+                            )}
+                            {userPhoto && (
+                              <div className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                                <Check className="h-2 w-2" />
+                              </div>
                             )}
                           </div>
 
@@ -798,31 +1058,55 @@ const ProductDetails = () => {
                             <p className="truncate text-xs font-bold text-[#333]">
                               {slot.name || `Photo Position ${index + 1}`}
                             </p>
-                            <p className="text-[10px] text-[#888]">
-                              {userPhoto ? "Your photo is attached" : "No photo selected"}
-                            </p>
+                            <div className="mt-0.5 flex items-center gap-1.5">
+                              {userPhoto ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1b794b]">
+                                  <CheckCircle2 className="h-3 w-3" /> Photo Attached
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                                  highlightMissingSlots ? "text-red-600" : "text-amber-700"
+                                }`}>
+                                  <AlertCircle className="h-3 w-3" /> Photo Required
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
                             {userPhoto && (
-                              <button
-                                type="button"
-                                onClick={() => removeCustomerPhoto(slot.id)}
-                                title="Remove photo"
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setAdjustingSlot(slot)}
+                                  title="Drag and adjust photo position & zoom"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-[#faf8f5] px-2.5 py-1.5 text-xs font-semibold text-[#333] transition hover:bg-white hover:text-[#1a3c36]"
+                                >
+                                  <Move className="h-3.5 w-3.5 text-[#b07838]" /> Adjust
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomerPhoto(slot.id)}
+                                  title="Remove photo"
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </>
                             )}
 
                             <button
                               type="button"
                               onClick={() => fileInputRefs.current[slot.id]?.click()}
                               disabled={isUploading}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d8d0c5] bg-[#faf8f5] px-3 py-1.5 text-xs font-bold text-[#333] transition hover:bg-white disabled:opacity-50"
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
+                                userPhoto
+                                  ? "border border-[#d8d0c5] bg-[#faf8f5] text-[#333] hover:bg-white"
+                                  : "border border-[#b07838] bg-[#fff8ef] text-[#9b6b2d] hover:bg-[#ffeed7] shadow-xs"
+                              }`}
                             >
                               <UploadCloud className="h-3.5 w-3.5" />
-                              {isUploading ? "Uploading" : userPhoto ? "Change" : "Upload"}
+                              {isUploading ? "Uploading..." : userPhoto ? "Change" : "Upload Photo"}
                             </button>
                           </div>
                         </div>
@@ -863,6 +1147,15 @@ const ProductDetails = () => {
                     </button>
                   </div>
                 </div>
+
+                {photoSlots.length > 0 && customPhotoCount < totalSlotsCount && (
+                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-[#fffbf2] p-2.5 text-xs text-amber-800">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                    <span>
+                      Please upload photos for all <strong>{totalSlotsCount} positions</strong> ({customPhotoCount}/{totalSlotsCount} uploaded) before adding to cart or buy now.
+                    </span>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2">
                   <button
@@ -921,6 +1214,210 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* ================= CUSTOMIZATION CONFIRMATION MODAL ================= */}
+      {isConfirmModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="relative my-8 w-full max-w-2xl rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl md:p-8">
+            {/* MODAL HEADER */}
+            <div className="flex items-start justify-between border-b border-[#f0e8dc] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#eef6f3] text-[#1a3c36]">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[#1d2925]">
+                    Confirm Your Custom Frame
+                  </h2>
+                  <p className="text-xs text-[#777]">
+                    Please review your uploaded photos, size, and pricing before {confirmActionType === "cart" ? "adding to cart" : "proceeding to checkout"}.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#999] hover:bg-[#f4efe8] hover:text-[#333]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* MODAL CONTENT */}
+            <div className="mt-5 space-y-5">
+              {/* COMPOSITE MERGED PREVIEW */}
+              <div className="rounded-2xl border border-[#e8dfd2] bg-[#f7f2ea] p-4 text-center">
+                <div className="relative mx-auto max-w-[320px] overflow-hidden rounded-xl shadow-lg">
+                  {mergedPreviewUrl || frameData.frame_image ? (
+                    <img
+                      src={mergedPreviewUrl || frameData.frame_image}
+                      alt="Customized Frame Preview"
+                      className="block h-auto w-full object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-48 w-full items-center justify-center bg-[#eee7de]">
+                      <Package className="h-10 w-10 text-[#bbb]" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-xs flex items-center gap-1">
+                    <Check className="h-3 w-3 text-[#22c55e]" /> Merged Frame Ready
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] font-medium text-[#777]">
+                  Preview of your personalized frame with customer-uploaded photos
+                </p>
+              </div>
+
+              {/* UPLOADED PHOTOS INDIVIDUAL BREAKDOWN */}
+              {photoSlots.length > 0 && (
+                <div>
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                    Your Uploaded Photos ({customPhotoCount} of {totalSlotsCount})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {photoSlots.map((slot, i) => {
+                      const photo = customerPhotos[slot.id];
+                      return (
+                        <div
+                          key={slot.id || i}
+                          className="flex items-center gap-2.5 rounded-xl border border-[#e2dacd] bg-[#faf8f5] p-2"
+                        >
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#eee7de]">
+                            {photo ? (
+                              <img
+                                src={photo}
+                                alt={slot.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[#bbb]">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] font-bold text-[#1d2925]">
+                              {slot.name || `Position ${i + 1}`}
+                            </p>
+                            <p className="text-[10px] font-semibold text-[#1b794b] flex items-center gap-1">
+                              <Check className="h-2.5 w-2.5" /> Attached
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SPECIFICATIONS & PRICE BREAKDOWN */}
+              <div className="rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-4">
+                <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                  Order Specifications
+                </h4>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Product</span>
+                    <span className="font-bold text-[#1d2925]">{product.product_name}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Frame Size</span>
+                    <span className="rounded-md bg-[#eef6f3] px-2 py-0.5 font-bold text-[#1a3c36]">
+                      {selectedVariant.size || "Standard"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Unit Price</span>
+                    <span className="font-bold text-[#1d2925]">
+                      ₹{selectedVariant.offer_price || selectedVariant.mrp}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
+                    <span className="text-[#666]">Quantity</span>
+                    <span className="font-bold text-[#1d2925]">{quantity}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-sm font-bold text-[#1d2925]">Total Amount</span>
+                      <p className="text-[10px] text-[#888]">Inclusive of all taxes</p>
+                    </div>
+                    <span className="text-2xl font-black text-[#1a3c36]">
+                      ₹{(Number(selectedVariant.offer_price || selectedVariant.mrp || 0) * Number(quantity))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* MODAL ACTIONS */}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end border-t border-[#f0e8dc] pt-4">
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={addingToCart || savingCustomization}
+                className="rounded-xl border border-[#d8cfc3] bg-white px-5 py-2.5 text-xs font-bold text-[#555] transition hover:bg-[#faf8f5] disabled:opacity-50"
+              >
+                ← Edit Customization
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmedAction}
+                disabled={addingToCart || savingCustomization}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-6 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-[#235048] disabled:opacity-50"
+              >
+                {confirmActionType === "cart" ? (
+                  <>
+                    <ShoppingCart className="h-4 w-4" />
+                    {addingToCart || savingCustomization ? "Adding to Cart..." : "Confirm & Add to Cart"}
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" />
+                    {savingCustomization ? "Preparing Checkout..." : "Confirm & Proceed to Checkout"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHOTO ADJUST MODAL */}
+      <PhotoAdjustModal
+        isOpen={Boolean(adjustingSlot)}
+        onClose={() => setAdjustingSlot(null)}
+        photoSrc={
+          adjustingSlot
+            ? customerPhotos[adjustingSlot.id] || product?.slot_photos?.[adjustingSlot.id]
+            : null
+        }
+        slot={adjustingSlot}
+        initialAdjustment={
+          adjustingSlot
+            ? photoAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
+            : { panX: 0, panY: 0, scale: 1.0 }
+        }
+        onSave={(adj) => {
+          if (adjustingSlot) {
+            setPhotoAdjustments((prev) => ({
+              ...prev,
+              [adjustingSlot.id]: adj,
+            }));
+            toast.success(`Position adjusted for ${adjustingSlot.name || "slot"}!`);
+          }
+        }}
+      />
 
       {/* CHECKOUT MODAL */}
       <CheckoutModal

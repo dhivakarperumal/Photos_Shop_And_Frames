@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, ImagePlus, Package } from "lucide-react";
 import api from "../../api";
@@ -9,6 +9,7 @@ const Shop = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,9 +34,16 @@ const Shop = () => {
   }, []);
 
   const filteredProducts = products.filter((p) => {
-    if (selectedCategory === "All") return true;
-    return p.category === selectedCategory;
+    const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+    const matchesOrientation = selectedOrientation === "All" || (p.orientation || "Portrait").toLowerCase() === selectedOrientation.toLowerCase();
+    return matchesCategory && matchesOrientation;
   });
+
+  const orientationCards = ["Portrait", "Landscape", "Square"];
+
+  const selectOrientation = (orientation) => {
+    setSelectedOrientation(orientation);
+  };
 
   return (
     <main className="min-h-screen bg-[#f7f3ed] py-10 ">
@@ -59,6 +67,28 @@ const Shop = () => {
               <Package className="h-4 w-4 text-[#b07838]" /> {filteredProducts.length} Available Products
             </span>
           </div>
+
+          {/* FRAME ORIENTATION SELECTOR */}
+          <section className="mb-8 rounded-2xl bg-[#f1f1f1] px-3 py-5 sm:px-5 md:px-6" aria-label="Choose frame orientation">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {orientationCards.map((orientation) => (
+                  <button
+                    key={orientation}
+                    type="button"
+                    onClick={() => selectOrientation(orientation)}
+                    aria-label={`Show ${orientation} frames`}
+                    className={`text-left transition ${selectedOrientation === orientation ? "text-[#1a3c36]" : "text-[#171717]"}`}
+                  >
+                    <div className={`h-52 overflow-hidden rounded-xl border-2 bg-white sm:h-56 ${selectedOrientation === orientation ? "border-[#1a3c36]" : "border-transparent"}`}>
+                      <div className="flex h-full items-center justify-center bg-[#f7f7f7]">
+                        <div className={`${orientation === "Portrait" ? "h-4/5 w-2/5" : orientation === "Landscape" ? "h-3/5 w-4/5" : "aspect-square h-3/5"} rounded-md border-4 border-[#1a3c36] bg-[#dce9e4] shadow-[inset_0_0_0_8px_#f7f7f7,0_5px_12px_rgba(26,60,54,0.15)]`} />
+                      </div>
+                    </div>
+                    <span className="mt-3 block text-center text-lg font-bold">{orientation}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
 
           {/* CATEGORY FILTER PILLS */}
           <div className="mb-8 flex flex-wrap items-center gap-2">

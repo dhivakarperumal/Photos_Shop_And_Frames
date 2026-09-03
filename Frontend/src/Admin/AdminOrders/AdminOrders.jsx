@@ -689,7 +689,8 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                           </p>
                         ) : (
                           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                            {slotEntries.map(([slotId, photoUrl], pIdx) => {
+                            {slotEntries.map(([slotId, photoEntry], pIdx) => {
+                              const photoUrl = typeof photoEntry === "string" ? photoEntry : photoEntry?.url || photoEntry?.preview || "";
                               return (
                                 <div
                                   key={slotId || pIdx}

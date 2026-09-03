@@ -51,7 +51,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, userProfile, role } = useAuth();
-  const { cart = [] } = useContext(StoreContext) || {};
+  const { cart = [], openCart } = useContext(StoreContext) || {};
 
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
@@ -235,7 +235,7 @@ const Navbar = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate("/cart")}
+                  onClick={() => (openCart ? openCart() : navigate("/cart"))}
                   className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
                   aria-label="Cart"
                 >
@@ -293,7 +293,8 @@ const Navbar = () => {
                             className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
                             onClick={() => {
                               setProfileDropdown(false);
-                              navigate("/cart");
+                              if (openCart) openCart();
+                              else navigate("/cart");
                             }}
                           >
                             <span>My Cart ({cart.length})</span>
