@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Calendar, 
   ShoppingBag, 
@@ -25,6 +25,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import api from '../api';
 
 const salesData = [
   { name: '1 May', value: 25000 },
@@ -55,6 +56,39 @@ const orderStatusData = [
 ];
 
 const AdminDashboard = () => {
+  const [dashboardCounts, setDashboardCounts] = useState({
+    orders: 0,
+    revenue: 0,
+    customers: 0,
+    products: 0,
+  });
+
+  useEffect(() => {
+    const fetchDashboardCounts = async () => {
+      try {
+        const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
+          api.get('/orders'),
+          api.get('/users'),
+          api.get('/products'),
+        ]);
+        const orders = Array.isArray(ordersResponse.data?.data) ? ordersResponse.data.data : [];
+        const users = Array.isArray(usersResponse.data?.data) ? usersResponse.data.data : [];
+        const products = Array.isArray(productsResponse.data?.data) ? productsResponse.data.data : [];
+
+        setDashboardCounts({
+          orders: orders.length,
+          revenue: orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0),
+          customers: users.filter((user) => !['admin', 'super admin'].includes(String(user.role || '').toLowerCase())).length,
+          products: products.length,
+        });
+      } catch (error) {
+        console.error('Failed to load dashboard counts:', error);
+      }
+    };
+
+    fetchDashboardCounts();
+  }, []);
+
   return (
     <div className="p-2  min-h-screen text-gray-800 font-sans">
       {/* Header */}
@@ -73,10 +107,10 @@ const AdminDashboard = () => {
       {/* Top Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {[
-          { title: 'Total Orders', value: '1,248', inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#22c55e]' }, // Bright Green
-          { title: 'Total Revenue', value: '₹8,45,230', inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, iconBg: 'bg-[#f59e0b]' }, // Bright Amber
-          { title: 'Total Customers', value: '2,532', inc: '15.3%', icon: <Users size={24} className="text-white" />, iconBg: 'bg-[#06b6d4]' }, // Bright Cyan
-          { title: 'Total Products', value: '896', inc: '10.7%', icon: <Package size={24} className="text-white" />, iconBg: 'bg-[#a855f7]' }, // Bright Purple
+          { title: 'Total Orders', value: dashboardCounts.orders.toLocaleString(), inc: '18.6%', icon: <ShoppingBag size={24} className="text-white" />, iconBg: 'bg-[#22c55e]' }, // Bright Green
+          { title: 'Total Revenue', value: `₹${dashboardCounts.revenue.toLocaleString('en-IN')}`, inc: '22.4%', icon: <IndianRupee size={24} className="text-white" />, iconBg: 'bg-[#f59e0b]' }, // Bright Amber
+          { title: 'Total Customers', value: dashboardCounts.customers.toLocaleString(), inc: '15.3%', icon: <Users size={24} className="text-white" />, iconBg: 'bg-[#06b6d4]' }, // Bright Cyan
+          { title: 'Total Products', value: dashboardCounts.products.toLocaleString(), inc: '10.7%', icon: <Package size={24} className="text-white" />, iconBg: 'bg-[#a855f7]' }, // Bright Purple
           { title: 'Total Views', value: '12,580', inc: '12.5%', icon: <Eye size={24} className="text-white" />, iconBg: 'bg-[#f97316]' }, // Bright Orange
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm relative overflow-hidden flex flex-col h-full">
