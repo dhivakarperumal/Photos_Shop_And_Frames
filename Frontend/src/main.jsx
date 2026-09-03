@@ -85,11 +85,11 @@ const router = createHashRouter([
             element: <AddProducts />,
           },
           {
-            path: 'products/frame-setup',
+            path: 'frames/add',
             element: <AddFrame />,
           },
           {
-            path: 'products/frame-setup/edit/:id',
+            path: 'frames/edit/:id',
             element: <AddFrame />,
           },
           {
@@ -110,6 +110,10 @@ const router = createHashRouter([
           },
           {
             path: 'products/categories/add',
+            element: <AddCategory />,
+          },
+          {
+            path: 'products/categories/edit/:categoryId',
             element: <AddCategory />,
           },
           {

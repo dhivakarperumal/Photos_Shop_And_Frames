@@ -1,20 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowUpRight,
-  ChevronDown,
-  Download,
-  Eye,
-  Filter,
   Grid2x2,
   ImageIcon,
+  LayoutGrid,
   PackageCheck,
   Pencil,
   Plus,
   Search,
   ShoppingBag,
+  Table2,
   Trash2,
-  Upload,
+  TrendingUp,
 } from 'lucide-react';
 import api from '../../api';
 
@@ -28,52 +25,35 @@ const normalizeImageUrl = (value) => {
   return `${baseUrl}${relativePath}`;
 };
 
-const categoryCards = [
-  { name: 'Photo Frames', products: 245, description: 'Beautiful photo frames in various sizes, styles and materials.', active: true, iconBg: 'bg-[#f4e4d1]', iconColor: 'text-[#a05c2a]' },
-  { name: 'Photo Printing', products: 156, description: 'High quality photo printing in multiple sizes and finishes.', active: true, iconBg: 'bg-[#f2dff4]', iconColor: 'text-[#9058a8]' },
-  { name: 'Custom Frames', products: 78, description: 'Personalized and custom made frames as per your requirements.', active: true, iconBg: 'bg-[#dfeaf8]', iconColor: 'text-[#3f7db8]' },
-  { name: 'Gifts', products: 132, description: 'Unique gifts for every occasion and special moments.', active: true, iconBg: 'bg-[#dff3e3]', iconColor: 'text-[#3a8c62]' },
-  { name: 'Photo Albums', products: 68, description: 'Premium photo albums to preserve your memories.', active: true, iconBg: 'bg-[#e9e9e9]', iconColor: 'text-[#5d5d5d]' },
-  { name: 'Canvas Prints', products: 54, description: 'Canvas wall art prints for your beautiful memories.', active: true, iconBg: 'bg-[#f4e7d0]', iconColor: 'text-[#99621f]' },
-  { name: 'LED Light Frames', products: 45, description: 'Illuminated LED frames to brighten your memories.', active: true, iconBg: 'bg-[#ebf4f0]', iconColor: 'text-[#5e8f7f]' },
-  { name: 'Personalized Gifts', products: 63, description: 'Customized gifts with your photos and messages.', active: true, iconBg: 'bg-[#fbe6eb]', iconColor: 'text-[#b15471]' },
-  { name: 'Collage Frames', products: 33, description: 'Multi-photo frames and collage frames.', active: true, iconBg: 'bg-[#efe0d0]', iconColor: 'text-[#9c5a3a]' },
-  { name: 'Others', products: 22, description: 'Other products and accessories.', active: false, iconBg: 'bg-[#f2f2f2]', iconColor: 'text-[#666666]' },
-];
-
-const tableData = [
-  { name: 'Photo Frames', description: 'Beautiful photo frames in various sizes, styles and materials.', products: 245, status: 'Active', sortOrder: 1, createdAt: '02 Sep 2024, 10:30 AM' },
-  { name: 'Photo Printing', description: 'High quality photo printing in multiple sizes and finishes.', products: 156, status: 'Active', sortOrder: 2, createdAt: '02 Sep 2024, 10:15 AM' },
-  { name: 'Custom Frames', description: 'Personalized and custom made frames as per your requirements.', products: 78, status: 'Active', sortOrder: 3, createdAt: '01 Sep 2024, 04:45 PM' },
-  { name: 'Gifts', description: 'Unique gifts for every occasion and special moments.', products: 132, status: 'Active', sortOrder: 4, createdAt: '01 Sep 2024, 03:30 PM' },
-  { name: 'Photo Albums', description: 'Premium photo albums to preserve your memories.', products: 68, status: 'Active', sortOrder: 5, createdAt: '31 Aug 2024, 02:20 PM' },
-];
-
-const statCards = [
-  { title: 'Total Categories', value: '10', sub: 'All product categories', icon: <Grid2x2 className="h-7 w-7" />, box: 'bg-[#dfece2]', color: 'text-[#2c6847]' },
-  { title: 'Active Categories', value: '9', sub: 'Currently active', icon: <PackageCheck className="h-7 w-7" />, box: 'bg-[#ede0f5]', color: 'text-[#6d4f87]' },
-  { title: 'Total Products', value: '896', sub: 'Across all categories', icon: <ShoppingBag className="h-7 w-7" />, box: 'bg-[#e8edf7]', color: 'text-[#526aa8]' },
-  { title: 'Total Views', value: '12,580', sub: 'Category page views', icon: <Eye className="h-7 w-7" />, box: 'bg-[#f7ebd9]', color: 'text-[#b28741]' },
-];
-
 const AdminCategories = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [selectedParent, setSelectedParent] = useState('All Parent Categories');
+  const [sortBy, setSortBy] = useState('latest');
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/categories');
-      const items = response?.data?.data || [];
+      const [categoryResponse, productResponse] = await Promise.all([
+        api.get('/categories'),
+        api.get('/products'),
+      ]);
+      const items = Array.isArray(categoryResponse?.data?.data) ? categoryResponse.data.data : [];
+      const productItems = Array.isArray(productResponse?.data?.data) ? productResponse.data.data : [];
       setCategories(items);
+      setProducts(productItems);
       setError('');
     } catch (err) {
       console.error('Failed to fetch categories:', err);
       setError(err?.response?.data?.message || 'Unable to load categories right now.');
       setCategories([]);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -83,37 +63,33 @@ const AdminCategories = () => {
     fetchCategories();
   }, []);
 
-  const handleEditCategory = (category) => {
-    const categoryId = category?.category_id || category?.id;
-    if (!categoryId) return;
-    navigate(`/admin/products/categories/add?edit=${encodeURIComponent(categoryId)}`);
-  };
-
   const handleDeleteCategory = async (categoryId) => {
     if (!categoryId) return;
-    const confirmed = window.confirm('Are you sure you want to delete this category?');
-    if (!confirmed) return;
+    if (!window.confirm('Are you sure you want to delete this category?')) return;
 
     try {
       await api.delete(`/categories/${categoryId}`);
       await fetchCategories();
     } catch (err) {
       console.error('Failed to delete category:', err);
-      setError(err?.response?.data?.message || 'Unable to delete category right now.');
+      alert(err?.response?.data?.message || 'Failed to delete category.');
     }
   };
 
   const listData = useMemo(() => {
-    if (categories.length) {
-      return categories.map((item, index) => ({
+    const productCounts = products.reduce((counts, product) => {
+      const categoryName = String(product.category || '').trim().toLowerCase();
+      if (categoryName) counts[categoryName] = (counts[categoryName] || 0) + 1;
+      return counts;
+    }, {});
+
+    return categories.map((item, index) => ({
         id: item.category_id || `CAT${index + 1}`,
         name: item.category_name || 'Untitled Category',
         description: item.description || 'No description added yet.',
-        products: item.products || 0,
-        subCategories: Array.isArray(item.sub_categories)
-          ? item.sub_categories.join(', ')
-          : item.sub_categories || '—',
+        products: productCounts[String(item.category_name || '').trim().toLowerCase()] || 0,
         status: item.status === 'Inactive' ? 'Inactive' : 'Active',
+        parentCategory: item.parent_category || item.parent_category_name || '',
         sortOrder: item.sort_order || index + 1,
         createdAt: item.created_date ? new Date(item.created_date).toLocaleString('en-GB', {
           day: '2-digit',
@@ -124,17 +100,32 @@ const AdminCategories = () => {
         }) : '—',
         image: normalizeImageUrl(item.category_image || ''),
       }));
-    }
-
-    return tableData;
-  }, [categories]);
+  }, [categories, products]);
 
   const activeCount = listData.filter((item) => item.status === 'Active').length;
+  const latestCategory = listData[0];
+  const parentCategories = [...new Set(listData.map((item) => item.parentCategory).filter(Boolean))];
+  const filteredCategories = listData
+    .filter((item) => {
+      const searchValue = searchTerm.toLowerCase();
+      const matchesSearch = [item.name, item.description].some((value) =>
+        String(value).toLowerCase().includes(searchValue)
+      );
+      const matchesStatus = selectedStatus === 'All Status' || item.status === selectedStatus;
+      const matchesParent = selectedParent === 'All Parent Categories' || item.parentCategory === selectedParent;
+      return matchesSearch && matchesStatus && matchesParent;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'products-high') return b.products - a.products;
+      if (sortBy === 'products-low') return a.products - b.products;
+      return a.sortOrder - b.sortOrder;
+    });
   const statValues = [
-    { title: 'Total Categories', value: String(listData.length), sub: 'All product categories', icon: <Grid2x2 className="h-7 w-7" />, box: 'bg-[#dfece2]', color: 'text-[#2c6847]' },
-    { title: 'Active Categories', value: String(activeCount), sub: 'Currently active', icon: <PackageCheck className="h-7 w-7" />, box: 'bg-[#ede0f5]', color: 'text-[#6d4f87]' },
-    { title: 'Total Products', value: String(listData.reduce((sum, item) => sum + Number(item.products || 0), 0)), sub: 'Across all categories', icon: <ShoppingBag className="h-7 w-7" />, box: 'bg-[#e8edf7]', color: 'text-[#526aa8]' },
-    { title: 'Total Views', value: '12,580', sub: 'Category page views', icon: <Eye className="h-7 w-7" />, box: 'bg-[#f7ebd9]', color: 'text-[#b28741]' },
+    { title: 'Total Categories', value: String(listData.length), inc: '10.7%', icon: <Grid2x2 className="h-7 w-7 text-white" />, iconBg: 'bg-[#22c55e]', waveColor: '#22c55e' },
+    { title: 'Active Categories', value: String(activeCount), inc: '9.2%', icon: <PackageCheck className="h-7 w-7 text-white" />, iconBg: 'bg-[#f59e0b]', waveColor: '#f59e0b' },
+    { title: 'Total Products', value: String(listData.reduce((sum, item) => sum + Number(item.products || 0), 0)), inc: '12.4%', icon: <ShoppingBag className="h-7 w-7 text-white" />, iconBg: 'bg-[#06b6d4]', waveColor: '#06b6d4' },
+    { title: 'Latest Category', value: String(latestCategory?.products || 0), inc: '12.5%', sub: latestCategory?.name || 'No categories yet', icon: <Grid2x2 className="h-7 w-7 text-white" />, iconBg: 'bg-[#a855f7]', waveColor: '#a855f7' },
   ];
 
   return (
@@ -150,14 +141,14 @@ const AdminCategories = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
+            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
             </button>
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Upload className="h-4 w-4" />
               Import
-            </button>
+            </button> */}
             <Link
               to="/admin/products/categories/add"
               className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
@@ -168,63 +159,95 @@ const AdminCategories = () => {
           </div>
         </div>
 
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {statValues.map((card, index) => (
-            <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.box} ${card.color}`}>
-                  {card.icon}
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {statValues.map((stat, index) => (
+            <div
+              key={index}
+              className="relative flex h-full min-h-[170px] flex-col overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-1 items-start gap-4">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${stat.iconBg}`}>
+                  {stat.icon}
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {index === 0 ? '10.7%' : index === 1 ? '9.2%' : index === 2 ? '12.4%' : '12.5%'}
+                <div className="flex flex-col">
+                  <p className="mb-1 text-xs font-medium text-gray-600">{stat.title}</p>
+                  <h3 className="mb-3 text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <div className="flex flex-col">
+                    <div className="mb-1 flex items-center text-xs font-medium text-emerald-600">
+                      <TrendingUp size={12} className="mr-1" />
+                      <span>{stat.inc}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">{stat.sub || 'from last month'}</p>
                   </div>
                 </div>
               </div>
-
-              <div className="mt-4">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
-                <div className="mt-2 text-[10px] text-[#7c7c7c]">{card.sub}</div>
+              <div className="pointer-events-none absolute bottom-0 left-0 h-8 w-full overflow-hidden">
+                <svg
+                  viewBox="0 0 100 20"
+                  preserveAspectRatio="none"
+                  className="h-full w-full opacity-40"
+                  style={{ color: stat.waveColor }}
+                  fill="currentColor"
+                >
+                  <path d="M0,10 C30,25 70,0 100,10 L100,20 L0,20 Z" />
+                </svg>
               </div>
             </div>
           ))}
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search categories..."
                   className="h-[46px] w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-10 pr-3 text-[14px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
+              <select
+                value={selectedStatus}
+                onChange={(event) => setSelectedStatus(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option>All Status</option>
+                <option>Active</option>
+                <option>Inactive</option>
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Parent Categories
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              {/* <select
+                value={selectedParent}
+                onChange={(event) => setSelectedParent(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option>All Parent Categories</option>
+                {parentCategories.map((parent) => <option key={parent}>{parent}</option>)}
+              </select> */}
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
+              {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
                 <Filter className="h-4 w-4 text-[#c69218]" />
                 Filter
-              </button>
+              </button> */}
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+            <div className="flex items-center gap-3 lg:shrink-0">
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="latest">Sort by: Latest</option>
+                <option value="name">Name: A to Z</option>
+                <option value="products-high">Products: High to Low</option>
+                <option value="products-low">Products: Low to High</option>
+              </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
                 <button
@@ -235,9 +258,7 @@ const AdminCategories = () => {
                   }`}
                   aria-label="Table view"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <path d="M7 17V7m0 0L3 11m4-4 4 4M17 7v10m0 0 4-4m-4 4-4-4" />
-                  </svg>
+                  <Table2 className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
@@ -247,12 +268,7 @@ const AdminCategories = () => {
                   }`}
                   aria-label="Card view"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
-                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -272,7 +288,7 @@ const AdminCategories = () => {
             <>
               {viewMode === 'card' ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                  {listData.map((category, index) => (
+                  {filteredCategories.map((category, index) => (
                     <div key={category.id || index} className="rounded-[18px] border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)] transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className={`flex h-[42px] w-[42px] items-center justify-center rounded-xl ${index % 2 === 0 ? 'bg-[#f4e4d1] text-[#a05c2a]' : 'bg-[#dfeaf8] text-[#3f7db8]'}`}>
@@ -286,19 +302,21 @@ const AdminCategories = () => {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleEditCategory(category)}
-                            className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
+                            onClick={() => navigate(`/admin/products/categories/edit/${category.id}`)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#4d4d4d] hover:bg-[#f8f6f3]"
                             aria-label={`Edit ${category.name}`}
+                            title="Edit category"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteCategory(category.id)}
-                            className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#d94848] hover:bg-[#ffeded]"
                             aria-label={`Delete ${category.name}`}
+                            title="Delete category"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -322,14 +340,14 @@ const AdminCategories = () => {
                       <tr>
                         <th className="px-4 py-4">S.No</th>
                         <th className="px-4 py-4">Category</th>
-                        <th className="px-4 py-4">Sub Categories</th>
+                        <th className="px-4 py-4">Description</th>
+                        <th className="px-4 py-4">Products</th>
                         <th className="px-4 py-4">Status</th>
-                        <th className="px-4 py-4">Sort Order</th>
                         <th className="px-4 py-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {listData.map((item, idx) => (
+                      {filteredCategories.map((item, idx) => (
                         <tr key={item.id || idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
                           <td className="px-4 py-4 font-medium text-[#2d2d2d]">{idx + 1}</td>
                           <td className="px-4 py-4">
@@ -344,20 +362,19 @@ const AdminCategories = () => {
                               <span className="font-medium text-[#202020]">{item.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-[#5d5d5d]">{item.subCategories}</td>
-                          
+                          <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
+                          <td className="px-4 py-4">{item.products}</td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${item.status === 'Active' ? 'bg-[#eaf7ef] text-[#2b7a4b]' : 'bg-[#fdf1f1] text-[#b85c5c]'}`}>
                               <span className={`mr-1.5 h-2 w-2 rounded-full ${item.status === 'Active' ? 'bg-[#2b7a4b]' : 'bg-[#b85c5c]'}`} />
                               {item.status}
                             </span>
                           </td>
-                          <td className="px-4 py-4">{item.sortOrder}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleEditCategory(item)}
+                                onClick={() => navigate(`/admin/products/categories/edit/${item.id}`)}
                                 className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
                                 aria-label={`Edit ${item.name}`}
                               >
@@ -381,7 +398,7 @@ const AdminCategories = () => {
               )}
 
               <div className="mt-4 flex items-center justify-between text-[12px] text-[#666]">
-                <span>{loading ? 'Loading categories...' : `Showing 1 to ${listData.length} of ${listData.length} categories`}</span>
+                <span>{loading ? 'Loading categories...' : `Showing ${filteredCategories.length} of ${listData.length} categories`}</span>
                 <div className="flex items-center gap-2">
                   <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&lt;</button>
                   <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1d3d36] text-white">1</button>

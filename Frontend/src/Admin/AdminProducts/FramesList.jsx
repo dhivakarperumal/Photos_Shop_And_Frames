@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
-  Check,
-  Eye,
-  Filter,
   Frame,
   Layers,
+  LayoutGrid,
   Pencil,
   Plus,
-  RotateCw,
   Search,
-  Sparkles,
+  Table2,
   Trash2,
 } from "lucide-react";
 import api from "../../api";
@@ -24,6 +20,7 @@ const FramesList = () => {
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [previewFrame, setPreviewFrame] = useState(null);
+  const [viewMode, setViewMode] = useState("card");
 
   const fetchFrames = async () => {
     try {
@@ -82,16 +79,10 @@ const FramesList = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/admin/products"
-              className="inline-flex items-center gap-2 rounded-xl border border-[#e6ddd1] bg-white px-4 py-2.5 text-[14px] font-semibold text-[#2a2a2a] shadow-sm transition hover:bg-[#faf7f3]"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Products
-            </Link>
+  
 
             <Link
-              to="/admin/products/frame-setup"
+              to="add"
               className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-[14px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
             >
               <Plus className="h-4 w-4" />
@@ -102,7 +93,7 @@ const FramesList = () => {
 
         {/* ================= FILTERS & SEARCH ================= */}
         <div className="mb-6 rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
             {/* SEARCH */}
             <div className="relative w-full max-w-[360px]">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
@@ -115,23 +106,38 @@ const FramesList = () => {
               />
             </div>
 
-            {/* ORIENTATION TABS */}
-            <div className="flex flex-wrap items-center gap-2">
-              {["All", "Portrait", "Landscape", "Square"].map((tab) => (
+            {/* ORIENTATION FILTER */}
+            <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+              <select
+                value={selectedOrientation}
+                onChange={(event) => setSelectedOrientation(event.target.value)}
+                className="h-10 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-xs font-bold text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+                aria-label="Filter frames by orientation"
+              >
+                {["All", "Portrait", "Landscape", "Square"].map((orientation) => (
+                  <option key={orientation} value={orientation}>{orientation}</option>
+                ))}
+              </select>
+              <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
                 <button
-                  key={tab}
                   type="button"
-                  onClick={() => setSelectedOrientation(tab)}
-                  className={`flex h-10 items-center gap-1.5 rounded-xl border px-4 text-xs font-bold transition ${
-                    selectedOrientation === tab
-                      ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-sm"
-                      : "border-[#e6ddd1] bg-[#faf9f8] text-[#555] hover:border-[#d4a553] hover:bg-white"
-                  }`}
+                  onClick={() => setViewMode("table")}
+                  className={`flex h-10 w-10 items-center justify-center border-r border-[#dfe2e5] ${viewMode === "table" ? "bg-[#1a3c36] text-white" : "text-[#4d4d4d] hover:bg-white"}`}
+                  aria-label="Table view"
+                  title="Table view"
                 >
-                  <RotateCw className="h-3 w-3" />
-                  {tab}
+                  <Table2 className="h-4 w-4" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setViewMode("card")}
+                  className={`flex h-10 w-10 items-center justify-center ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#4d4d4d] hover:bg-white"}`}
+                  aria-label="Card view"
+                  title="Card view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -161,6 +167,46 @@ const FramesList = () => {
             </Link>
           </div>
         ) : (
+          viewMode === "table" ? (
+            <div className="overflow-x-auto rounded-[16px] border border-[#e8e4df] bg-white">
+              <table className="w-full min-w-[700px] border-collapse text-left">
+                <thead className="bg-[#f7f4ef] text-xs font-semibold text-[#333]">
+                  <tr>
+                    <th className="px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">Frame</th>
+                    <th className="px-4 py-4">Orientation</th>
+                    <th className="px-4 py-4">Photo Slots</th>
+                    <th className="px-4 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFrames.map((frame,index) => (
+                    <tr key={frame.id} className="border-t border-[#efefef] text-sm text-[#444]">
+                      <td className="px-4 py-4">{index + 1}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <img src={frame.frame_image} alt={frame.frame_name} className="h-12 w-12 rounded-lg bg-[#f6f2ec] object-contain" />
+                          <div>
+                            <div className="font-semibold text-[#202020]">{frame.frame_name}</div>
+                            {/* <div className="font-mono text-[10px] text-[#888]">{frame.uuid?.slice(0, 16)}...</div> */}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">{frame.orientation}</td>
+                      <td className="px-4 py-4">{(frame.photo_slots || []).length}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => navigate(`/admin/products/add?frameId=${frame.id}`)} className="rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white" title="Use in product">Use</button>
+                          <button type="button" onClick={() => navigate(`/admin/frames/edit/${frame.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#dcd4c8] bg-white" aria-label="Edit frame" title="Edit frame"><Pencil className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => handleDeleteFrame(frame.id, frame.frame_name)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600" aria-label="Delete frame" title="Delete frame"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {filteredFrames.map((frame) => {
               const slots = frame.photo_slots || [];
@@ -214,12 +260,12 @@ const FramesList = () => {
                       <h3 className="text-base font-bold text-[#1f1f1f] group-hover:text-[#1a3c36]">
                         {frame.frame_name}
                       </h3>
-                      <p className="mt-1 font-mono text-[11px] text-[#888]">
+                      {/* <p className="mt-1 font-mono text-[11px] text-[#888]">
                         UUID: {frame.uuid?.slice(0, 16)}...
-                      </p>
+                      </p> */}
 
                       <div className="mt-3 flex flex-wrap gap-1">
-                        {slots.map((s, i) => (
+                        {slots.slice(0,3).map((s, i) => (
                           <span
                             key={i}
                             className="rounded-md bg-[#f4f0eb] px-2 py-0.5 text-[10px] text-[#666]"
@@ -263,6 +309,7 @@ const FramesList = () => {
               );
             })}
           </div>
+          )
         )}
       </div>
     </div>

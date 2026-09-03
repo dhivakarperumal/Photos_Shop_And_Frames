@@ -18,6 +18,7 @@ import {
   Pencil
 } from "lucide-react";
 import api from "../../api";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 
 const generateUuid = () => {
@@ -31,6 +32,13 @@ const AddFrame = () => {
   const navigate = useNavigate();
   const { id: editFrameId } = useParams();
   const isEditMode = Boolean(editFrameId);
+  const { user, userProfile } = useAuth();
+  const currentUserId =
+    userProfile?.user_id ||
+    userProfile?.id ||
+    user?.user_id ||
+    user?.id ||
+    null;
 
   // ==========================================
   // FRAME TEMPLATE STATE
@@ -258,6 +266,8 @@ const AddFrame = () => {
           objectFit: slot.objectFit,
         })),
         status: "Active",
+        created_by: currentUserId,
+        updated_by: currentUserId,
       };
 
       let response;
@@ -365,17 +375,7 @@ const AddFrame = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Template UUID
-                    </label>
-                    <input
-                      type="text"
-                      value={uuid}
-                      readOnly
-                      className="h-11 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-xs text-[#666] outline-none"
-                    />
-                  </div>
+                  
 
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">

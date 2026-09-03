@@ -1,137 +1,164 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  ArrowUpRight,
   ChevronDown,
-  Download,
   Eye,
-  Filter,
-  PackageCheck,
+  LayoutGrid,
   Pencil,
+  Package,
   Search,
   ShoppingBag,
-  Trash2,
-  Upload,
+  Table2,
+  TrendingUp,
 } from 'lucide-react';
+import api from '../../api';
+import toast from 'react-hot-toast';
 
-const stockRows = [
-  {
-    product: 'Classic Wooden Frame',
-    sku: 'PF-WD-001',
-    category: 'Photo Frames',
-    price: 899,
-    offerPrice: 1299,
-    currentStock: 52,
-    available: 48,
-    reserved: 4,
-    status: 'In Stock',
-    lastUpdated: '02 Sep 2024\n10:30 AM',
-    image: 'linear-gradient(135deg, #d3b495, #f2e4d2)',
-  },
-  {
-    product: 'Black Matt Frame',
-    sku: 'PF-BK-002',
-    category: 'Photo Frames',
-    price: 699,
-    offerPrice: 999,
-    currentStock: 18,
-    available: 15,
-    reserved: 3,
-    status: 'Low Stock',
-    lastUpdated: '02 Sep 2024\n09:15 AM',
-    image: 'linear-gradient(135deg, #d8d8d8, #b0b0b0)',
-  },
-  {
-    product: 'Canvas Wall Print',
-    sku: 'PF-CV-001',
-    category: 'Photo Printing',
-    price: 1299,
-    offerPrice: 1799,
-    currentStock: 35,
-    available: 30,
-    reserved: 5,
-    status: 'In Stock',
-    lastUpdated: '01 Sep 2024\n04:45 PM',
-    image: 'linear-gradient(135deg, #a9c7d9, #e9d6c8)',
-  },
-  {
-    product: 'LED Light Frame',
-    sku: 'PF-LED-001',
-    category: 'Custom Frames',
-    price: 1599,
-    offerPrice: 2199,
-    currentStock: 12,
-    available: 8,
-    reserved: 4,
-    status: 'Low Stock',
-    lastUpdated: '01 Sep 2024\n03:20 PM',
-    image: 'linear-gradient(135deg, #d6bf9a, #f3e1c1)',
-  },
-  {
-    product: 'Personalized Photo Mug',
-    sku: 'PF-GF-001',
-    category: 'Gifts',
-    price: 399,
-    offerPrice: 599,
-    currentStock: 80,
-    available: 72,
-    reserved: 8,
-    status: 'In Stock',
-    lastUpdated: '01 Sep 2024\n02:10 PM',
-    image: 'linear-gradient(135deg, #d6c4ae, #ebdfd0)',
-  },
-  {
-    product: 'Premium Photo Album',
-    sku: 'PF-AL-001',
-    category: 'Photo Albums',
-    price: 1099,
-    offerPrice: 1499,
-    currentStock: 22,
-    available: 20,
-    reserved: 2,
-    status: 'Low Stock',
-    lastUpdated: '31 Aug 2024\n11:00 AM',
-    image: 'linear-gradient(135deg, #d9d9d9, #f0f0f0)',
-  },
-  {
-    product: 'Multi Collage Frame',
-    sku: 'PF-CG-001',
-    category: 'Photo Frames',
-    price: 799,
-    offerPrice: 1099,
-    currentStock: 0,
-    available: 0,
-    reserved: 0,
-    status: 'Out of Stock',
-    lastUpdated: '31 Aug 2024\n09:30 AM',
-    image: 'linear-gradient(135deg, #c7d7cf, #f0e1d0)',
-  },
-  {
-    product: 'Personalized Gift Box',
-    sku: 'PF-GF-002',
-    category: 'Gifts',
-    price: 499,
-    offerPrice: 699,
-    currentStock: 5,
-    available: 3,
-    reserved: 2,
-    status: 'Low Stock',
-    lastUpdated: '30 Aug 2024\n06:45 PM',
-    image: 'linear-gradient(135deg, #d8b691, #f1d5bb)',
-  },
-];
+const normalizeImageUrl = (value) => {
+  if (!value || typeof value !== 'string') return '';
+  if (value.startsWith('data:') || value.startsWith('blob:') || value.startsWith('http://') || value.startsWith('https://')) return value;
 
-const statCards = [
-  { title: 'Total Products', value: '896', sub: 'All products', icon: <PackageCheck className="h-7 w-7" />, box: 'bg-[#dfece2]', color: 'text-[#2c6847]' },
-  { title: 'Total Stock (Units)', value: '12,580', sub: 'Across all products', icon: <ShoppingBag className="h-7 w-7" />, box: 'bg-[#e7ebf7]', color: 'text-[#536bb0]' },
-  { title: 'In Stock', value: '9,642', sub: '76.7% of total', icon: <Eye className="h-7 w-7" />, box: 'bg-[#e9f6ee]', color: 'text-[#2d8f55]' },
-  { title: 'Low Stock', value: '782', sub: 'Reorder needed', icon: <AlertTriangle className="h-7 w-7" />, box: 'bg-[#fff0df]', color: 'text-[#cf8a1d]' },
-  { title: 'Out of Stock', value: '156', sub: 'Need attention', icon: <div className="text-xl font-bold">×</div>, box: 'bg-[#fde7e7]', color: 'text-[#db5f5f]' },
-];
+  const rawApiUrl = import.meta.env.VITE_API_URL || '/api';
+  const baseUrl = rawApiUrl.replace(/\/api\/?$/, '');
+  return `${baseUrl}${value.startsWith('/') ? value : `/${value}`}`;
+};
 
 const StockDetails = () => {
-  const navigate = useNavigate();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedStatus, setSelectedStatus] = useState('All Stock Status');
+  const [sortBy, setSortBy] = useState('latest');
+  const [viewMode, setViewMode] = useState('table');
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [stockValues, setStockValues] = useState([]);
+  const [savingStock, setSavingStock] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get('/products');
+        setProducts(Array.isArray(response?.data?.data) ? response.data.data : []);
+      } catch (error) {
+        console.error('Failed to load stock details:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const stockRows = useMemo(() => products.map((product) => {
+    const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
+    const currentStock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+    const firstVariant = variants[0] || {};
+    const status = currentStock === 0 ? 'Out of Stock' : currentStock <= 15 ? 'Low Stock' : 'In Stock';
+    const image = normalizeImageUrl(product.product_images?.[0] || product.frame_data?.frame_image || '');
+
+    return {
+      id: product.id,
+      product: product.product_name || 'Untitled Product',
+      sku: product.product_id || '—',
+      category: product.category || 'Uncategorized',
+      price: Number(firstVariant.offer_price || 0),
+      offerPrice: Number(firstVariant.mrp || 0),
+      currentStock,
+      available: currentStock,
+      reserved: 0,
+      status,
+      lastUpdated: product.updated_at || product.created_at || '',
+      image,
+      rawData: product,
+    };
+  }), [products]);
+
+  const categories = [...new Set(stockRows.map((item) => item.category))].sort();
+  const filteredRows = stockRows
+    .filter((item) => {
+      const query = searchTerm.toLowerCase();
+      const matchesSearch = item.product.toLowerCase().includes(query) || item.sku.toLowerCase().includes(query);
+      const matchesCategory = selectedCategory === 'All Categories' || item.category === selectedCategory;
+      const matchesStatus = selectedStatus === 'All Stock Status' || item.status === selectedStatus;
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'stock-high') return b.currentStock - a.currentStock;
+      if (sortBy === 'stock-low') return a.currentStock - b.currentStock;
+      if (sortBy === 'name') return a.product.localeCompare(b.product);
+      return new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0);
+    });
+
+  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const visiblePage = Math.min(currentPage, pageCount);
+  const paginatedRows = filteredRows.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
+
+  const totalStock = stockRows.reduce((sum, item) => sum + item.currentStock, 0);
+  const inStock = stockRows.filter((item) => item.status === 'In Stock').length;
+  const lowStock = stockRows.filter((item) => item.status === 'Low Stock').length;
+  const outOfStock = stockRows.filter((item) => item.status === 'Out of Stock').length;
+  const statCards = [
+    { title: 'Total Products', value: String(stockRows.length), sub: 'All products', inc: '10.7%', icon: <Package className="h-7 w-7 text-white" />, iconBg: 'bg-[#22c55e]', waveColor: '#22c55e' },
+    { title: 'Total Stock (Units)', value: totalStock.toLocaleString('en-IN'), sub: 'Across all products', inc: '12.4%', icon: <ShoppingBag className="h-7 w-7 text-white" />, iconBg: 'bg-[#f59e0b]', waveColor: '#f59e0b' },
+    { title: 'In Stock', value: String(inStock), sub: 'Products available', inc: '15.3%', icon: <Eye className="h-7 w-7 text-white" />, iconBg: 'bg-[#06b6d4]', waveColor: '#06b6d4' },
+    { title: 'Low Stock', value: String(lowStock), sub: 'Reorder needed', inc: '9.2%', icon: <AlertTriangle className="h-7 w-7 text-white" />, iconBg: 'bg-[#a855f7]', waveColor: '#a855f7' },
+    { title: 'Out of Stock', value: String(outOfStock), sub: 'Need attention', inc: '0%', icon: <Package className="h-7 w-7 text-white" />, iconBg: 'bg-[#f97316]', waveColor: '#f97316' },
+  ];
+
+  const openStockEditor = (row) => {
+    const variants = Array.isArray(row.rawData?.size_variants) ? row.rawData.size_variants : [];
+    setEditingProduct(row);
+    setReportOpen(true);
+    setStockValues(variants.map((variant) => ({
+      ...variant,
+      stock: Number(variant.stock) || 0,
+    })));
+  };
+
+  const openStockReport = () => {
+    setEditingProduct(null);
+    setStockValues([]);
+    setReportOpen(true);
+  };
+
+  const handleReportProductChange = (event) => {
+    const row = stockRows.find((item) => String(item.id) === event.target.value);
+    if (row) openStockEditor(row);
+  };
+
+  const updateStockValue = (index, value) => {
+    setStockValues((current) => current.map((variant, variantIndex) => (
+      variantIndex === index ? { ...variant, stock: Math.max(0, Number(value) || 0) } : variant
+    )));
+  };
+
+  const saveStock = async (event) => {
+    event.preventDefault();
+    if (!editingProduct) return;
+
+    try {
+      setSavingStock(true);
+      await api.put(`/products/${editingProduct.id}`, {
+        ...editingProduct.rawData,
+        size_variants: stockValues,
+      });
+      toast.success('Stock updated successfully');
+      setEditingProduct(null);
+      setReportOpen(false);
+      const response = await api.get('/products');
+      setProducts(Array.isArray(response?.data?.data) ? response.data.data : []);
+    } catch (error) {
+      console.error('Failed to update stock:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update stock');
+    } finally {
+      setSavingStock(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
@@ -146,107 +173,129 @@ const StockDetails = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
+            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Download className="h-4 w-4" />
               Export
             </button>
             <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
               <Upload className="h-4 w-4" />
               Import
-            </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
+            </button> */}
+            <button type="button" onClick={openStockReport} className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
               <span className="text-lg">+</span>
               Stock Report
             </button>
           </div>
         </div>
 
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {statCards.map((card, index) => (
-            <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.box} ${card.color}`}>
-                  {card.icon}
-                </div>
-                <div className="ml-auto text-right">
-                  {index === 2 && (
-                    <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                      76.7%
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {statCards.map((stat, index) => (
+            <div key={index} className="relative flex min-h-[170px] flex-col overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex flex-1 items-start gap-4">
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${stat.iconBg}`}>{stat.icon}</div>
+                <div className="flex flex-col">
+                  <p className="mb-1 text-xs font-medium text-gray-600">{stat.title}</p>
+                  <h3 className="mb-3 text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <div className="flex flex-col">
+                    <div className="mb-1 flex items-center text-xs font-medium text-emerald-600">
+                      <TrendingUp size={12} className="mr-1" />
+                      <span>{stat.inc}</span>
                     </div>
-                  )}
+                    <p className="text-[10px] text-gray-400">{stat.sub}</p>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
-                <div className="mt-2 text-[10px] text-[#7c7c7c]">{card.sub}</div>
+              <div className="pointer-events-none absolute bottom-0 left-0 h-8 w-full overflow-hidden">
+                <svg viewBox="0 0 100 20" preserveAspectRatio="none" className="h-full w-full opacity-40" style={{ color: stat.waveColor }} fill="currentColor">
+                  <path d="M0,10 C30,25 70,0 100,10 L100,20 L0,20 Z" />
+                </svg>
               </div>
             </div>
           ))}
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:flex-nowrap">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3 lg:flex-nowrap">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
+                  value={searchTerm}
+                  onChange={(event) => { setSearchTerm(event.target.value); setCurrentPage(1); }}
                   placeholder="Search products..."
                   className="h-[46px] w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-10 pr-3 text-[14px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Categories
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <div className="flex w-full flex-wrap items-center justify-end gap-3 lg:ml-auto lg:w-auto lg:flex-nowrap">
+              <select value={selectedCategory} onChange={(event) => { setSelectedCategory(event.target.value); setCurrentPage(1); }} className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none">
+                <option>All Categories</option>
+                {categories.map((category) => <option key={category}>{category}</option>)}
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
-
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Stock Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
-
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                <Filter className="h-4 w-4 text-[#c69218]" />
-                Filter
-              </button>
+              <select value={selectedStatus} onChange={(event) => { setSelectedStatus(event.target.value); setCurrentPage(1); }} className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none">
+                <option>All Stock Status</option>
+                <option>In Stock</option>
+                <option>Low Stock</option>
+                <option>Out of Stock</option>
+              </select>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+            <div className="flex shrink-0 items-center gap-3">
+              <select value={sortBy} onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }} className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none">
+                <option value="latest">Sort by: Latest</option>
+                <option value="name">Name: A to Z</option>
+                <option value="stock-high">Stock: High to Low</option>
+                <option value="stock-low">Stock: Low to High</option>
+              </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
-                <button className="flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] text-[#4d4d4d]">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <path d="M7 17V7m0 0L3 11m4-4 4 4M17 7v10m0 0 4-4m-4 4-4-4" />
-                  </svg>
+                <button type="button" onClick={() => setViewMode('table')} className={`flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] ${viewMode === 'table' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`} aria-label="Table view" title="Table view">
+                  <Table2 className="h-4 w-4" />
                 </button>
-                <button className="flex h-[46px] w-[46px] items-center justify-center text-[#4d4d4d]">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
-                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
+                <button type="button" onClick={() => setViewMode('card')} className={`flex h-[46px] w-[46px] items-center justify-center ${viewMode === 'card' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`} aria-label="Card view" title="Card view">
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[16px] border border-[#e8e4df]">
+          {loading ? (
+            <div className="py-16 text-center text-sm text-[#777]">Loading stock details...</div>
+          ) : filteredRows.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-[#e6ddd1] bg-[#faf9f8] py-16 text-center text-sm text-[#777]">No stock records found.</div>
+          ) : viewMode === 'card' ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {paginatedRows.map((item) => (
+                <div key={item.id} className="rounded-xl border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-sm">
+                  <div className="mb-4 flex h-40 items-center justify-center overflow-hidden rounded-lg bg-[#f5f1ec]">
+                    {item.image ? <img src={item.image} alt={item.product} className="h-full w-full object-contain" /> : <Package className="h-12 w-12 text-[#b5a998]" />}
+                  </div>
+                  <h3 className="truncate text-base font-semibold text-[#1f1f1f]">{item.product}</h3>
+                  <p className="mt-1 font-mono text-xs text-[#7a7a7a]">{item.sku}</p>
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="font-bold text-[#1e1e1e]">Stock: {item.currentStock}</span>
+                    <span className="text-[#666]">{item.category}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${item.status === 'In Stock' ? 'bg-[#edf7f1] text-[#2d7b5a]' : item.status === 'Low Stock' ? 'bg-[#fff2df] text-[#c77f11]' : 'bg-[#fde7e7] text-[#d94d4d]'}`}>
+                      <span className="h-2 w-2 rounded-full bg-current" />{item.status}
+                    </span>
+                    <button type="button" onClick={() => openStockEditor(item)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] hover:border-[#d0b997] hover:text-[#1a1a1a]" aria-label={`Edit stock for ${item.product}`} title="Edit stock">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <div className="w-full overflow-x-auto rounded-[16px] border border-[#e8e4df]">
             <table className="w-full min-w-[1200px] border-collapse bg-white text-left">
               <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
                 <tr>
+                  <th className="px-4 py-4">S.No</th>
                   <th className="px-4 py-4">Product</th>
                   <th className="px-4 py-4">SKU</th>
                   <th className="px-4 py-4">Category</th>
@@ -255,16 +304,18 @@ const StockDetails = () => {
                   <th className="px-4 py-4">Available Stock</th>
                   <th className="px-4 py-4">Reserved</th>
                   <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4">Last Updated</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {stockRows.map((item, idx) => (
-                  <tr key={idx} className="border-t border-[#efefef] text-[13px] text-[#444444]">
+                {paginatedRows.map((item, index) => (
+                  <tr key={item.id} className="border-t border-[#efefef] text-[13px] text-[#444444]">
+                    <td className="px-4 py-4">{index + 1}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-lg border border-[#e7e0d8]" style={{ background: item.image }} />
+                        <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-[#e7e0d8] bg-[#f5f1ec]">
+                          {item.image ? <img src={item.image} alt={item.product} className="h-full w-full object-contain" /> : <Package className="h-5 w-5 text-[#b5a998]" />}
+                        </div>
                         <div>
                           <div className="font-medium text-[#202020]">{item.product}</div>
                         </div>
@@ -297,21 +348,10 @@ const StockDetails = () => {
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-pre-line text-[#5b5b5b]">{item.lastUpdated}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => navigate('/admin/products/stock-details')}
-                          className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]">
+                        <button type="button" onClick={() => openStockEditor(item)} className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]" aria-label={`Edit stock for ${item.product}`} title="Edit stock">
                           <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d94848] hover:bg-[#ffeded]">
-                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -320,21 +360,74 @@ const StockDetails = () => {
               </tbody>
             </table>
           </div>
+          )}
 
           <div className="mt-4 flex items-center justify-between text-[12px] text-[#666]">
-            <span>Showing 1 to 10 of 896 products</span>
+            <span>Showing {filteredRows.length === 0 ? 0 : ((visiblePage - 1) * pageSize) + 1} to {Math.min(visiblePage * pageSize, filteredRows.length)} of {filteredRows.length} products</span>
             <div className="flex items-center gap-2">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&lt;</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1d3d36] text-white">1</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">2</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">3</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">4</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">5</button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666]">&gt;</button>
+              <button type="button" disabled={visiblePage === 1} onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666] disabled:cursor-not-allowed disabled:opacity-40">&lt;</button>
+              {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+                <button type="button" key={page} onClick={() => setCurrentPage(page)} className={`flex h-8 w-8 items-center justify-center rounded-lg ${visiblePage === page ? 'bg-[#1d3d36] text-white' : 'border border-[#e7e0d8] bg-white text-[#666]'}`}>{page}</button>
+              ))}
+              <button type="button" disabled={visiblePage === pageCount} onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e7e0d8] bg-white text-[#666] disabled:cursor-not-allowed disabled:opacity-40">&gt;</button>
             </div>
           </div>
         </div>
       </div>
+
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <form onSubmit={saveStock} className="w-full max-w-lg rounded-2xl border border-[#e7e0d8] bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4 border-b border-[#f0ebe3] pb-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-[#777]">Stock report</p>
+                <h2 className="mt-1 text-xl font-bold text-[#202020]">Select product and update stock</h2>
+              </div>
+              <button type="button" onClick={() => { setEditingProduct(null); setReportOpen(false); }} className="text-2xl leading-none text-[#777] hover:text-[#222]" aria-label="Close stock editor">&times;</button>
+            </div>
+
+            <label className="mb-4 block text-sm font-semibold text-[#333]">
+              Product
+              <select value={editingProduct?.id || ''} onChange={handleReportProductChange} className="mt-2 h-11 w-full rounded-lg border border-[#dfe2e5] bg-white px-3 text-sm font-normal outline-none focus:border-[#1a3c36]">
+                <option value="">Select a product</option>
+                {stockRows.map((row) => <option key={row.id} value={row.id}>{row.product} ({row.sku})</option>)}
+              </select>
+            </label>
+
+            {!editingProduct ? (
+              <p className="rounded-xl bg-[#faf9f8] p-4 text-sm text-[#666]">Select a product to view and update its stock.</p>
+            ) : stockValues.length === 0 ? (
+              <p className="rounded-xl bg-[#faf9f8] p-4 text-sm text-[#666]">No size variants are available for this product.</p>
+            ) : (
+              <div className="space-y-3">
+                {stockValues.map((variant, index) => (
+                  <label key={index} className="flex items-center justify-between gap-4 rounded-xl border border-[#e7e0d8] bg-[#faf9f8] p-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-[#222]">{variant.size || `Size ${index + 1}`}</span>
+                      <span className="text-xs text-[#777]">Current stock: {variant.stock}</span>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={variant.stock}
+                      onChange={(event) => updateStockValue(index, event.target.value)}
+                      className="h-10 w-24 rounded-lg border border-[#dfe2e5] bg-white px-3 text-right text-sm font-semibold outline-none focus:border-[#1a3c36]"
+                      aria-label={`Stock for ${variant.size || `size ${index + 1}`}`}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => { setEditingProduct(null); setReportOpen(false); }} className="rounded-xl border border-[#dfe2e5] bg-white px-4 py-2 text-sm font-semibold text-[#555] hover:bg-[#faf9f8]">Cancel</button>
+              <button type="submit" disabled={savingStock || !editingProduct || stockValues.length === 0} className="rounded-xl bg-[#1a3c36] px-5 py-2 text-sm font-semibold text-white hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-60">
+                {savingStock ? 'Updating...' : 'Update Stock'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

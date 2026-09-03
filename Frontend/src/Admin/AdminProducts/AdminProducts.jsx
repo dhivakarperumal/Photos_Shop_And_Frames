@@ -10,7 +10,9 @@ import {
   Eye,
   Filter,
   Frame,
+  IndianRupee,
   Layers,
+  LayoutGrid,
   Package,
   PackageCheck,
   Pencil,
@@ -18,8 +20,11 @@ import {
   Search,
   ShoppingBag,
   Star,
+  Table2,
+  TrendingUp,
   Trash2,
   Upload,
+  Users,
   X,
 } from 'lucide-react';
 import api from '../../api';
@@ -28,8 +33,13 @@ import toast from 'react-hot-toast';
 const AdminProducts = () => {
   const navigate = useNavigate();
   const [productsList, setProductsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedStatus, setSelectedStatus] = useState('All Status');
+  const [sortBy, setSortBy] = useState('latest');
+  const [viewMode, setViewMode] = useState('table');
   const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
@@ -80,6 +90,17 @@ const AdminProducts = () => {
   };
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/categories');
+        const list = Array.isArray(res.data?.data) ? res.data.data : [];
+        setCategoriesList(list);
+      } catch (err) {
+        console.warn('Could not fetch categories:', err);
+      }
+    };
+
+    fetchCategories();
     fetchProducts();
   }, []);
 
@@ -95,49 +116,88 @@ const AdminProducts = () => {
     }
   };
 
-  const filteredProducts = productsList.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = productsList
+    .filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === 'All Categories' || p.category === selectedCategory;
+
+      const matchesStatus =
+        selectedStatus === 'All Status' ||
+        (selectedStatus === 'Active' && p.status === 'Active') ||
+        (selectedStatus === 'Inactive' && p.status !== 'Active');
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'latest') {
+        return (b.id || 0) - (a.id || 0);
+      }
+
+      if (sortBy === 'low-stock') {
+        return (a.stock || 0) - (b.stock || 0);
+      }
+
+      if (sortBy === 'price-high') {
+        return Number(b.rawData?.size_variants?.[0]?.offer_price || 0) - Number(a.rawData?.size_variants?.[0]?.offer_price || 0);
+      }
+
+      if (sortBy === 'price-low') {
+        return Number(a.rawData?.size_variants?.[0]?.offer_price || 0) - Number(b.rawData?.size_variants?.[0]?.offer_price || 0);
+      }
+
+      return 0;
+    });
+
+  const activeProducts = productsList.filter((p) => (p.status || 'Active') === 'Active').length;
+  const totalUnitsInStock = productsList.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
+  const totalProductAmount = productsList.reduce((sum, p) => {
+    const variants = Array.isArray(p.rawData?.size_variants) ? p.rawData.size_variants : [];
+    const value = variants.reduce((variantSum, variant) => {
+      const offerPrice = Number(variant.offer_price || 0);
+      const stock = Number(variant.stock || 0);
+      return variantSum + (offerPrice * stock);
+    }, 0);
+
+    return sum + value;
+  }, 0);
 
   const statCards = [
     {
-      title: 'Total Products',
-      value: String(productsList.length),
-      trend: productsList.length > 0 ? '+ 100%' : '0%',
-      trendText: 'in catalog',
-      accent: 'bg-[#d9ead9]',
-      iconColor: 'text-[#2a5e3d]',
-      icon: <PackageCheck className="h-7 w-7" />,
+      title: 'No of Products',
+      value: String(productsList.length || 0),
+      inc: productsList.length > 0 ? '18.6%' : '0%',
+      icon: <PackageCheck className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#22c55e]',
+      waveColor: '#22c55e',
     },
     {
       title: 'Active Products',
-      value: String(productsList.filter((p) => p.status === 'Active').length),
-      trend: productsList.length > 0 ? '100%' : '0%',
-      trendText: 'of total',
-      accent: 'bg-[#f1e7f7]',
-      iconColor: 'text-[#7d5a93]',
-      icon: <ShoppingBag className="h-7 w-7" />,
+      value: String(activeProducts),
+      inc: productsList.length > 0 ? '12.4%' : '0%',
+      icon: <ShoppingBag className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#f59e0b]',
+      waveColor: '#f59e0b',
     },
     {
-      title: 'Total Views',
-      value: String(productsList.reduce((acc, p) => acc + (p.views || 0), 0)),
-      trend: '0%',
-      trendText: 'this month',
-      accent: 'bg-[#e8eefb]',
-      iconColor: 'text-[#7a5fc4]',
-      icon: <Eye className="h-7 w-7" />,
+      title: 'Total Orders',
+      value: String(Math.max(totalUnitsInStock, productsList.length || 0)),
+      inc: productsList.length > 0 ? '15.3%' : '0%',
+      icon: <Users className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#06b6d4]',
+      waveColor: '#06b6d4',
     },
     {
-      title: 'Low Stock',
-      value: String(productsList.filter((p) => p.stock <= 18 && p.stock > 0).length),
-      trend: 'Low stock items',
-      trendText: '',
-      accent: 'bg-[#dfeff8]',
-      iconColor: 'text-[#4f88b2]',
-      icon: <Star className="h-7 w-7" />,
+      title: 'Total Amount',
+      value: `₹${totalProductAmount.toLocaleString('en-IN')}`,
+      inc: productsList.length > 0 ? '10.7%' : '0%',
+      icon: <IndianRupee className="h-7 w-7 text-white" />,
+      iconBg: 'bg-[#a855f7]',
+      waveColor: '#a855f7',
     },
   ];
 
@@ -154,28 +214,6 @@ const AdminProducts = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-
-            {/* VIEW FRAMES BUTTON */}
-            <Link
-              to="/admin/frames"
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
-            >
-              <Eye className="h-4 w-4 text-[#d4a843]" />
-              View Frames
-            </Link>
-
-            {/* ADD FRAME SETUP BUTTON */}
-            <Link
-              to="/admin/products/frame-setup"
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#9b6b2d] shadow-sm transition hover:bg-[#fff5e0]"
-            >
-              <Layers className="h-4 w-4 text-[#d4a843]" />
-              Add Frame Setup
-            </Link>
 
             {/* ADD NEW PRODUCT BUTTON */}
             <Link
@@ -189,27 +227,42 @@ const AdminProducts = () => {
         </div>
 
         {/* ================= STAT CARDS ================= */}
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {statCards.map((card, index) => (
-            <div key={index} className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.accent} ${card.iconColor}`}>
-                  {card.icon}
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((stat, index) => (
+            <div
+              key={index}
+              className="relative flex h-full min-h-[170px] flex-col overflow-hidden rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-1 items-start gap-4">
+                <div
+                  className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${stat.iconBg}`}
+                >
+                  {stat.icon}
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {card.trend}
+
+                <div className="flex flex-col">
+                  <p className="mb-1 text-xs font-medium text-gray-600">{stat.title}</p>
+                  <h3 className="mb-3 text-2xl font-bold text-gray-900">{stat.value}</h3>
+                  <div className="flex flex-col">
+                    <div className="mb-1 flex items-center text-xs font-medium text-emerald-600">
+                      <TrendingUp size={12} className="mr-1" />
+                      <span>{stat.inc}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">from last month</p>
                   </div>
-                  {card.trendText && (
-                    <div className="text-[10px] text-[#7c7c7c]">{card.trendText}</div>
-                  )}
                 </div>
               </div>
 
-              <div className="mt-4">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">{card.value}</div>
+              <div className="pointer-events-none absolute bottom-0 left-0 h-8 w-full overflow-hidden">
+                <svg
+                  viewBox="0 0 100 20"
+                  preserveAspectRatio="none"
+                  className="h-full w-full opacity-40"
+                  style={{ color: stat.waveColor }}
+                  fill="currentColor"
+                >
+                  <path d="M0,10 C30,25 70,0 100,10 L100,20 L0,20 Z" />
+                </svg>
               </div>
             </div>
           ))}
@@ -217,8 +270,8 @@ const AdminProducts = () => {
 
         {/* ================= TABLE CARD ================= */}
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-wrap items-center gap-3">
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
@@ -230,39 +283,64 @@ const AdminProducts = () => {
                 />
               </div>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Categories
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="All Categories">All Categories</option>
+                {categoriesList.map((cat) => (
+                  <option key={cat.category_id || cat.id} value={cat.category_name}>
+                    {cat.category_name}
+                  </option>
+                ))}
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                All Status
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="All Status">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                <Filter className="h-4 w-4 text-[#c69218]" />
-                Filter
-              </button>
+              
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+            <div className="flex items-center gap-3 lg:shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
+              >
+                <option value="latest">Sort by: Latest</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="price-low">Price: Low to High</option>
+              </select>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
-                <button className="flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] text-[#4d4d4d]">
-                  <ArrowDownUp className="h-4 w-4" />
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] ${viewMode === 'table' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}
+                  aria-label="Table view"
+                  title="Table view"
+                >
+                  <Table2 className="h-4 w-4" />
                 </button>
-                <button className="flex h-[46px] w-[46px] items-center justify-center text-[#4d4d4d]">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                    <rect x="14" y="3" width="7" height="4" rx="1.5" />
-                    <rect x="14" y="11" width="7" height="10" rx="1.5" />
-                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  </svg>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  className={`flex h-[46px] w-[46px] items-center justify-center ${viewMode === 'card' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}
+                  aria-label="Card view"
+                  title="Card view"
+                >
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -291,16 +369,48 @@ const AdminProducts = () => {
             </div>
           ) : (
             <>
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {filteredProducts.map((product, index) => (
+                    <div key={product.id || index} className="rounded-xl border border-[#e7e0d8] bg-[#fdfdfc] p-4 shadow-sm">
+                      <div className="mb-4 flex h-40 items-center justify-center overflow-hidden rounded-lg bg-[#f5f1ec]">
+                        {product.image && (product.image.startsWith('http') || product.image.startsWith('/')) ? (
+                          <img src={product.image} alt={product.name} className="h-full w-full object-contain" />
+                        ) : (
+                          <div className="h-20 w-20 rounded-lg border border-[#d9c5a7]" style={{ background: product.image || '#eee' }} />
+                        )}
+                      </div>
+                      <h3 className="truncate text-base font-semibold text-[#1f1f1f]">{product.name}</h3>
+                      <p className="mt-1 font-mono text-xs text-[#7a7a7a]">{product.code}</p>
+                      <div className="mt-3 flex items-center justify-between text-sm">
+                        <span className="font-bold text-[#1e1e1e]">{product.price}</span>
+                        <span className="text-[#666]">Stock: {product.stock}</span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf7f1] px-2.5 py-1 text-xs font-semibold text-[#2d7b5a]">
+                          <span className="h-2 w-2 rounded-full bg-[#2d7b5a]" />
+                          {product.status}
+                        </span>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => navigate(`/admin/products/edit/${product.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white" aria-label="Edit product" title="Edit product"><Pencil className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => handleDeleteProduct(product.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d]" aria-label="Delete product" title="Delete product"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-0">
                   <thead>
                     <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                      <th className="px-4 py-4">S.No</th>
                       <th className="px-4 py-4">Product</th>
                       <th className="px-4 py-4">Category</th>
                       <th className="px-4 py-4">Price</th>
                       <th className="px-4 py-4">Stock</th>
                       <th className="px-4 py-4">Status</th>
-                      <th className="px-4 py-4">Views</th>
+                      {/* <th className="px-4 py-4">Views</th> */}
                       <th className="px-4 py-4">Actions</th>
                     </tr>
                   </thead>
@@ -312,6 +422,7 @@ const AdminProducts = () => {
 
                       return (
                         <tr key={product.id || index} className="border-t border-[#f0ebe6] align-middle">
+                          <td className="px-4 py-4">{index + 1}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
@@ -360,7 +471,7 @@ const AdminProducts = () => {
                             </span>
                           </td>
 
-                          <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td>
+                          {/* <td className="px-4 py-4 text-sm font-medium text-[#313131]">{product.views}</td> */}
 
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
@@ -398,6 +509,7 @@ const AdminProducts = () => {
                   </tbody>
                 </table>
               </div>
+              )}
 
               <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
                 <span>Showing {filteredProducts.length} of {productsList.length} products</span>
