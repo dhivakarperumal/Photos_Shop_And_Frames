@@ -39,7 +39,7 @@ const AdminProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [sortBy, setSortBy] = useState('latest');
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState('card');
   const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
@@ -392,7 +392,7 @@ const AdminProducts = () => {
                           {product.status}
                         </span>
                         <div className="flex gap-2">
-                          <button type="button" onClick={() => navigate(`/admin/products/edit/${product.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white" aria-label="Edit product" title="Edit product"><Pencil className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => navigate(`/admin/products/edit/${product.id}`)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white" aria-label="Edit product photos" title="Edit product photos"><Upload className="h-4 w-4" /></button>
                           <button type="button" onClick={() => handleDeleteProduct(product.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d]" aria-label="Delete product" title="Delete product"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </div>
