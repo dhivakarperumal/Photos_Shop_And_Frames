@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../api";
 
 const emptyOrder = { id: "", customer: "-", phone: "-", items: 0, date: "-", time: "-", amount: 0, status: "Pending", orderItems: [] };
+const ALL_ORDERS = "All Orders";
 const products = [];
 
 const formatCurrency = (value) => `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -22,7 +23,7 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(emptyOrder);
-  const [activeStatus, setActiveStatus] = useState("All Orders");
+  const [activeStatus, setActiveStatus] = useState(ALL_ORDERS);
   const [viewMode, setViewMode] = useState("table");
   const [receivedAmount, setReceivedAmount] = useState("1300");
 
@@ -58,7 +59,7 @@ const Billing = () => {
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const query = search.toLowerCase();
     const matchesSearch = !query || `${order.id} ${order.customer} ${order.phone}`.toLowerCase().includes(query);
-    const matchesStatus = activeStatus === "All Orders" || order.status === activeStatus;
+    const matchesStatus = activeStatus === ALL_ORDERS || order.status === activeStatus;
     return matchesSearch && matchesStatus;
   }), [search, activeStatus]);
 
