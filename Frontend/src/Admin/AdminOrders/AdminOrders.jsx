@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
   CheckCircle,
@@ -83,6 +83,7 @@ const getStatusOptions = (currentStatus) => {
 };
 
 const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false, readOnlyStatus = false }) => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -159,6 +160,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   };
 
   const handleViewOrder = async (orderId) => {
+    if (todayOnly) {
+      navigate(`/admin/orders/new/${orderId}`);
+      return;
+    }
+
     try {
       setLoadingDetails(true);
       const res = await api.get(`/orders/${orderId}`);
