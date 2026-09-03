@@ -127,7 +127,7 @@ async function ensureDatabaseSchema() {
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         order_id VARCHAR(255) NOT NULL UNIQUE,
         customer_id VARCHAR(255), billing_type VARCHAR(100) NOT NULL,
-        order_date DATE NOT NULL, total_items INT DEFAULT 0,
+        order_date DATE NOT NULL, order_time VARCHAR(20) DEFAULT '00:00', total_items INT DEFAULT 0,
         subtotal DECIMAL(12,2) DEFAULT 0, discount_amount DECIMAL(12,2) DEFAULT 0,
         tax_amount DECIMAL(12,2) DEFAULT 0, total_amount DECIMAL(12,2) DEFAULT 0,
         payment_method VARCHAR(50), payment_status VARCHAR(50), order_status VARCHAR(50), notes TEXT,
@@ -140,7 +140,7 @@ async function ensureDatabaseSchema() {
       CREATE TABLE IF NOT EXISTS order_items (
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, item_id VARCHAR(255) NOT NULL UNIQUE,
         order_id VARCHAR(255) NOT NULL, product_id VARCHAR(255), product_name VARCHAR(255) NOT NULL,
-        product_code VARCHAR(255), quantity INT DEFAULT 1, unit_price DECIMAL(12,2) DEFAULT 0,
+        product_code VARCHAR(255), product_image VARCHAR(500) DEFAULT '', quantity INT DEFAULT 1, unit_price DECIMAL(12,2) DEFAULT 0,
         discount DECIMAL(12,2) DEFAULT 0, tax DECIMAL(5,2) DEFAULT 0, total_price DECIMAL(12,2) DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_order_items_order (order_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

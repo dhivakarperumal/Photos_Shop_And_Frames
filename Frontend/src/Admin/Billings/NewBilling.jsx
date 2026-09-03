@@ -103,6 +103,14 @@ const NewBilling = () => {
   const [users, setUsers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerForm, setCustomerForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+  });
+  const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10));
+  const [orderTime, setOrderTime] = useState(new Date().toTimeString().slice(0, 5));
   const [receivedAmount, setReceivedAmount] = useState("2000");
   const [discount, setDiscount] = useState("0");
   const [shippingCharge, setShippingCharge] = useState("0");
@@ -222,9 +230,37 @@ const NewBilling = () => {
     .slice(0, 8);
 
   const selectCustomer = (user) => {
+    const nextCustomer = {
+      name: user.username || user.name || user.full_name || "",
+      email: user.email || "",
+      phone: user.mobile_number || user.phone || user.mobile || "",
+      address: user.address || user.full_address || user.billing_address || "",
+    };
+
     setSelectedCustomer(user);
     setCustomerSearch(user.username || user.name || user.email || "");
+    setCustomerForm(nextCustomer);
   };
+
+  useEffect(() => {
+    if (!selectedCustomer) {
+      setCustomerForm((current) => ({
+        ...current,
+        name: current.name || "",
+        email: current.email || "",
+        phone: current.phone || "",
+        address: current.address || "",
+      }));
+      return;
+    }
+
+    setCustomerForm({
+      name: selectedCustomer.username || selectedCustomer.name || selectedCustomer.full_name || "",
+      email: selectedCustomer.email || "",
+      phone: selectedCustomer.mobile_number || selectedCustomer.phone || selectedCustomer.mobile || "",
+      address: selectedCustomer.address || selectedCustomer.full_address || selectedCustomer.billing_address || "",
+    });
+  }, [selectedCustomer]);
 
   const addSelectedProduct = () => {
     const product = productOptions.find(
@@ -264,15 +300,22 @@ const NewBilling = () => {
     setShowProductModal(false);
   };
 
+  const isCustomerFormValid =
+    customerForm.name.trim() && customerForm.phone.trim() && items.length > 0;
+
   const handleGenerateBill = async () => {
-    if (!selectedCustomer || !items.length) return;
+    if (!isCustomerFormValid) return;
     try {
       const createdBy = user?.user_id || user?.id || user?.email || "system";
+      const customerId =
+        selectedCustomer?.user_id || selectedCustomer?.id || `guest-${Date.now()}`;
+
       await api.post("/orders", {
         order: {
-          customer_id: selectedCustomer.user_id || selectedCustomer.id,
+          customer_id: customerId,
           billing_type: "Shop Billing",
-          order_date: new Date().toISOString().slice(0, 10),
+          order_date: orderDate || new Date().toISOString().slice(0, 10),
+          order_time: orderTime || new Date().toTimeString().slice(0, 5),
           total_items: items.reduce((sum, item) => sum + item.quantity, 0),
           subtotal,
           discount_amount: itemDiscountTotal + Number(discount || 0),
@@ -289,6 +332,7 @@ const NewBilling = () => {
           product_id: item.product_id || item.id,
           product_name: item.name,
           product_code: item.productCode,
+          product_image: item.image || "",
           quantity: item.quantity,
           unit_price: item.price,
           discount: item.discount || 0,
@@ -297,10 +341,10 @@ const NewBilling = () => {
         })),
         address: {
           user_id: createdBy,
-          customer_id: selectedCustomer.user_id || selectedCustomer.id,
-          customer_name: selectedCustomer.username || selectedCustomer.name || selectedCustomer.full_name,
-          mobile_number: selectedCustomer.mobile_number || selectedCustomer.phone || selectedCustomer.mobile,
-          address: selectedCustomer.address || selectedCustomer.full_address || selectedCustomer.billing_address,
+          customer_id: customerId,
+          customer_name: customerForm.name || selectedCustomer?.username || selectedCustomer?.name || selectedCustomer?.full_name || "",
+          mobile_number: customerForm.phone || selectedCustomer?.mobile_number || selectedCustomer?.phone || selectedCustomer?.mobile || "",
+          address: customerForm.address || selectedCustomer?.address || selectedCustomer?.full_address || selectedCustomer?.billing_address || "",
         },
       });
       navigate("/admin/billing");
@@ -331,7 +375,8 @@ const NewBilling = () => {
                 Order Date *
                 <input
                   type="date"
-                  defaultValue="2025-05-06"
+                  value={orderDate}
+                  onChange={(event) => setOrderDate(event.target.value)}
                   className={fieldClass}
                 />
               </label>
@@ -339,7 +384,8 @@ const NewBilling = () => {
                 Order Time *
                 <input
                   type="time"
-                  defaultValue="11:30"
+                  value={orderTime}
+                  onChange={(event) => setOrderTime(event.target.value)}
                   className={fieldClass}
                 />
               </label>
@@ -360,8 +406,8 @@ const NewBilling = () => {
               <label className="text-[10px] font-semibold">
                 Name *
                 <input
-                  value={selectedCustomer?.username || selectedCustomer?.name || selectedCustomer?.full_name || ""}
-                  readOnly
+                  value={customerForm.name}
+                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, name: event.target.value }))}
                   placeholder="Enter customer name"
                   className={fieldClass}
                 />
@@ -370,8 +416,8 @@ const NewBilling = () => {
                 Email
                 <input
                   type="email"
-                  value={selectedCustomer?.email || ""}
-                  readOnly
+                  value={customerForm.email}
+                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, email: event.target.value }))}
                   placeholder="Enter email address"
                   className={fieldClass}
                 />
@@ -379,8 +425,8 @@ const NewBilling = () => {
               <label className="text-[10px] font-semibold">
                 Phone *
                 <input
-                  value={selectedCustomer?.mobile_number || selectedCustomer?.phone || selectedCustomer?.mobile || ""}
-                  readOnly
+                  value={customerForm.phone}
+                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, phone: event.target.value }))}
                   placeholder="Enter phone number"
                   className={fieldClass}
                 />
@@ -388,8 +434,8 @@ const NewBilling = () => {
               <label className="text-[10px] font-semibold">
                 Address
                 <textarea
-                  value={selectedCustomer?.address || selectedCustomer?.full_address || selectedCustomer?.billing_address || ""}
-                  readOnly
+                  value={customerForm.address}
+                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, address: event.target.value }))}
                   placeholder="Enter complete address"
                   className="mt-1 h-14 w-full resize-none rounded-md border border-[#e5e7eb] px-3 py-2 text-xs outline-none focus:border-[#ff8a4c]"
                 />
@@ -514,7 +560,7 @@ const NewBilling = () => {
             <button
               type="button"
               onClick={handleGenerateBill}
-              disabled={!selectedCustomer || !items.length}
+              disabled={!isCustomerFormValid}
               className="inline-flex items-center gap-2 rounded-md bg-[#f56618] px-5 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer className="h-4 w-4" /> Generate Bill

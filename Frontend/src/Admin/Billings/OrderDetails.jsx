@@ -10,10 +10,45 @@ import {
   User,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 
 const formatCurrency = (value) =>
   `₹ ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+
+const normalizeImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
+  ) {
+    return trimmed;
+  }
+
+  const baseUrl = API_URL.replace(/\/api\/?$/, "");
+  return `${baseUrl}${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
+};
+
+const getOrderItemImage = (value) => {
+  if (Array.isArray(value)) return getOrderItemImage(value[0]);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parsed === value ? normalizeImageUrl(value) : getOrderItemImage(parsed);
+    } catch {
+      return normalizeImageUrl(trimmed);
+    }
+  }
+  if (value && typeof value === "object") {
+    return getOrderItemImage(value.url || value.image || value.src || value.path || "");
+  }
+  return "";
+};
 
 const statusClass = {
   Confirmed: "bg-[#e6f7ed] text-[#18794e]",
@@ -211,8 +246,23 @@ const OrderDetails = () => {
                     {(order.orderItems || []).map((item) => (
                       <tr key={item.item_id || item.id || `${order.id}-${item.product_name}`} className="border-b border-[#f3f4f6]">
                         <td className="px-2 py-3">
-                          <div className="font-medium text-[#111827]">{item.product_name}</div>
-                          <div className="text-xs text-[#6b7280]">{item.product_code || "-"}</div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
+                              {getOrderItemImage(item.product_image) ? (
+                                <img
+                                  src={getOrderItemImage(item.product_image)}
+                                  alt={item.product_name || "Ordered product"}
+                                  className="h-full w-full object-contain"
+                                />
+                              ) : (
+                                <Package className="h-5 w-5 text-[#9ca3af]" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium text-[#111827]">{item.product_name}</div>
+                              <div className="text-xs text-[#6b7280]">{item.product_code || "-"}</div>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-2 py-3 text-[#374151]">{item.quantity}</td>
                         <td className="px-2 py-3 text-[#374151]">{formatCurrency(item.unit_price)}</td>

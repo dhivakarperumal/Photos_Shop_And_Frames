@@ -15,14 +15,14 @@ const createOrder = async (orderData, items, address) => {
     const orderId = `ORD-${datePart}-${String(lastSequence + 1).padStart(3, "0")}`;
 
     await connection.query(
-      `INSERT INTO orders (order_id, customer_id, billing_type, order_date, total_items, subtotal, discount_amount, tax_amount, total_amount, payment_method, payment_status, order_status, notes, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [orderId, orderData.customer_id, orderData.billing_type, orderData.order_date, orderData.total_items, orderData.subtotal, orderData.discount_amount, orderData.tax_amount, orderData.total_amount, orderData.payment_method, orderData.payment_status, orderData.order_status, orderData.notes || "", orderData.created_by, orderData.updated_by]
+      `INSERT INTO orders (order_id, customer_id, billing_type, order_date, order_time, total_items, subtotal, discount_amount, tax_amount, total_amount, payment_method, payment_status, order_status, notes, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [orderId, orderData.customer_id, orderData.billing_type, orderData.order_date, orderData.order_time || "00:00", orderData.total_items, orderData.subtotal, orderData.discount_amount, orderData.tax_amount, orderData.total_amount, orderData.payment_method, orderData.payment_status, orderData.order_status, orderData.notes || "", orderData.created_by, orderData.updated_by]
     );
 
     if (items.length) {
       await connection.query(
-        `INSERT INTO order_items (item_id, order_id, product_id, product_name, product_code, quantity, unit_price, discount, tax, total_price) VALUES ?`,
-        [items.map((item, index) => [`${orderId}-ITEM${String(index + 1).padStart(3, "0")}`, orderId, item.product_id, item.product_name, item.product_code || null, item.quantity, item.unit_price, item.discount || 0, item.tax || 0, item.total_price])]
+        `INSERT INTO order_items (item_id, order_id, product_id, product_name, product_code, product_image, quantity, unit_price, discount, tax, total_price) VALUES ?`,
+        [items.map((item, index) => [`${orderId}-ITEM${String(index + 1).padStart(3, "0")}`, orderId, item.product_id, item.product_name, item.product_code || null, item.product_image || "", item.quantity, item.unit_price, item.discount || 0, item.tax || 0, item.total_price])]
       );
     }
 
