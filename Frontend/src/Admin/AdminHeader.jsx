@@ -56,14 +56,14 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
   if (type === "lowStock") viewAllLink = "/admin/products/stock-details";
 
   return (
-    <div className="absolute right-0 top-full mt-3 w-80 bg-[#13141a] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+    <div className="absolute right-0 top-full mt-3 w-80 rounded-2xl border border-gray-200 bg-white shadow-2xl z-50 overflow-hidden flex flex-col">
       {/* header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
-        <span className="text-sm font-bold text-white flex items-center gap-2">{icon} {title}</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+        <span className="text-sm font-bold text-gray-900 flex items-center gap-2">{icon} {title}</span>
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${accent}`}>{items.length} Active</span>
       </div>
       {/* list */}
-      <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
+      <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
         {items.length ? items.map((item, i) => {
           let link = "/admin", label = "", sub = "";
           if (type === "tasks")    { 
@@ -76,19 +76,19 @@ const AlertDropdown = ({ title, items, icon, type, onClose, accent }) => {
           if (type === "orders")   { link = `/admin/billing/${item.id}`; label = item.id; sub = `${item.customer} · ${item.status}`; }
           if (type === "lowStock") { link = "/admin/products/stock-details"; label = item.name; sub = `${item.stock} units remaining`; }
           return (
-            <Link key={i} to={link} onClick={onClose} className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition group">
-              <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">{icon}</div>
+            <Link key={i} to={link} onClick={onClose} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition group">
+              <div className="w-8 h-8 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">{icon}</div>
               <div>
-                <p className="text-xs font-semibold text-white group-hover:text-primary transition">{label}</p>
-                <p className="text-[10px] text-white/40 mt-0.5">{sub}</p>
+                <p className="text-xs font-semibold text-gray-900 group-hover:text-primary transition">{label}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>
               </div>
             </Link>
           );
         }) : (
-          <div className="py-8 text-center text-white/30 text-xs">No active items</div>
+          <div className="py-8 text-center text-gray-400 text-xs">No active items</div>
         )}
       </div>
-      <Link to={viewAllLink} onClick={onClose} className="block text-center py-2.5 border-t border-white/10 text-[11px] font-bold text-primary hover:bg-primary/10 transition uppercase tracking-widest">
+      <Link to={viewAllLink} onClick={onClose} className="block text-center py-2.5 border-t border-gray-100 text-[11px] font-bold text-primary hover:bg-primary/10 transition uppercase tracking-widest">
         View All
       </Link>
     </div>
