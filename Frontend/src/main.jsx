@@ -19,11 +19,15 @@ import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
 import AdminAlbums from './Admin/AdminAlbums.jsx'
 import AddAlbum from './Admin/AddAlbum.jsx'
+import AlbumDetails from './Admin/AlbumDetails.jsx'
 import BannerManagement from './Admin/Marketting/BannerManagement.jsx'
 import VideoManagement from './Admin/Marketting/VideoManagement.jsx'
 import GalleryManagement from './Admin/Marketting/GalleryManagement.jsx'
 import AddGalleryAlbum from './Admin/Marketting/AddGalleryAlbum.jsx'
+import GalleryDetails from './Admin/Marketting/GalleryDetails.jsx'
+import Coupons from './Admin/Marketting/Coupons.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
+import CustomerDetails from './Admin/CustomerDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
 
@@ -119,6 +123,10 @@ const router = createHashRouter([
             element: <AdminAlbums />,
           },
           {
+            path: 'albums/:albumId',
+            element: <AlbumDetails />,
+          },
+          {
             path: 'albums/add',
             element: <AddAlbum />,
           },
@@ -135,12 +143,24 @@ const router = createHashRouter([
             element: <GalleryManagement />,
           },
           {
+            path: 'gallery/:albumId',
+            element: <GalleryDetails />,
+          },
+          {
             path: 'gallery/add',
             element: <AddGalleryAlbum />,
           },
           {
+            path: 'coupons',
+            element: <Coupons />,
+          },
+          {
             path: 'customers',
             element: <AdminCustomers />,
+          },
+          {
+            path: 'customers/:userId',
+            element: <CustomerDetails />,
           },
           {
             path: 'reviews',

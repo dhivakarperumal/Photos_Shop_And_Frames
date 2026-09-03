@@ -48,6 +48,7 @@ const getInitialCategoryId = () => 'CAT001';
 
 const AddCategory = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const fileInputRef = useRef(null);
   const { profileName } = useAuth();
   const { categoryId } = useParams();
@@ -77,6 +78,36 @@ const AddCategory = () => {
       }));
     } catch (error) {
       console.warn('Unable to fetch next category ID.', error);
+    }
+  };
+
+  const fetchCategoryForEdit = async (categoryId) => {
+    try {
+      const response = await api.get(`/categories/${categoryId}`);
+      const category = response?.data?.data || response?.data || null;
+      if (!category) return;
+
+      const imageUrl = category.category_image ? normalizeImageUrl(category.category_image) : '';
+      setFormData({
+        categoryId: category.category_id || categoryId,
+        categoryType: category.category_type || 'Frame',
+        categoryName: category.category_name || '',
+        subCategories: Array.isArray(category.sub_categories) ? category.sub_categories : [],
+        description: category.description || '',
+        sortOrder: Number(category.sort_order || 1),
+        status: String(category.status || 'Active') !== 'Inactive',
+        createdBy: category.created_by || profileName || 'Admin',
+        updatedBy: category.updated_by || profileName || 'Super Admin',
+        createdDate: category.created_date ? formatDate(new Date(category.created_date)) : formatDate(new Date()),
+        updatedDate: category.updated_date ? formatDate(new Date(category.updated_date)) : formatDate(new Date()),
+      });
+      setUploadedImageUrl(imageUrl);
+      setPreviewUrl(imageUrl);
+      setEditingCategoryId(categoryId);
+      setIsEditMode(true);
+    } catch (error) {
+      console.error('Failed to load category for edit:', error);
+      alert(error?.response?.data?.message || 'Unable to load category details for editing.');
     }
   };
 
@@ -602,17 +633,19 @@ const AddCategory = () => {
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(26,60,54,0.16)] transition hover:bg-[#214a42]"
             >
               <Save className="h-4 w-4" />
-              Save Category
+              {isEditMode ? 'Update Category' : 'Save Category'}
             </button>
 
-            <button
-              type="button"
-              onClick={(event) => onSubmit(event, 'add-another')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b87840] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(184,120,64,0.18)] transition hover:bg-[#a96b36]"
-            >
-              <Check className="h-4 w-4" />
-              Save & Add Another
-            </button>
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={(event) => onSubmit(event, 'add-another')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b87840] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_10px_22px_rgba(184,120,64,0.18)] transition hover:bg-[#a96b36]"
+              >
+                <Check className="h-4 w-4" />
+                Save & Add Another
+              </button>
+            )}
           </div>
         </form>
       </div>

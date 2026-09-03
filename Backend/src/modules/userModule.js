@@ -73,6 +73,13 @@ const getUserById = async (user_id) => {
   }
 };
 
+const getUserByDatabaseId = async (id) => {
+  const query = "SELECT id, user_id, username, mobile_number, email, profile_image, role, status, created_at, updated_at FROM users WHERE id = ?";
+  const pool = getDB();
+  const [rows] = await pool.query(query, [id]);
+  return rows.length > 0 ? rows[0] : null;
+};
+
 const getUserByIdentifier = async (identifier) => {
   const query = "SELECT * FROM users WHERE email = ? OR username = ? LIMIT 1";
   try {
@@ -86,7 +93,7 @@ const getUserByIdentifier = async (identifier) => {
 
 // Get all users
 const getAllUsers = async () => {
-  const query = "SELECT id, user_id, username, email, role, status, created_at FROM users";
+  const query = "SELECT id, user_id, username, mobile_number, email, role, status, created_at FROM users";
   try {
     const pool = getDB();
     const [rows] = await pool.query(query);
@@ -172,6 +179,7 @@ module.exports = {
   getUserByEmail,
   getUserByIdentifier,
   getUserById,
+  getUserByDatabaseId,
   getAllUsers,
   updateUser,
   deleteUser,

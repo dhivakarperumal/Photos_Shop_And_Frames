@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   ChevronLeft,
   CloudUpload,
@@ -15,18 +15,22 @@ import {
   Upload,
   Loader2
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api, { API_URL } from "../../api";
 
 const AddGalleryAlbum = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editAlbumId = new URLSearchParams(location.search).get("edit");
+  const isEditing = Boolean(editAlbumId);
   const [loading, setLoading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
+    gallery_id: "GAL001",
     title: "",
     category: "",
     status: "Active",
@@ -44,6 +48,29 @@ const AddGalleryAlbum = () => {
   const photosInputRef = useRef(null);
 
   useEffect(() => {
+    const fetchAlbumForEdit = async () => {
+      try {
+        const response = await api.get(`/gallery/${editAlbumId}`);
+        const album = response?.data?.data || {};
+        setFormData({
+          gallery_id: album.album_id || editAlbumId,
+          title: album.title || "",
+          category: album.category || "",
+          status: album.status || "Active",
+          sort_order: String(album.sort_order || 1),
+          short_description: album.short_description || "",
+          description: album.description || "",
+          meta_title: album.meta_title || "",
+          meta_description: album.meta_description || "",
+        });
+        setCoverImage(album.cover_image || null);
+        setPhotos(Array.isArray(album.photos) ? album.photos : []);
+      } catch (error) {
+        console.error("Failed to load gallery album for edit:", error);
+        toast.error(error?.response?.data?.message || "Failed to load gallery album");
+      }
+    };
+
     const fetchCategories = async () => {
       try {
         const response = await api.get('/categories');
@@ -61,8 +88,20 @@ const AddGalleryAlbum = () => {
       }
     };
 
+    const fetchNextGalleryId = async () => {
+      try {
+        const response = await api.get("/gallery/next-id");
+        const nextId = response?.data?.data || "GAL001";
+        setFormData((previous) => ({ ...previous, gallery_id: nextId }));
+      } catch (error) {
+        console.error("Failed to get next gallery ID:", error);
+      }
+    };
+
+    if (isEditing) fetchAlbumForEdit();
+    if (!isEditing) fetchNextGalleryId();
     fetchCategories();
-  }, []);
+  }, [editAlbumId, isEditing]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -148,8 +187,13 @@ const AddGalleryAlbum = () => {
 
     try {
       setLoading(true);
-      await api.post("/gallery", { ...formData, cover_image: coverImage, photos });
-      toast.success("Album saved successfully");
+      const payload = { ...formData, cover_image: coverImage, photos };
+      if (isEditing) {
+        await api.put(`/gallery/${editAlbumId}`, payload);
+      } else {
+        await api.post("/gallery", payload);
+      }
+      toast.success(isEditing ? "Album updated successfully" : "Album saved successfully");
       navigate("/admin/gallery");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to save album");
@@ -165,12 +209,12 @@ const AddGalleryAlbum = () => {
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-[2rem] font-bold tracking-tight text-[#1f1d1b]">
-              Add New Gallery Album
+              {isEditing ? "Edit Gallery Album" : "Add New Gallery Album"}
             </h1>
             <p className="mt-1 text-[13px] text-[#646464]">
               Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span>
               Gallery Management <span className="mx-2 text-[#9a9a9a]">&gt;</span>
-              <span className="font-medium text-[#2a2a2a]">Add New Gallery Album</span>
+              <span className="font-medium text-[#2a2a2a]">{isEditing ? "Edit Gallery Album" : "Add New Gallery Album"}</span>
             </p>
           </div>
           <Link
@@ -192,6 +236,19 @@ const AddGalleryAlbum = () => {
             <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
               <div className="space-y-5">
                 {/* Album Title */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Gallery ID
+                  </label>
+                  <input
+                    type="text"
+                    name="gallery_id"
+                    value={formData.gallery_id}
+                    readOnly
+                    className="w-full rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-4 py-2.5 text-[14px] font-semibold text-[#4b5563] outline-none"
+                  />
+                </div>
+
                 <div>
                   <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
                     Album Title <span className="text-red-500">*</span>
@@ -444,38 +501,7 @@ const AddGalleryAlbum = () => {
               )}
             </div>
 
-            {/* SEO Settings */}
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
-              <h3 className="text-[16px] font-bold text-[#1f1d1b] mb-4">SEO Settings (Optional)</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Title</label>
-                  <input
-                    type="text"
-                    name="meta_title"
-                    value={formData.meta_title}
-                    onChange={handleChange}
-                    placeholder="Enter meta title (max 60 characters)"
-                    maxLength={60}
-                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
-                  />
-                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_title.length}/60</div>
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-semibold text-[#1f1d1b]">Meta Description</label>
-                  <textarea
-                    name="meta_description"
-                    value={formData.meta_description}
-                    onChange={handleChange}
-                    placeholder="Enter meta description (max 160 characters)"
-                    rows="3"
-                    maxLength={160}
-                    className="w-full rounded-xl border border-[#d1d5db] bg-white px-4 py-2 text-[13px] text-[#111827] outline-none focus:border-[#d4a843]"
-                  />
-                  <div className="mt-1 text-right text-[11px] text-[#6b7280]">{formData.meta_description.length}/160</div>
-                </div>
-              </div>
-            </div>
+
 
             {/* Preview Card */}
             <div className="rounded-2xl border border-[#e5e7eb] bg-[#f9fafb] p-5">
@@ -527,7 +553,7 @@ const AddGalleryAlbum = () => {
           ) : (
             <CloudUpload className="h-4 w-4" />
           )}
-          Save Album
+          {isEditing ? "Update Album" : "Save Album"}
         </button>
       </div>
     </div>

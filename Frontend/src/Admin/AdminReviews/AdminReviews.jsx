@@ -14,6 +14,8 @@ import {
   IdCard,
   Image as ImageIcon,
   ImagePlus,
+  LayoutGrid,
+  List,
   MessageSquare,
   Package,
   Pencil,
@@ -81,6 +83,7 @@ const AdminReviews = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRating, setFilterRating] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [viewMode, setViewMode] = useState("table");
 
   // Modal State (Add / Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -466,26 +469,7 @@ const AdminReviews = () => {
   return (
     <div className="min-h-screen bg-[#f3f4f6] p-3 md:p-6 text-gray-800 font-sans">
       <div className="mx-auto max-w-[1540px]">
-        {/* ================= HEADER ================= */}
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Product Reviews & Ratings</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Select products to manage customer testimonials, star ratings, and review photos.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => handleOpenCreateModal()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
-            >
-              <Plus className="h-4 w-4" />
-              Add Review
-            </button>
-          </div>
-        </div>
+     
 
         {/* ================= TOP STATS CARDS (DASHBOARD DESIGN WITH BOTTOM WAVES) ================= */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
@@ -529,96 +513,13 @@ const AdminReviews = () => {
           ))}
         </div>
 
-        {/* ================= STEP 1: SELECT PRODUCT FIRST CAROUSEL / STRIP ================= */}
-        <div className="mb-6 rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm">
-          <div className="mb-3 flex items-center justify-between border-b border-[#f0ebe3] pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e8f3ef] text-[#1a3c36]">
-                <Package className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-[#1f1f1f]">
-                  Step 1: Select a Product to Filter Reviews
-                </h2>
-                <p className="text-[11px] text-[#777]">
-                  Choose any product to view its specific reviews or add a new review for it
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setSelectedProductId("all")}
-              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${
-                selectedProductId === "all"
-                  ? "bg-[#1a3c36] text-white shadow-xs"
-                  : "border border-[#e2d9cd] bg-[#faf8f5] text-[#555] hover:bg-white"
-              }`}
-            >
-              All Products ({productsList.length})
-            </button>
-          </div>
-
-          {/* PRODUCTS SCROLLABLE STRIP */}
-          {productsList.length === 0 ? (
-            <div className="py-4 text-center text-xs text-[#888]">
-              No products found in catalog. Create products first from the Products tab.
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-              {productsList.map((prod) => {
-                const isSelected =
-                  String(selectedProductId) === String(prod.id) ||
-                  selectedProductId === prod.product_id;
-                const prodImg =
-                  prod.product_images?.[0] || prod.frame_data?.frame_image || "";
-
-                return (
-                  <div
-                    key={prod.id}
-                    onClick={() => setSelectedProductId(prod.id)}
-                    className={`group flex min-w-[220px] max-w-[240px] cursor-pointer items-center gap-3 rounded-xl border p-2.5 transition ${
-                      isSelected
-                        ? "border-[#1a3c36] bg-[#eef6f3] ring-2 ring-[#1a3c36]/20"
-                        : "border-[#e8e2d8] bg-[#faf8f5] hover:border-[#d4a553] hover:bg-white"
-                    }`}
-                  >
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#e6ded4] bg-white p-0.5">
-                      {prodImg ? (
-                        <img
-                          src={prodImg}
-                          alt={prod.product_name}
-                          className="h-full w-full object-contain"
-                        />
-                      ) : (
-                        <Package className="h-6 w-6 text-[#999]" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-bold text-[#1f1f1f]">
-                        {prod.product_name}
-                      </p>
-                      <p className="font-mono text-[10px] text-[#777]">
-                        {prod.product_id} • {prod.category}
-                      </p>
-                      <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-600 font-bold">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <span>Filter Reviews</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+       
 
         {/* ================= STEP 2: REVIEWS TABLE & FILTER SECTION ================= */}
         <div className="rounded-[22px] border border-[#e7e0d8] bg-white p-4 shadow-sm md:p-5">
           {/* SEARCH AND FILTER BAR */}
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center">
               {/* SEARCH */}
               <div className="relative w-full max-w-[340px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
@@ -631,6 +532,9 @@ const AdminReviews = () => {
                 />
               </div>
 
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
               {/* RATING FILTER */}
               <div className="relative">
                 <select
@@ -661,12 +565,22 @@ const AdminReviews = () => {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#777]" />
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#777]">
-                Showing <strong className="text-[#222]">{filteredReviews.length}</strong> reviews
-              </span>
+              <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
+                <button type="button" onClick={() => setViewMode("table")} title="Table view" className={`flex h-11 w-11 items-center justify-center border-r border-[#dfe2e5] ${viewMode === "table" ? "bg-[#1a3c36] text-white" : "text-[#666] hover:bg-white"}`}><List className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setViewMode("card")} title="Card view" className={`flex h-11 w-11 items-center justify-center ${viewMode === "card" ? "bg-[#1a3c36] text-white" : "text-[#666] hover:bg-white"}`}><LayoutGrid className="h-4 w-4" /></button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleOpenCreateModal()}
+              className="inline-flex items-center gap-2 rounded-md bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-6 w-6" />
+              Add Review
+            </button>
+          </div>
             </div>
           </div>
 
@@ -695,31 +609,42 @@ const AdminReviews = () => {
                 Add Review
               </button>
             </div>
+          ) : viewMode === "card" ? (
+            <div className="grid gap-4 p-1 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredReviews.map((rev) => (
+                <article key={rev.id} className="rounded-2xl border border-[#e7e0d8] bg-[#fffdfa] p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[10px] font-bold text-[#1a3c36]">{rev.review_id}</p><h3 className="mt-1 text-sm font-bold text-[#222]">{rev.product_name}</h3></div><span className="rounded-full bg-[#eef5f1] px-2 py-1 text-[10px] font-semibold text-[#2d7b5a]">{rev.status}</span></div>
+                  <div className="mt-4 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d4a843] text-xs font-bold text-white">{(rev.reviewer_name?.[0] || "U").toUpperCase()}</div><div><p className="text-xs font-bold text-[#333]">{rev.reviewer_name}</p><div className="flex items-center">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={`h-3 w-3 ${star <= rev.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />)}</div></div></div>
+                  <p className="mt-4 line-clamp-3 text-xs leading-5 text-[#555]">{rev.comment}</p>
+                  <div className="mt-4 flex items-center justify-end gap-2 border-t border-[#f0ebe6] pt-3"><button type="button" onClick={() => handleOpenEditModal(rev)} className="rounded-lg border border-[#e2d9cf] bg-white p-2 text-[#444]" title="Edit review"><Pencil className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setViewingReview(rev)} className="rounded-lg border border-[#e2d9cf] bg-white p-2 text-[#444]" title="View details"><Eye className="h-3.5 w-3.5" /></button><button type="button" onClick={() => handleDeleteReview(rev.id, rev.review_id)} className="rounded-lg border border-[#f3d7d7] bg-[#fff8f8] p-2 text-[#d04d4d]" title="Delete review"><Trash2 className="h-3.5 w-3.5" /></button></div>
+                </article>
+              ))}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[#f0e6d2] text-left text-xs font-bold uppercase tracking-wider text-[#3d3d3d]">
-                    <th className="px-4 py-3.5 rounded-l-xl">ID & Product</th>
-                    <th className="px-4 py-3.5">Reviewer</th>
-                    <th className="px-4 py-3.5">Rating</th>
-                    <th className="px-4 py-3.5">Review Comment</th>
-                    <th className="px-4 py-3.5">Customer Photo</th>
-                    <th className="px-4 py-3.5">Status</th>
-                    <th className="px-4 py-3.5">Created By (User ID)</th>
-                    <th className="px-4 py-3.5 rounded-r-xl">Actions</th>
+                  <tr className="bg-[#f0e6d2] text-left text-xs font-bold capitalize tracking-wider text-[#3d3d3d]">
+                    <th className="rounded-tl-md px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">ID & Product</th>
+                    <th className="px-4 py-4">Reviewer</th>
+                    <th className="px-4 py-4">Rating</th>
+                    <th className="px-4 py-4">Review Comment</th>
+                    <th className="px-4 py-4">Customer Photo</th>
+                    <th className="px-4 py-4">Status</th>
+                    <th className="rounded-tr-md px-4 py-4">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredReviews.map((rev) => {
-                    const displayUserId = rev.created_by || "system";
-
+                  {filteredReviews.map((rev, index) => {
                     return (
                       <tr
                         key={rev.id}
                         className="border-t border-[#f0ebe6] transition hover:bg-[#fffdfa]"
                       >
+                        <td className="px-4 py-3.5 align-middle text-[#777]">{index + 1}</td>
+
                         {/* ID & PRODUCT */}
                         <td className="px-4 py-3.5 align-middle">
                           <div className="flex items-center gap-3">
@@ -840,31 +765,6 @@ const AdminReviews = () => {
                           </span>
                         </td>
 
-                        {/* CREATED BY (USER ID) & DATE */}
-                        <td className="px-4 py-3.5 align-middle">
-                          <p className="text-xs font-medium text-[#333]">
-                            {formatDate(rev.created_at)}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-1">
-                            <span
-                              title={`User ID: ${displayUserId}`}
-                              className="font-mono text-[10px] text-[#666] bg-[#f2ede6] px-1.5 py-0.5 rounded"
-                            >
-                              {displayUserId.length > 18
-                                ? `${displayUserId.slice(0, 8)}...${displayUserId.slice(-4)}`
-                                : displayUserId}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => copyToClipboard(displayUserId, "User ID")}
-                              className="text-[#999] hover:text-[#1a3c36]"
-                              title="Copy user_id"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </td>
-
                         {/* ACTIONS */}
                         <td className="px-4 py-3.5 align-middle">
                           <div className="flex items-center gap-1.5">
@@ -908,7 +808,7 @@ const AdminReviews = () => {
         {/* ================= ADD / EDIT REVIEW MODAL ================= */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl hide-scrollbar">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -1222,7 +1122,7 @@ const AdminReviews = () => {
         {/* ================= VIEW REVIEW DETAIL MODAL ================= */}
         {viewingReview && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[#e8dfd2] bg-white p-6 shadow-2xl hide-scrollbar">
               <button
                 type="button"
                 onClick={() => setViewingReview(null)}

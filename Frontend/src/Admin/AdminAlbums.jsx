@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -18,7 +19,8 @@ import {
   BookOpen,
   FolderOpen,
   BarChart3,
-  BriefcaseBusiness,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import api from '../api';
 
@@ -33,9 +35,20 @@ const formatCurrency = (value) => {
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return '';
-  if (/^https?:\/\//i.test(imagePath)) return imagePath;
-  if (imagePath.startsWith('/')) return `http://localhost:5000${imagePath}`;
-  return imagePath;
+
+  const normalizedPath = String(imagePath).trim();
+  if (!normalizedPath) return '';
+  if (/^https?:\/\//i.test(normalizedPath)) return encodeURI(normalizedPath);
+
+  const cleanPath = normalizedPath.replace(/\\/g, '/');
+  let finalPath = cleanPath;
+
+  if (finalPath.startsWith('/')) finalPath = finalPath;
+  else if (finalPath.startsWith('uploads/')) finalPath = `/${finalPath}`;
+  else if (finalPath.startsWith('images/')) finalPath = `/${finalPath}`;
+  else finalPath = `/${finalPath.replace(/^\//, '')}`;
+
+  return encodeURI(`http://localhost:5000${finalPath}`);
 };
 
 const normalizeAlbum = (album) => {
@@ -52,12 +65,13 @@ const normalizeAlbum = (album) => {
     return [];
   })();
 
-  const thumbnail = getImageUrl(album.thumbnail_image || productImages[0] || '');
+  const firstGalleryImage = Array.isArray(productImages) && productImages.length > 0 ? productImages[0] : '';
+  const thumbnail = getImageUrl(firstGalleryImage || album.thumbnail_image || '');
   const stock = Number(album.stock_quantity || 0);
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
 
   return {
-    id: album.id || album.product_id,
+    id: album.product_id || album.id,
     name: album.product_name || 'Untitled Album',
     code: album.product_code || album.product_id || 'N/A',
     category: album.category || album.sub_category || 'General',
@@ -100,6 +114,7 @@ const AdminAlbums = () => {
   const [status, setStatus] = useState('All Status');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => {
     let isMounted = true;
@@ -177,11 +192,38 @@ const AdminAlbums = () => {
   const filteredAlbums = useMemo(() => {
     return albums.filter((album) => {
       const matchesSearch = album.name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = category === 'All Categories' || album.category === category;
-      const matchesStatus = status === 'All Status' || album.status === status;
+      const matchesCategory = category === 'All Categories' || String(album.category || '').toLowerCase() === category.toLowerCase();
+      const matchesStatus = status === 'All Status' || String(album.status || '').toLowerCase() === status.toLowerCase();
       return matchesSearch && matchesCategory && matchesStatus;
     });
   }, [albums, search, category, status]);
+
+  const categoryOptions = useMemo(() => {
+    return [...new Set(albums.map((album) => album.category).filter(Boolean))].sort();
+  }, [albums]);
+
+  const handleViewAlbum = (album) => {
+    navigate(`/admin/albums/${album.id}`);
+  };
+
+  const handleEditAlbum = (album) => {
+    navigate(`/admin/albums/add?edit=${album.id}`);
+  };
+
+  const handleDeleteAlbum = async (albumId) => {
+    if (!window.confirm('Are you sure you want to delete this album?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/albums/${albumId}`);
+      setAlbums((prev) => prev.filter((album) => String(album.id) !== String(albumId)));
+      toast.success('Album deleted successfully');
+    } catch (error) {
+      console.error('Delete album error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete album');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -241,9 +283,9 @@ const AdminAlbums = () => {
         </div>
 
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-3 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-full max-w-[340px]">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
+              <div className="relative w-full max-w-[340px] lg:w-[390px] lg:max-w-[390px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
@@ -254,36 +296,35 @@ const AdminAlbums = () => {
                 />
               </div>
 
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                {category}
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
-
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                {status}
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
-
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                <Filter className="h-4 w-4 text-[#c69218]" />
-                Filter
-              </button>
+              
             </div>
 
-            <div className="flex items-center gap-3">
-              <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                Sort by: Latest
-                <ChevronDown className="h-4 w-4 text-[#666]" />
-              </button>
+            <div className="flex shrink-0 items-center gap-3">
+             
+              <div className="relative">
+                <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-[46px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-9 text-[14px] font-medium text-[#2d2d2d] outline-none cursor-pointer focus:border-[#d2bc8a]">
+                  <option value="All Categories">All Categories</option>
+                  {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
+              </div>
+
+              <div className="relative">
+                <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-[46px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-9 text-[14px] font-medium text-[#2d2d2d] outline-none cursor-pointer focus:border-[#d2bc8a]">
+                  <option value="All Status">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
+              </div>
+
+        
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-[#faf9f8]">
-                <button className="flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] text-[#4d4d4d]">
-                  <ImageIcon className="h-4 w-4" />
-                </button>
-                <button className="flex h-[46px] w-[46px] items-center justify-center text-[#4d4d4d]">
-                  <BriefcaseBusiness className="h-4 w-4" />
-                </button>
+                <button type="button" onClick={() => setViewMode('table')} title="Table view" className={`flex h-[46px] w-[46px] items-center justify-center border-r border-[#dfe2e5] ${viewMode === 'table' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}><List className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setViewMode('card')} title="Card view" className={`flex h-[46px] w-[46px] items-center justify-center ${viewMode === 'card' ? 'bg-[#1a3c36] text-white' : 'text-[#4d4d4d] hover:bg-white'}`}><LayoutGrid className="h-4 w-4" /></button>
               </div>
+
             </div>
           </div>
 
@@ -296,36 +337,59 @@ const AdminAlbums = () => {
               <div className="flex min-h-[200px] items-center justify-center text-sm text-[#b42318]">
                 {error}
               </div>
+            ) : viewMode === 'card' ? (
+              <div className="grid gap-4 p-1 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredAlbums.map((album) => (
+                  <article key={album.id} className="overflow-hidden rounded-2xl border border-[#e7e0d8] bg-white shadow-sm">
+                    {album.image && !album.image.startsWith('linear-gradient') ? <img src={album.image} alt={album.name} className="h-44 w-full object-cover" /> : <div className="h-44 w-full" style={{ background: album.image }} />}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-[#1d1d1d]">{album.name}</h2><p className="mt-1 text-xs text-[#707070]">{album.code}</p></div><span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(album.status)}`}>{album.status}</span></div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><p className="text-[#888]">Category</p><p className="mt-1 font-medium text-[#333]">{album.category}</p></div><div><p className="text-[#888]">Stock</p><p className="mt-1 font-medium text-[#333]">{album.stock} ({album.stockLabel})</p></div><div><p className="text-[#888]">Size</p><p className="mt-1 font-medium text-[#333]">{album.size}</p></div><div><p className="text-[#888]">Price</p><p className="mt-1 font-medium text-[#333]">{album.price}</p></div></div>
+                      <div className="mt-4 flex justify-end gap-2 border-t border-[#f0efec] pt-4"><button type="button" onClick={() => handleViewAlbum(album)} className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d]" aria-label={`View ${album.name}`}><Eye className="h-4 w-4" /></button><button type="button" onClick={() => handleEditAlbum(album)} className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d]" aria-label={`Edit ${album.name}`}><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => handleDeleteAlbum(album.id)} className="rounded-lg border border-[#f1d8d8] bg-[#fff5f5] p-2 text-[#d95a5a]" aria-label={`Delete ${album.name}`}><Trash2 className="h-4 w-4" /></button></div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             ) : (
               <table className="min-w-full text-left">
                 <thead>
-                  <tr className="border-b border-[#ece9e5] text-[12px] font-semibold uppercase tracking-[0.04em] text-[#6c6c6c]">
-                    <th className="px-4 py-3">Album</th>
-                    <th className="px-4 py-3">Product Code</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Size</th>
-                    <th className="px-4 py-3">Price</th>
-                    <th className="px-4 py-3">Stock</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Views</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                  <tr className="rounded-md bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                    <th className="rounded-tl-md px-4 py-4">S.No</th>
+                    <th className="px-4 py-4">Album</th>
+                    <th className="px-4 py-4">Product Code</th>
+                    <th className="px-4 py-4">Category</th>
+                    <th className="px-4 py-4">Size</th>
+                    <th className="px-4 py-4">Price</th>
+                    <th className="px-4 py-4">Stock</th>
+                    <th className="px-4 py-4">Status</th>
+                  
+                    <th className="rounded-tr-md px-4 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredAlbums.map((album) => (
+                  {filteredAlbums.map((album, index) => (
                     <tr key={album.id} className="border-b border-[#f0efec] text-sm text-[#2d2d2d] transition hover:bg-[#fafaf9]">
+                      <td className="px-4 py-4 text-[#737373]">{index + 1}</td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className="h-14 w-14 rounded-xl border border-[#eaeaea] bg-cover bg-center shadow-sm"
-                            style={{
-                              backgroundImage: album.image && !album.image.startsWith('linear-gradient') ? `url(${album.image})` : undefined,
-                              background: album.image && album.image.startsWith('linear-gradient') ? album.image : undefined,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                            }}
-                          />
+                          {album.image && !album.image.startsWith('linear-gradient') ? (
+                            <img
+                              src={album.image}
+                              alt={album.name}
+                              className="h-14 w-14 rounded-xl border border-[#eaeaea] object-cover shadow-sm"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="h-14 w-14 rounded-xl border border-[#eaeaea] shadow-sm"
+                              style={{
+                                background: album.image && album.image.startsWith('linear-gradient') ? album.image : 'linear-gradient(135deg, #f8d7da, #f3d6e4)',
+                              }}
+                            />
+                          )}
                           <div>
                             <div className="font-semibold text-[#1d1d1d]">{album.name}</div>
                             <div className="text-[12px] text-[#707070]">{album.category} album</div>
@@ -346,26 +410,37 @@ const AdminAlbums = () => {
                       <td className="px-4 py-4">
                         <div className="font-semibold text-[#1f1f1f]">{album.stock}</div>
                       </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStockClasses(album.stockLabel)}`}>
-                          {album.stockLabel}
-                        </span>
-                      </td>
+                     
                       <td className="px-4 py-4">
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${getStatusClasses(album.status)}`}>
                           {album.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-[#1f1f1f] font-medium">{album.views.toLocaleString()}</td>
+                     
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="View album">
+                          <button
+                            type="button"
+                            onClick={() => handleViewAlbum(album)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]"
+                            aria-label="View album"
+                          >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]" aria-label="Edit album">
+                          <button
+                            type="button"
+                            onClick={() => handleEditAlbum(album)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#4d4d4d] transition hover:border-[#c9d3df] hover:text-[#1f1f1f]"
+                            aria-label="Edit album"
+                          >
                             <Pencil className="h-4 w-4" />
                           </button>
-                          <button className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]" aria-label="Delete album">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAlbum(album.id)}
+                            className="rounded-lg border border-[#dfe2e5] bg-white p-2 text-[#d95a5a] transition hover:border-[#f0c9c9] hover:bg-[#fff2f2]"
+                            aria-label="Delete album"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>

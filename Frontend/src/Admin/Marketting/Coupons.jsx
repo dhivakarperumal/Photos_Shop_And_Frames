@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FiPlus, FiEdit, FiTrash2, FiSearch, FiRefreshCw, FiTag, FiCheckCircle, FiXCircle, FiList, FiGrid } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import Select from "react-select";
 import api from "../../api";
-import Loader from "../../Components/CommenComponents/Loader";
+import Loader from "../../CommonComponents/Loader";
 
 const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -14,6 +13,7 @@ const Coupons = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCoupon, setCurrentCoupon] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("table");
 
   const [formData, setFormData] = useState({
@@ -51,19 +51,22 @@ const Coupons = () => {
   const fetchOptions = async () => {
     try {
       const [prodRes, catRes] = await Promise.all([
-        api.get('/products').catch(() => ({ data: [] })),
-        api.get('/categories').catch(() => ({ data: [] }))
+        api.get('/albums').catch(() => ({ data: { data: [] } })),
+        api.get('/categories').catch(() => ({ data: { data: [] } }))
       ]);
 
-      const allFoods = Array.isArray(prodRes.data) ? prodRes.data : [];
-      const prodList = allFoods.map(p => ({ 
-        value: p.id, 
-        label: p.name || 'Product' 
+      const allProducts = Array.isArray(prodRes.data?.data) ? prodRes.data.data : [];
+      const prodList = allProducts.map((p) => ({
+        value: p.product_id || p.id,
+        label: p.product_name || p.name || 'Product',
       }));
       setProducts(prodList);
 
-      const allCategories = Array.isArray(catRes.data) ? catRes.data : [];
-      const catList = allCategories.map(c => ({ value: c.id, label: c.name || `Category ${c.id}` }));
+      const allCategories = Array.isArray(catRes.data?.data) ? catRes.data.data : [];
+      const catList = allCategories.map((c) => ({
+        value: c.category_id || c.id,
+        label: c.category_name || c.name || `Category ${c.category_id || c.id}`,
+      }));
       setCategories(catList);
     } catch (err) {
       console.error(err);
@@ -116,10 +119,11 @@ const Coupons = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (selectedOptions, field) => {
+  const handleSelectChange = (event, field) => {
+    const values = Array.from(event.target.selectedOptions || []).map((option) => option.value);
     setFormData(prev => ({
       ...prev,
-      [field]: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+      [field]: values,
     }));
   };
 
@@ -164,10 +168,12 @@ const Coupons = () => {
     const q = String(searchTerm || "").toLowerCase();
     const code = String(c?.code || "").toLowerCase();
     const name = String(c?.name || "").toLowerCase();
-    return code.includes(q) || name.includes(q);
+    const matchesSearch = code.includes(q) || name.includes(q);
+    const matchesStatus = statusFilter === "all" || c?.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  if (loading) return <Loader />;
+
 
   const totalCount = coupons.length;
   const activeCount = coupons.filter(c => c.status === 'active').length;
@@ -186,9 +192,9 @@ const Coupons = () => {
 
         <button
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center justify-center gap-2 bg-[#3a8b28] hover:bg-[#317a22] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
+          className="inline-flex items-center justify-center gap-2 bg-[#1a3c36] hover:bg-[#214a42] text-white px-5 py-2.5 rounded-md font-bold text-sm shadow-sm transition active:scale-95 self-start sm:self-auto"
         >
-          <FiPlus className="w-4 h-4" /> Add New Coupon
+          <FiPlus className="w-6 h-6" /> Add New Coupon
         </button>
       </div>
 
@@ -234,30 +240,38 @@ const Coupons = () => {
             placeholder="Search coupons by code or name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium text-gray-900 text-sm focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all placeholder:text-gray-400"
+            className="w-1/2 pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none font-medium text-gray-900 text-sm focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all placeholder:text-gray-400"
           />
         </div>
 
         <div className="flex items-center gap-3 self-end xl:self-auto">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter coupons by status"
+            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-700 outline-none focus:bg-white focus:border-[#3a8b28] focus:ring-2 focus:ring-[#3a8b28]/20 transition-all"
+          >
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
           <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-xl">
             <button
               onClick={() => setViewMode("table")}
-              className={`p-2.5 rounded-lg transition ${viewMode === "table" ? "bg-white text-[#3a8b28] shadow-sm font-bold" : "text-gray-500 hover:text-gray-700"}`}
+              className={`p-2.5 rounded-lg transition ${viewMode === "table" ? "bg-white text-[#1a3c36] shadow-sm font-bold" : "text-gray-500 hover:text-[#1a3c36]"}`}
               title="Table View"
             >
               <FiList className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode("card")}
-              className={`p-2.5 rounded-lg transition ${viewMode === "card" ? "bg-white text-[#3a8b28] shadow-sm font-bold" : "text-gray-500 hover:text-gray-700"}`}
+              className={`p-2.5 rounded-lg transition ${viewMode === "card" ? "bg-white text-[#1a3c36] shadow-sm font-bold" : "text-gray-500 hover:text-[#1a3c36]"}`}
               title="Card View"
             >
               <FiGrid className="w-4 h-4" />
             </button>
           </div>
-          <button onClick={fetchCoupons} className="p-3 bg-white border border-gray-200 text-gray-500 hover:text-[#3a8b28] rounded-xl transition shadow-sm hover:bg-green-50" title="Refresh">
-            <FiRefreshCw className="w-5 h-5" />
-          </button>
+         
         </div>
       </div>
 
@@ -267,27 +281,29 @@ const Coupons = () => {
         <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 bg-[#1b7f29]">
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Code</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Discount</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Validity</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Usage</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider">Scope</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-white uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                <th className="px-4 py-4 text-xs font-bold">S No</th>
+                <th className="px-4 py-4 text-xs font-bold ">Code</th>
+                <th className="px-4 py-4 text-xs font-bold ">Name</th>
+                <th className="px-4 py-4 text-xs font-bold ">Discount</th>
+                <th className="px-4 py-4 text-xs font-bold ">Validity</th>
+                <th className="px-4 py-4 text-xs font-bold ">Usage</th>
+                <th className="px-4 py-4 text-xs font-bold ">Scope</th>
+                <th className="px-4 py-4 text-xs font-bold  text-center">Status</th>
+                <th className="px-4 py-4 text-xs font-bold  text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCoupons.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-slate-500 font-semibold">
+                  <td colSpan="8" className="p-8 text-center text-slate-500 font-semibold">
                     No coupons found. Create one to get started.
                   </td>
                 </tr>
               ) : (
-                filteredCoupons.map((coupon) => (
+                filteredCoupons.map((coupon, index) => (
                   <tr key={coupon.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-600">{index + 1}</td>
                     <td className="px-6 py-4">
                       <span className="inline-flex px-3 py-1 bg-gray-100 text-gray-800 font-bold text-xs rounded-lg border border-gray-200">
                         {coupon.code}
@@ -320,7 +336,7 @@ const Coupons = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => handleOpenModal(coupon)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition mr-2">
+                      <button onClick={() => handleOpenModal(coupon)} className="p-2 text-[#1a3c36] hover:bg-[#eef6f3] rounded-xl transition mr-2">
                         <FiEdit className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(coupon.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition">
@@ -378,7 +394,7 @@ const Coupons = () => {
                 </div>
 
                 <div className="flex justify-end gap-2 mt-auto pt-2">
-                  <button onClick={() => handleOpenModal(coupon)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition">
+                  <button onClick={() => handleOpenModal(coupon)} className="p-2 text-[#1a3c36] hover:bg-[#eef6f3] rounded-xl transition">
                     <FiEdit className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(coupon.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition">
@@ -394,7 +410,7 @@ const Coupons = () => {
       {isModalOpen && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-[3rem] w-full max-w-[95vw] md:max-w-[90vw] lg:max-w-6xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl relative z-[10000] animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
-            <div className="bg-blue-600 p-8 text-white relative flex-shrink-0">
+            <div className="bg-[#1a3c36] p-8 text-white relative flex-shrink-0">
               <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
               <div className="relative flex items-center justify-between">
                 <div>
@@ -479,40 +495,46 @@ const Coupons = () => {
                     {formData.coupon_scope === 'specific_products' && (
                       <div className="mb-4 animate-in fade-in zoom-in-95 duration-300">
                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 mb-2 block">Select Products</label>
-                        <Select 
-                          isMulti 
-                          options={products} 
-                          value={products.filter(p => formData.applicable_product_ids.includes(p.value))}
-                          onChange={(opts) => handleSelectChange(opts, 'applicable_product_ids')}
-                          className="react-select-container text-black"
-                          classNamePrefix="react-select"
-                          placeholder="Search and select products..."
-                          styles={{
-                            option: (provided) => ({ ...provided, color: '#000' }),
-                            singleValue: (provided) => ({ ...provided, color: '#000' }),
-                            multiValueLabel: (provided) => ({ ...provided, color: '#000' })
-                          }}
-                        />
+                        <select
+                          multiple
+                          size={Math.min(products.length || 4, 8)}
+                          value={formData.applicable_product_ids}
+                          onChange={(event) => handleSelectChange(event, 'applicable_product_ids')}
+                          className="w-full min-h-[120px] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-black outline-none focus:border-blue-600"
+                        >
+                          {products.length ? (
+                            products.map((product) => (
+                              <option key={product.value} value={product.value}>
+                                {product.label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">No products available</option>
+                          )}
+                        </select>
                       </div>
                     )}
 
                     {formData.coupon_scope === 'specific_categories' && (
                       <div className="mb-4 animate-in fade-in zoom-in-95 duration-300">
                         <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1 mb-2 block">Select Categories</label>
-                        <Select 
-                          isMulti 
-                          options={categories} 
-                          value={categories.filter(c => formData.applicable_category_ids.includes(c.value))}
-                          onChange={(opts) => handleSelectChange(opts, 'applicable_category_ids')}
-                          className="react-select-container text-black"
-                          classNamePrefix="react-select"
-                          placeholder="Search and select categories..."
-                          styles={{
-                            option: (provided) => ({ ...provided, color: '#000' }),
-                            singleValue: (provided) => ({ ...provided, color: '#000' }),
-                            multiValueLabel: (provided) => ({ ...provided, color: '#000' })
-                          }}
-                        />
+                        <select
+                          multiple
+                          size={Math.min(categories.length || 4, 8)}
+                          value={formData.applicable_category_ids}
+                          onChange={(event) => handleSelectChange(event, 'applicable_category_ids')}
+                          className="w-full min-h-[120px] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-black outline-none focus:border-blue-600"
+                        >
+                          {categories.length ? (
+                            categories.map((category) => (
+                              <option key={category.value} value={category.value}>
+                                {category.label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">No categories available</option>
+                          )}
+                        </select>
                       </div>
                     )}
                   </div>
@@ -522,7 +544,7 @@ const Coupons = () => {
             
             <div className="p-8 flex justify-end gap-3 bg-white">
               <button type="button" onClick={handleCloseModal} className="px-8 py-3.5 rounded-2xl font-[900] text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all uppercase tracking-widest text-xs">Cancel</button>
-              <button form="couponForm" type="submit" className="px-8 py-3.5 rounded-2xl font-[900] text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all uppercase tracking-widest text-xs flex items-center gap-2">Save Coupon</button>
+              <button form="couponForm" type="submit" className="px-8 py-3.5 rounded-2xl font-[900] text-white bg-[#1a3c36] hover:bg-[#214a42] shadow-xl shadow-emerald-900/20 transition-all uppercase tracking-widest text-xs flex items-center gap-2">Save Coupon</button>
             </div>
           </div>
         </div>,

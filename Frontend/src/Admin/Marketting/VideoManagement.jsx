@@ -184,7 +184,7 @@ const VideoManagement = () => {
             </div>
             {/* Header Section */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <div className="relative w-full xl:max-w-md">
+                <div className="relative w-full xl:w-[420px] xl:max-w-[420px]">
                     <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
@@ -194,12 +194,12 @@ const VideoManagement = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3">
                     <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
                         <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Table mode" title="Table mode"><FiList size={16} /></button>
                         <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-[#4b0b78] shadow-sm" : "text-gray-500 hover:text-[#4b0b78]"}`} aria-label="Card mode" title="Card mode"><FiGrid size={16} /></button>
                     </div>
-                    <button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2 bg-[#4b0b78] hover:bg-[#260642] text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-purple-200 active:scale-95"><FiPlus /> Add New Video</button>
+                    <button onClick={() => handleOpenModal()} className="flex items-center justify-center gap-2 bg-[#1a3c36] hover:bg-[#214a42] text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20 active:scale-95"><FiPlus /> Add New Video</button>
                 </div>
             </div>
 
@@ -213,12 +213,12 @@ const VideoManagement = () => {
                     {viewMode === "table" ? <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse block md:table">
                             <thead className="hidden md:table-header-group">
-                                <tr className="bg-gradient-to-r from-[#260642] to-[#4b0b78]">
-                                    <th className="px-4 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-center">S No</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Preview</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Title</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider">Source</th>
-                                    <th className="px-6 py-4 text-xs font-black text-[#facc15] uppercase tracking-wider text-right">Actions</th>
+                                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                                    <th className="rounded-tl-md px-4 py-4 text-xs font-black  capitalize tracking-wider text-center">S No</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Preview</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Title</th>
+                                    <th className="px-6 py-4 text-xs font-black  capitalize tracking-wider">Source</th>
+                                    <th className="rounded-tr-md px-6 py-4 text-xs font-black  capitalize tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="block md:table-row-group divide-y divide-gray-50 text-slate-800 px-3 py-4 md:p-0">
@@ -273,14 +273,14 @@ const VideoManagement = () => {
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
                                                             onClick={() => handleOpenModal(video)}
-                                                            className="p-2 border border-[#4b0b78] bg-[#4b0b78] text-white rounded-lg hover:bg-[#260642] transition-all shadow-sm md:shadow-none"
+                                                            className="p-2 border border-[#1a3c36] bg-[#1a3c36] text-white rounded-lg hover:bg-[#214a42] transition-all shadow-sm md:shadow-none"
                                                             title="Edit"
                                                         >
                                                             <FiEdit2 size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(video.id)}
-                                                            className="p-2 border border-[#4b0b78] bg-[#4b0b78] text-white rounded-lg hover:bg-[#260642] transition-all shadow-sm md:shadow-none"
+                                                            className="p-2 border border-[#1a3c36] bg-[#1a3c36] text-white rounded-lg hover:bg-[#214a42] transition-all shadow-sm md:shadow-none"
                                                             title="Delete"
                                                         >
                                                             <FiTrash2 size={16} />
@@ -301,7 +301,7 @@ const VideoManagement = () => {
                         {filteredVideos.length === 0 ? <div className="col-span-full text-center py-16 text-gray-400 font-bold">No videos found.</div> : filteredVideos.map((video, index) => (
                             <article key={video.id} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
                                 <div className="h-40 bg-gray-100 relative">{video.thumbnail ? <img src={resolveMediaUrl(video.thumbnail)} alt={video.title} className="w-full h-full object-cover" /> : video.type === "youtube" ? <img src={`https://img.youtube.com/vi/${getYoutubeId(video.videoId)}/hqdefault.jpg`} alt={video.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><FiVideo size={32} /></div>}<span className="absolute top-3 left-3 bg-white/90 text-[10px] px-2 py-1 rounded font-black text-[#4b0b78]">S No. {index + 1}</span></div>
-                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{video.title || "Untitled Video"}</h3><p className="text-xs text-gray-400 truncate">{video.type === "youtube" ? video.videoId : "Uploaded File"}</p></div><div className="flex gap-2"><button onClick={() => handleOpenModal(video)} className="flex-1 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]"><FiEdit2 className="inline mr-1" />Edit</button><button onClick={() => handleDelete(video.id)} className="flex-1 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
+                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{video.title || "Untitled Video"}</h3><p className="text-xs text-gray-400 truncate">{video.type === "youtube" ? video.videoId : "Uploaded File"}</p></div><div className="flex gap-2"><button onClick={() => handleOpenModal(video)} className="flex-1 py-2 rounded-lg bg-[#1a3c36] text-white text-xs font-bold hover:bg-[#214a42]"><FiEdit2 className="inline mr-1" />Edit</button><button onClick={() => handleDelete(video.id)} className="flex-1 py-2 rounded-lg bg-[#1a3c36] text-white text-xs font-bold hover:bg-[#214a42]"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
                             </article>
                         ))}
                     </div>}
@@ -460,7 +460,7 @@ const VideoManagement = () => {
                             <button
                                 type="submit"
                                 disabled={uploading || thumbUploading || !currentVideo.videoId}
-                                className={`w-full py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98] ${uploading || thumbUploading || !currentVideo.videoId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#4b0b78] hover:bg-[#260642] text-white shadow-purple-200'}`}
+                                className={`w-full py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98] ${uploading || thumbUploading || !currentVideo.videoId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#1a3c36] hover:bg-[#214a42] text-white shadow-emerald-900/20'}`}
                             >
                                 {uploading || thumbUploading ? "Processing Media..." : isEditing ? "Save Refinements" : "Launch Showcase"}
                             </button>

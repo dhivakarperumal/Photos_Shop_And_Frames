@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Download,
   Eye,
+  Pencil,
   Trash2,
   ChevronDown,
   ArrowUpRight,
@@ -17,8 +18,11 @@ import {
   List,
   Mail,
   Calendar,
+  Plus,
+  X,
 } from "lucide-react";
 import api from "../api";
+import toast from "react-hot-toast";
 
 /* ============================================================
    HELPERS
@@ -56,7 +60,7 @@ const PAGE_SIZES = [10, 25, 50];
 /* ============================================================
    CUSTOMER CARD (card-view)
    ============================================================ */
-const CustomerCard = ({ customer }) => {
+const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
   const isActive = customer.status === "Active";
   const isAdmin  = ["Admin", "Super Admin"].includes(customer.role);
 
@@ -120,12 +124,19 @@ const CustomerCard = ({ customer }) => {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => onView(customer.id)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
             title="View customer"
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
+          <button type="button" onClick={() => onEdit(customer.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" title="Edit customer">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
           <button
+            type="button"
+            onClick={() => onDelete(customer.id)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
             title="Delete customer"
           >
@@ -133,6 +144,83 @@ const CustomerCard = ({ customer }) => {
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+const AddUserModal = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({ username: "", email: "", phone: "", password: "", role: "user" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    try {
+      setSaving(true);
+      await api.post("/users/register", { username: form.username.trim(), email: form.email.trim(), phone: form.phone.trim(), mobile_number: form.phone.trim(), password: form.password, role: form.role, status: "Active" });
+      toast.success("User created successfully");
+      onCreated();
+      onClose();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message || "Failed to create user");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-[#ece9e5] pb-4"><div><h2 className="text-xl font-bold text-[#1f1d1b]">Add New User</h2><p className="mt-1 text-xs text-[#777]">Create a user or admin account</p></div><button type="button" onClick={onClose} aria-label="Close"><X className="h-5 w-5 text-[#777]" /></button></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required placeholder="Enter username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input required type="email" placeholder="Enter email address" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input required type="tel" placeholder="Enter phone number" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Role</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none focus:border-[#1a3c36]"><option value="user">User</option><option value="Admin">Admin</option></select></label>
+          <label className="space-y-2 sm:col-span-2"><span className="text-sm font-semibold text-[#333]">Password</span><input required minLength={6} type="password" placeholder="Enter password (minimum 6 characters)" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm outline-none placeholder:text-[#999] focus:border-[#1a3c36]" /></label>
+        </div>
+        {error && <p className="mt-4 text-sm text-[#c03939]">{error}</p>}
+        <div className="mt-6 flex justify-end gap-3 border-t border-[#ece9e5] pt-5"><button type="button" onClick={onClose} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Creating..." : "Create User"}</button></div>
+      </form>
+    </div>
+  );
+};
+
+const CustomerModal = ({ customer, mode, onClose, onSaved }) => {
+  const isEditing = mode === "edit";
+  const [form, setForm] = useState({ username: customer.username || "", mobile_number: customer.mobile_number || "", role: customer.role || "user", status: customer.status || "Active" });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      await api.put(`/users/${customer.id}`, form);
+      toast.success("Customer updated successfully");
+      onSaved();
+      onClose();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update customer");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="mb-5 flex items-center justify-between border-b border-[#ece9e5] pb-4"><div><h2 className="text-xl font-bold text-[#1f1d1b]">{isEditing ? "Edit Customer" : "Customer Details"}</h2><p className="mt-1 text-xs text-[#777]">{customer.user_id || customer.id}</p></div><button type="button" onClick={onClose} aria-label="Close"><X className="h-5 w-5 text-[#777]" /></button></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Username</span><input required disabled={!isEditing} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Email</span><input disabled value={customer.email || ""} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Phone</span><input disabled={!isEditing} value={form.mobile_number} onChange={(event) => setForm({ ...form, mobile_number: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]" /></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Role</span><select disabled={!isEditing} value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]"><option value="user">User</option><option value="Admin">Admin</option><option value="Super Admin">Super Admin</option></select></label>
+          <label className="space-y-2"><span className="text-sm font-semibold text-[#333]">Status</span><select disabled={!isEditing} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} className="w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm disabled:text-[#555]"><option>Active</option><option>Inactive</option></select></label>
+          <div><span className="text-sm font-semibold text-[#333]">Joined</span><p className="mt-2 text-sm text-[#555]">{formatDate(customer.created_at)}</p></div>
+        </div>
+        {isEditing && <div className="mt-6 flex justify-end gap-3 border-t border-[#ece9e5] pt-5"><button type="button" onClick={onClose} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium">Cancel</button><button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Saving..." : "Save Changes"}</button></div>}
+      </form>
     </div>
   );
 };
@@ -151,6 +239,8 @@ const AdminCustomers = () => {
   const [pageSize,     setPageSize]     = useState(10);
   const [refreshKey,   setRefreshKey]   = useState(0);
   const [viewMode,     setViewMode]     = useState("table"); // "table" | "card"
+  const [showAddUser,  setShowAddUser]  = useState(false);
+  const [customerModal, setCustomerModal] = useState(null);
 
   /* ---------- FETCH ---------- */
   const fetchCustomers = async () => {
@@ -167,6 +257,25 @@ const AdminCustomers = () => {
   };
 
   useEffect(() => { fetchCustomers(); }, [refreshKey]);
+
+  const handleView = (userId) => {
+    const customer = customers.find((item) => String(item.id) === String(userId));
+    if (customer) setCustomerModal({ customer, mode: "view" });
+  };
+  const handleEdit = (userId) => {
+    const customer = customers.find((item) => String(item.id) === String(userId));
+    if (customer) setCustomerModal({ customer, mode: "edit" });
+  };
+  const handleDelete = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this customer?")) return;
+    try {
+      await api.delete(`/users/${userId}`);
+      setCustomers((previousCustomers) => previousCustomers.filter((customer) => String(customer.id) !== String(userId)));
+      toast.success("Customer deleted successfully");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to delete customer");
+    }
+  };
 
   /* ---------- FILTER ---------- */
   const filtered = useMemo(() => {
@@ -270,6 +379,14 @@ const AdminCustomers = () => {
           </div>
           <div className="flex items-center gap-3">
             <button
+              type="button"
+              onClick={() => setShowAddUser(true)}
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-4 w-4" />
+              Add New User
+            </button>
+            <button
               onClick={() => setRefreshKey((k) => k + 1)}
               disabled={loading}
               className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3] disabled:opacity-50"
@@ -319,11 +436,11 @@ const AdminCustomers = () => {
         <div className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]">
 
           {/* ── TOOLBAR ── */}
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between">
             {/* Left: search + filters */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
               {/* Search */}
-              <div className="relative w-full max-w-[300px]">
+              <div className="relative w-full max-w-[500px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
                   type="text"
@@ -335,7 +452,13 @@ const AdminCustomers = () => {
               </div>
 
               {/* Role */}
-              <div className="relative">
+              
+            </div>
+
+            {/* Right: page size + view toggle */}
+            <div className="flex shrink-0 items-center gap-3">
+              {/* Page size */}
+            <div className="relative">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
@@ -356,25 +479,6 @@ const AdminCustomers = () => {
                   {STATUSES.map((s) => <option key={s}>{s}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
-              </div>
-            </div>
-
-            {/* Right: page size + view toggle */}
-            <div className="flex items-center gap-3">
-              {/* Page size */}
-              <div className="flex items-center gap-2 text-[13px] text-[#6a6a6a]">
-                <span>Show</span>
-                <div className="relative">
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    className="h-[38px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer"
-                  >
-                    {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#666]" />
-                </div>
-                <span>entries</span>
               </div>
 
               {/* View toggle */}
@@ -432,7 +536,7 @@ const AdminCustomers = () => {
             /* ─────────── CARD VIEW ─────────── */
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {paginated.map((customer) => (
-                <CustomerCard key={customer.id || customer.user_id} customer={customer} />
+                <CustomerCard key={customer.id || customer.user_id} customer={customer} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           ) : (
@@ -441,13 +545,13 @@ const AdminCustomers = () => {
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                    <th className="rounded-tl-xl px-4 py-4">#</th>
+                    <th className="rounded-tl-md px-4 py-4">S No</th>
                     <th className="px-4 py-4">Customer</th>
                     <th className="px-4 py-4">Email</th>
                     <th className="px-4 py-4">Role</th>
                     <th className="px-4 py-4">Status</th>
                     <th className="px-4 py-4">Joined</th>
-                    <th className="rounded-tr-xl px-4 py-4">Actions</th>
+                    <th className="rounded-tr-md px-4 py-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -510,12 +614,19 @@ const AdminCustomers = () => {
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
                             <button
+                              type="button"
+                              onClick={() => handleView(customer.id)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
                               title="View customer"
                             >
                               <Eye className="h-4 w-4" />
                             </button>
+                            <button type="button" onClick={() => handleEdit(customer.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" title="Edit customer">
+                              <Pencil className="h-4 w-4" />
+                            </button>
                             <button
+                              type="button"
+                              onClick={() => handleDelete(customer.id)}
                               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
                               title="Delete customer"
                             >
@@ -530,17 +641,25 @@ const AdminCustomers = () => {
               </table>
             </div>
           )}
+          
 
           {/* ── PAGINATION ── */}
           {!loading && !error && filtered.length > 0 && (
             <div className="mt-6 flex flex-col gap-3 border-t border-[#efebe7] pt-4 text-sm text-[#6a6a6a] md:flex-row md:items-center md:justify-between">
-              <span>
-                Showing {Math.min((page - 1) * pageSize + 1, filtered.length)}–
-                {Math.min(page * pageSize, filtered.length)} of {filtered.length} customer
-                {filtered.length !== 1 ? "s" : ""}
-                {customers.length !== filtered.length && ` (filtered from ${customers.length})`}
-              </span>
-
+               <div className="flex items-center gap-2 text-[13px] text-[#6a6a6a]">
+                <span>Show</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="h-[38px] appearance-none rounded-xl border border-[#dfe2e5] bg-[#faf9f8] pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer"
+                  >
+                    {PAGE_SIZES.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#666]" />
+                </div>
+                <span>entries</span>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -576,6 +695,8 @@ const AdminCustomers = () => {
           )}
         </div>
       </div>
+      {showAddUser && <AddUserModal onClose={() => setShowAddUser(false)} onCreated={() => setRefreshKey((key) => key + 1)} />}
+      {customerModal && <CustomerModal customer={customerModal.customer} mode={customerModal.mode} onClose={() => setCustomerModal(null)} onSaved={() => setRefreshKey((key) => key + 1)} />}
     </div>
   );
 };
