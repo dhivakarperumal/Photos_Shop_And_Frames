@@ -65,17 +65,19 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
   const isAdmin  = ["Admin", "Super Admin"].includes(customer.role);
 
   return (
-    <div className="rounded-2xl border border-[#e7e0d8] bg-white p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4">
+    <div className="group relative flex min-h-[250px] flex-col gap-4 overflow-hidden rounded-2xl border border-[#e7e0d8] bg-white p-5 shadow-[0_2px_8px_rgba(31,31,31,0.04)] transition-all hover:-translate-y-0.5 hover:border-[#d8cbbd] hover:shadow-[0_10px_24px_rgba(31,31,31,0.08)]">
+      <div className="absolute inset-x-0 top-0 h-1 bg-[#d4a843]" />
       {/* Top row: avatar + status */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-base font-bold ${getAvatarColor(customer.username || "")}`}
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-base font-bold shadow-inner ${getAvatarColor(customer.username || "")}`}
           >
             {getInitials(customer.username)}
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-[#1f1f1f] leading-tight">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9a9a9a]">Customer profile</p>
+            <p className="max-w-[150px] truncate text-[15px] font-semibold leading-tight text-[#1f1f1f]">
               {customer.username || "—"}
             </p>
             <p className="text-[11px] text-[#9a9a9a] mt-0.5">
@@ -85,7 +87,7 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
         </div>
 
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
             isActive ? "bg-[#edf7f1] text-[#2d7b5a]" : "bg-[#fff0f0] text-[#d04d4d]"
           }`}
         >
@@ -97,22 +99,22 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
       </div>
 
       {/* Info rows */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-[13px] text-[#5a5a5a]">
-          <Mail className="h-3.5 w-3.5 shrink-0 text-[#a0a0a0]" />
-          <span className="truncate">{customer.email || "—"}</span>
+      <div className="space-y-2.5 rounded-xl border border-[#f0ebe6] bg-[#faf9f8] px-3 py-3">
+        <div className="flex min-w-0 items-center gap-2 text-[13px] text-[#5a5a5a]">
+          <Mail className="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
+          <span className="truncate">{customer.email || "No email provided"}</span>
         </div>
         <div className="flex items-center gap-2 text-[13px] text-[#5a5a5a]">
-          <Calendar className="h-3.5 w-3.5 shrink-0 text-[#a0a0a0]" />
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-[#8d8d8d]" />
           <span>Joined {formatDate(customer.created_at)}</span>
         </div>
       </div>
 
       {/* Divider */}
-      <div className="border-t border-[#f0ebe6]" />
+      <div className="mt-auto border-t border-[#f0ebe6]" />
 
       {/* Footer: role + actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
             isAdmin ? "bg-[#f1e7f7] text-[#7d5a93]" : "bg-[#e8eefb] text-[#4f88b2]"
@@ -122,22 +124,22 @@ const CustomerCard = ({ customer, onView, onEdit, onDelete }) => {
           {customer.role || "user"}
         </span>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onView(customer.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#1a3c36] hover:bg-[#f3f8f6] hover:text-[#1a3c36]"
             title="View customer"
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
-          <button type="button" onClick={() => onEdit(customer.id)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]" title="Edit customer">
+          <button type="button" onClick={() => onEdit(customer.id)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#1a3c36] hover:bg-[#f3f8f6] hover:text-[#1a3c36]" title="Edit customer">
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
             onClick={() => onDelete(customer.id)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]"
             title="Delete customer"
           >
             <Trash2 className="h-3.5 w-3.5" />
