@@ -24,7 +24,7 @@ import {
 import api from "../../api";
 import toast from "react-hot-toast";
 
-const AdminOrders = ({ defaultStatus = "All" }) => {
+const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
@@ -37,7 +37,7 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
     try {
       setLoading(true);
       const params = {};
-      if (activeStatus && activeStatus !== "All") {
+      if (!allowedStatuses && activeStatus && activeStatus !== "All") {
         params.status = activeStatus;
       }
       if (searchTerm.trim()) {
@@ -47,7 +47,11 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
 
       const res = await api.get("/orders", { params });
       if (res.data?.success && Array.isArray(res.data.data)) {
-        setOrders(res.data.data);
+        const nextOrders = res.data.data.filter((order) => {
+          if (allowedStatuses && !allowedStatuses.includes(order.order_status)) return false;
+          return activeStatus === "All" || order.order_status === activeStatus;
+        });
+        setOrders(nextOrders);
       } else {
         setOrders([]);
       }
@@ -62,7 +66,7 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
 
   useEffect(() => {
     fetchOrders();
-  }, [activeStatus]);
+  }, [activeStatus, allowedStatuses]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -147,7 +151,9 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
     }
   };
 
-  const statusOptions = ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+  const statusOptions = allowedStatuses
+    ? ["All", ...allowedStatuses]
+    : ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
 
   // Metrics
   const totalOrdersCount = orders.length;
