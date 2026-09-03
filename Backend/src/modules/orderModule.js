@@ -1,14 +1,16 @@
 const { getDB } = require("../config/db");
 
 /**
- * Order Module
- * Manages orders and order_items with customer customized photos.
+ * Generates a clean human-readable Order ID
+ * Format: ORD-YYYYMMDD-XXXX (e.g. ORD-20260903-D38W)
  */
-
 const generateOrderId = () => {
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `ORD-${dateStr}-${rand}`;
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `ORD-${year}${month}${day}-${randomChars}`;
 };
 
 const createOrder = async ({ orderData, items = [] }) => {
@@ -43,12 +45,12 @@ const createOrder = async ({ orderData, items = [] }) => {
       orderId,
       orderData.user_id || null,
       orderData.customer_name,
-      orderData.customer_email,
+      orderData.customer_email || null,
       orderData.customer_phone,
       orderData.shipping_address,
-      orderData.city || "",
-      orderData.state || "",
-      orderData.pincode || "",
+      orderData.city || null,
+      orderData.state || null,
+      orderData.pincode || null,
       Number(orderData.total_amount || 0),
       orderData.payment_method || "Cash On Delivery",
       orderData.payment_status || "Pending",
@@ -58,6 +60,7 @@ const createOrder = async ({ orderData, items = [] }) => {
 
     const [orderResult] = await connection.query(insertOrderQuery, orderValues);
 
+    // Insert order items
     const insertItemQuery = `
       INSERT INTO order_items (
         order_id,
@@ -78,15 +81,15 @@ const createOrder = async ({ orderData, items = [] }) => {
     for (const item of items) {
       const itemValues = [
         orderId,
-        Number(item.product_id),
-        item.product_name || "Custom Frame Product",
+        Number(item.product_id || 0),
+        item.product_name || "Custom Frame",
         item.category || "Photo Frames",
         item.size || "Standard",
-        Number(item.price || 0),
+        Number(item.price || item.unit_price || 0),
         Number(item.quantity || 1),
-        Number(item.total_price || (item.price * (item.quantity || 1))),
+        Number(item.total_price || (Number(item.price || item.unit_price || 0) * Number(item.quantity || 1))),
         item.customization_id || null,
-        item.slot_photos ? JSON.stringify(item.slot_photos) : null,
+        item.slot_photos ? (typeof item.slot_photos === "string" ? item.slot_photos : JSON.stringify(item.slot_photos)) : null,
         item.product_image || null,
         item.frame_image || null,
       ];
@@ -232,7 +235,6 @@ const deleteOrder = async (orderId) => {
   try {
     await connection.beginTransaction();
 
-    // Look up order_id if passed as numeric id
     const [orders] = await connection.query(
       `SELECT order_id FROM orders WHERE id = ? OR order_id = ? LIMIT 1`,
       [orderId, orderId]
@@ -261,6 +263,7 @@ const deleteOrder = async (orderId) => {
 module.exports = {
   createOrder,
   getAllOrders,
+  getOrders: getAllOrders,
   getOrderById,
   getOrdersByUser,
   updateOrderStatus,

@@ -3,8 +3,8 @@ const orderController = require("../controllers/orderController");
 
 const router = express.Router();
 
-router.post("/", orderController.createOrder);
 router.get("/", orderController.getAllOrders);
+router.post("/", orderController.createOrder);
 router.get("/user/:userId", orderController.getOrdersByUser);
 router.get("/:orderId", orderController.getOrderById);
 router.patch("/:orderId/status", orderController.updateOrderStatus);

@@ -18,7 +18,7 @@ import {
   User,
   X,
   XCircle,
-  Sparkles 
+  Sparkles
 } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";

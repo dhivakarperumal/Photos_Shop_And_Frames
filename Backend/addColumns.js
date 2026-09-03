@@ -43,6 +43,36 @@ async function addColumns() {
       }
     }
 
+    // Add columns to orders table
+    console.log("\nAdding columns to orders table...");
+    try {
+      await connection.query(
+        `ALTER TABLE orders ADD COLUMN order_time VARCHAR(20) DEFAULT '00:00'`
+      );
+      console.log("✅ Added order_time to orders table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  order_time already exists in orders table");
+      } else {
+        throw error;
+      }
+    }
+
+    // Add columns to order_items table
+    console.log("\nAdding columns to order_items table...");
+    try {
+      await connection.query(
+        `ALTER TABLE order_items ADD COLUMN product_image VARCHAR(500) DEFAULT ''`
+      );
+      console.log("✅ Added product_image to order_items table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  product_image already exists in order_items table");
+      } else {
+        throw error;
+      }
+    }
+
     // Add columns to frames table
     console.log("\nAdding columns to frames table...");
     try {

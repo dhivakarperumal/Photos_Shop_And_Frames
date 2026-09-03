@@ -17,7 +17,37 @@ const createOrder = async (req, res) => {
       notes,
       items = [],
       clear_cart = false,
+      // Legacy / billing format support
+      order,
+      address,
     } = req.body;
+
+    // Handle legacy format if passed
+    if (order && !customer_name) {
+      const legacyResult = await orderModule.createOrder({
+        orderData: {
+          user_id: order.user_id || order.customer_id || null,
+          customer_name: address?.customer_name || order.customer_name || "Customer",
+          customer_email: order.customer_email || "",
+          customer_phone: address?.mobile_number || order.customer_phone || "",
+          shipping_address: [address?.address_line1, address?.address_line2].filter(Boolean).join(", ") || "Store Pickup",
+          city: address?.city || "",
+          state: address?.state || "",
+          pincode: address?.pincode || "",
+          total_amount: order.total_amount || 0,
+          payment_method: order.payment_method || "Cash",
+          payment_status: order.payment_status || "Pending",
+          order_status: order.order_status || "Pending",
+          notes: order.notes || null,
+        },
+        items: Array.isArray(items) ? items : [],
+      });
+      return res.status(201).json({
+        success: true,
+        message: "Order created successfully",
+        data: legacyResult,
+      });
+    }
 
     if (!customer_name || !customer_name.trim()) {
       return res.status(400).json({
@@ -49,7 +79,11 @@ const createOrder = async (req, res) => {
 
     const calculatedTotal =
       Number(total_amount) ||
-      items.reduce((acc, item) => acc + Number(item.price || 0) * Number(item.quantity || 1), 0);
+      items.reduce(
+        (acc, item) =>
+          acc + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
+        0
+      );
 
     const orderPayload = {
       user_id: user_id || req.user?.user_id || null,
@@ -223,6 +257,7 @@ const deleteOrder = async (req, res) => {
 module.exports = {
   createOrder,
   getAllOrders,
+  getOrders: getAllOrders,
   getOrderById,
   getOrdersByUser,
   updateOrderStatus,
