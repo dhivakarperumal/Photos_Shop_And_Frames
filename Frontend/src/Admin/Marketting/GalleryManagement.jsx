@@ -211,10 +211,10 @@ const GalleryManagement = () => {
         <div className="rounded-2xl border border-[#e7e0d8] bg-white p-2 shadow-sm">
           
           {/* TOOLBAR */}
-          <div className="p-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-[#f0ebe6]">
+          <div className="p-3 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between border-b border-[#f0ebe6]">
             
             {/* Search & Filters */}
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
               <div className="relative w-full max-w-[260px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7a7a7a]" />
                 <input
@@ -226,7 +226,16 @@ const GalleryManagement = () => {
                 />
               </div>
 
-              <div className="relative">
+             
+
+              
+            </div>
+
+            {/* Sort & View Toggles */}
+            <div className="flex items-center gap-3">
+            
+              
+           <div className="relative">
                 <select 
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
@@ -252,28 +261,6 @@ const GalleryManagement = () => {
                   <option value="Inactive">Inactive</option>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
-              </div>
-
-              <button className="inline-flex h-[42px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-white px-3 text-[13px] font-medium text-[#2d2d2d] hover:bg-[#faf9f8]">
-                <Filter className="h-4 w-4 text-[#d4a843]" />
-                Filter
-              </button>
-            </div>
-
-            {/* Sort & View Toggles */}
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={fetchAlbums}
-                className="flex h-[40px] w-[40px] items-center justify-center rounded-xl border border-[#dfe2e5] bg-white text-[#6a6a6a] hover:bg-[#faf9f8]"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              
-              <div className="relative">
-                <select className="h-[42px] appearance-none rounded-xl border border-[#dfe2e5] bg-white pl-3 pr-8 text-[13px] font-medium text-[#2d2d2d] outline-none cursor-pointer">
-                  <option>Sort by: Latest</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#666]" />
               </div>
 
               <div className="flex overflow-hidden rounded-xl border border-[#dfe2e5] bg-white">
@@ -325,6 +312,54 @@ const GalleryManagement = () => {
 
           {/* TABLE CONTENT */}
           <div className="overflow-x-auto p-1">
+            {viewMode === "card" ? (
+              <div className="grid gap-4 p-2 sm:grid-cols-2 xl:grid-cols-3">
+                {loading ? (
+                  <div className="col-span-full flex min-h-[200px] items-center justify-center text-sm text-[#5d5d5d]">
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin text-[#d4a843]" />
+                    Loading albums...
+                  </div>
+                ) : filteredAlbums.length === 0 ? (
+                  <p className="col-span-full px-4 py-10 text-center text-sm text-[#6a6a6a]">No albums found.</p>
+                ) : (
+                  filteredAlbums.map((album) => {
+                    const isActive = album.status === "Active";
+                    return (
+                      <article key={album.album_id} className="overflow-hidden rounded-xl border border-[#e7e0d8] bg-white shadow-sm transition-shadow hover:shadow-md">
+                        <div className="h-48 w-full bg-[#f3f0ec] bg-cover bg-center" style={{ backgroundImage: getImageUrl(album.cover_image) }} />
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h2 className="truncate text-base font-bold text-[#1f1d1b]">{album.title}</h2>
+                              <p className="mt-1 text-xs text-[#7a7a7a]">{album.album_id}</p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${isActive ? "bg-[#edf7f1] text-[#2d7b5a]" : "bg-[#fff0f0] text-[#d04d4d]"}`}>
+                              {album.status}
+                            </span>
+                          </div>
+                          <p className="mt-3 line-clamp-2 min-h-10 text-sm text-[#5f5f5f]">{album.short_description || "No description available."}</p>
+                          <div className="mt-4 flex items-center justify-between border-t border-[#f0ebe6] pt-3 text-xs text-[#6a6a6a]">
+                            <span>{album.category || "Uncategorized"}</span>
+                            <span>{album.photo_count || 0} photos</span>
+                          </div>
+                          <div className="mt-4 flex justify-end gap-2">
+                            <button type="button" onClick={() => handleEdit(album.album_id)} aria-label="Edit gallery album" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => handleView(album.album_id)} aria-label="View gallery album" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2d9cf] bg-white text-[#4d4d4d] transition hover:border-[#d0b997] hover:text-[#1a1a1a]">
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => handleDelete(album.album_id)} aria-label="Delete gallery album" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f3d7d7] bg-[#fff8f8] text-[#d04d4d] transition hover:bg-[#fff0f0]">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
@@ -448,6 +483,7 @@ const GalleryManagement = () => {
                 )}
               </tbody>
             </table>
+            )}
           </div>
 
           {/* PAGINATION */}
