@@ -319,32 +319,32 @@ const AdminCustomers = () => {
       title: "Total Customers",
       value: totalCustomers,
       icon: <Users className="h-6 w-6" />,
-      accent: "bg-[#e8f3eb]",
-      iconColor: "text-[#2d7b5a]",
+      color: "#22c55e",
+      wave: "#9be7b9",
       trend: `${totalCustomers} total`,
     },
     {
       title: "Active",
       value: activeCustomers,
       icon: <UserCheck className="h-6 w-6" />,
-      accent: "bg-[#eaf7f1]",
-      iconColor: "text-[#2d7b5a]",
+      color: "#06b6d4",
+      wave: "#93dce8",
       trend: totalCustomers > 0 ? `${Math.round((activeCustomers / totalCustomers) * 100)}% of total` : "0%",
     },
     {
       title: "Inactive",
       value: inactiveCustomers,
       icon: <UserX className="h-6 w-6" />,
-      accent: "bg-[#fff0f0]",
-      iconColor: "text-[#d04d4d]",
+      color: "#f97316",
+      wave: "#ffc39e",
       trend: totalCustomers > 0 ? `${Math.round((inactiveCustomers / totalCustomers) * 100)}% of total` : "0%",
     },
     {
       title: "Admins",
       value: adminCount,
       icon: <Shield className="h-6 w-6" />,
-      accent: "bg-[#f1e7f7]",
-      iconColor: "text-[#7d5a93]",
+      color: "#a855f7",
+      wave: "#d8b4f5",
       trend: "Admin & Super Admin",
     },
   ];
@@ -407,29 +407,37 @@ const AdminCustomers = () => {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {statCards.map((card, idx) => (
             <div
               key={idx}
-              className="rounded-[18px] border border-[#e7e0d8] bg-white p-4 shadow-[0_1px_0_rgba(16,24,40,0.02)]"
+              className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className={`flex h-[52px] w-[52px] items-center justify-center rounded-xl ${card.accent} ${card.iconColor}`}>
+              <div className="flex flex-1 items-start gap-4">
+                <div
+                  className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ backgroundColor: card.color }}
+                >
                   {card.icon}
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="mb-1 flex items-center justify-end gap-1 text-[11px] font-semibold text-[#2d7b5a]">
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                    {card.trend}
-                  </div>
+                <div className="min-w-0 pt-1">
+                  <p className="text-sm font-medium text-[#374151]">{card.title}</p>
+                  <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">
+                    {loading ? "—" : card.value}
+                  </p>
+                  <p className="mt-5 flex items-center gap-1 text-xs font-medium text-[#00a76f]">
+                    <ArrowUpRight className="h-3.5 w-3.5" /> {card.trend}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#7c8798]">customer overview</p>
                 </div>
               </div>
-              <div className="mt-4">
-                <div className="text-[13px] font-medium text-[#666666]">{card.title}</div>
-                <div className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.08em] text-[#1e1e1e]">
-                  {loading ? "—" : card.value}
-                </div>
-              </div>
+              <div
+                className="absolute bottom-0 left-0 h-6 w-full"
+                style={{
+                  background: card.wave,
+                  clipPath: "ellipse(65% 75% at 55% 100%)",
+                }}
+              />
             </div>
           ))}
         </div>
