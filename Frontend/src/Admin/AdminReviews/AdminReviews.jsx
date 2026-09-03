@@ -467,7 +467,7 @@ const AdminReviews = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] p-3 md:p-6 text-gray-800 font-sans">
+    <div className="min-h-screen bg-[#f3f4f6] p-3 md:p-2 text-gray-800 font-sans">
       <div className="mx-auto max-w-[1540px]">
      
 

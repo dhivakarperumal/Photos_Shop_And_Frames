@@ -367,44 +367,9 @@ const AdminCustomers = () => {
      RENDER
      ============================================================ */
   return (
-    <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
+    <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-2">
       <div className="mx-auto max-w-[1500px]">
 
-        {/* ── PAGE HEADER ── */}
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1d1b]">Customers</h1>
-            <p className="mt-2 text-[13px] text-[#646464]">
-              Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span>
-              <span className="font-medium text-[#2a2a2a]">Customers</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowAddUser(true)}
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
-            >
-              <Plus className="h-4 w-4" />
-              Add New User
-            </button>
-            <button
-              onClick={() => setRefreshKey((k) => k + 1)}
-              disabled={loading}
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3] disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            <button
-              onClick={handleExport}
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-          </div>
-        </div>
 
         {/* ── STAT CARDS ── */}
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -516,6 +481,23 @@ const AdminCustomers = () => {
                   <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
+             
+            <button
+              type="button"
+              onClick={() => setShowAddUser(true)}
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-4 w-4" />
+              Add New User
+            </button>
+         
+            <button
+              onClick={handleExport}
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </button>
             </div>
           </div>
 
