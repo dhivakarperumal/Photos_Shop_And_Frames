@@ -8,7 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
 const money = (value) =>
@@ -29,42 +29,66 @@ const parseVariants = (value) => {
 
 const normalizeImageUrl = (value) => {
   if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
   if (
-    value.startsWith("data:") ||
-    value.startsWith("blob:") ||
-    value.startsWith("http://") ||
-    value.startsWith("https://")
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://")
   ) {
-    return value;
+    return trimmed;
   }
 
-  const rawApiUrl = import.meta.env.VITE_API_URL || "/api";
-  const baseUrl = rawApiUrl.replace(/\/api\/?$/, "");
-  return `${baseUrl}${value.startsWith("/") ? value : `/${value}`}`;
+  const baseUrl = API_URL.replace(/\/api\/?$/, "");
+  return `${baseUrl}${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
+};
+
+const getArrayValue = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 };
 
 const getProductImage = (product) => {
-  const imageList = Array.isArray(product?.product_images)
-    ? product.product_images
-    : typeof product?.product_images === "string"
-      ? (() => {
-          try {
-            const parsed = JSON.parse(product.product_images || "[]");
-            return Array.isArray(parsed) ? parsed : [];
-          } catch {
-            return [];
-          }
-        })()
-      : [];
+  const candidates = [
+    product?.product_images,
+    product?.images,
+    product?.image,
+    product?.frame_data?.frame_image,
+    product?.frame_data?.images,
+    product?.image_url,
+    product?.thumbnail,
+  ];
 
-  const rawImage =
-    imageList[0] ||
-    product?.frame_data?.frame_image ||
-    product?.image ||
-    product?.images?.[0] ||
-    "";
+  for (const candidate of candidates) {
+    const list = getArrayValue(candidate);
+    if (list.length) {
+      const first = list[0];
+      if (first && typeof first === "string") return normalizeImageUrl(first);
+      if (first && typeof first === "object") {
+        const nested = first.url || first.image || first.src || first.path || "";
+        if (nested) return normalizeImageUrl(nested);
+      }
+    }
 
-  return normalizeImageUrl(rawImage);
+    if (typeof candidate === "string" && candidate.trim()) {
+      return normalizeImageUrl(candidate);
+    }
+
+    if (candidate && typeof candidate === "object") {
+      const nested = candidate.url || candidate.image || candidate.src || candidate.path || "";
+      if (nested) return normalizeImageUrl(nested);
+    }
+  }
+
+  return "";
 };
 
 const NewBilling = () => {
