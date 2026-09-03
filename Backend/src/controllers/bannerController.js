@@ -33,6 +33,8 @@ const createBanner = async (req, res) => {
       link,
       type,
       active,
+      created_by: req.body.created_by || req.user?.user_id || null,
+      updated_by: req.body.updated_by || req.user?.user_id || req.body.created_by || null,
     });
 
     res.status(201).json({
@@ -52,7 +54,10 @@ const createBanner = async (req, res) => {
 const updateBanner = async (req, res) => {
   try {
     const { id } = req.params;
-    const banner = await bannerModule.updateBanner(id, req.body);
+    const banner = await bannerModule.updateBanner(id, {
+      ...req.body,
+      updated_by: req.body.updated_by || req.user?.user_id || null,
+    });
 
     res.status(200).json({
       success: true,

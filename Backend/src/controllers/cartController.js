@@ -66,6 +66,8 @@ const addToCart = async (req, res) => {
       quantity: Number(quantity) || 1,
       slot_photos: slot_photos || null,
       preview_image: preview_image || null,
+      created_by: finalUserId,
+      updated_by: finalUserId,
     });
 
     res.status(201).json({
@@ -94,7 +96,12 @@ const updateCartItem = async (req, res) => {
       });
     }
 
-    const updated = await cartModule.updateCartItem(id, quantity, price);
+    const updated = await cartModule.updateCartItem(
+      id,
+      quantity,
+      price,
+      req.user?.user_id || req.user?.id || req.body.updated_by || null,
+    );
     if (!updated) {
       return res.status(404).json({
         success: false,

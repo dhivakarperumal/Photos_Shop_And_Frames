@@ -109,6 +109,26 @@ async function addColumns() {
       }
     }
 
+    for (const table of ["gallery_albums", "customized_photos", "coupons", "carts", "banners"]) {
+      console.log(`\nAdding audit columns to ${table} table...`);
+      for (const column of [
+        "created_by VARCHAR(255) NULL",
+        "updated_by VARCHAR(255) NULL",
+      ]) {
+        const columnName = column.split(" ")[0];
+        try {
+          await connection.query(`ALTER TABLE ${table} ADD COLUMN ${column}`);
+          console.log(`✅ Added ${columnName} to ${table} table`);
+        } catch (error) {
+          if (error.code === "ER_DUP_FIELDNAME") {
+            console.log(`ℹ️  ${columnName} already exists in ${table} table`);
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
+
     // Add columns to frames table
     console.log("\nAdding columns to frames table...");
     try {

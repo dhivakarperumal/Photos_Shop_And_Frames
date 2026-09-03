@@ -27,6 +27,8 @@ const createCustomization = async (req, res) => {
       product_id,
       slot_photos: slot_photos || {},
       preview_image: preview_image || null,
+      created_by: user_id || req.user?.user_id || req.user?.id || null,
+      updated_by: user_id || req.user?.user_id || req.user?.id || null,
     });
 
     res.status(201).json({

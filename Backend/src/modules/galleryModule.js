@@ -18,6 +18,8 @@ const initGalleryTables = async () => {
         cover_image VARCHAR(255),
         meta_title VARCHAR(255),
         meta_description TEXT,
+        created_by VARCHAR(255) NULL,
+        updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -127,8 +129,8 @@ const createAlbum = async (albumData, photos = []) => {
 
   const query = `
     INSERT INTO gallery_albums 
-    (album_id, title, category, status, sort_order, short_description, description, cover_image, meta_title, meta_description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (album_id, title, category, status, sort_order, short_description, description, cover_image, meta_title, meta_description, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -142,6 +144,8 @@ const createAlbum = async (albumData, photos = []) => {
     cover_image || null,
     meta_title || null,
     meta_description || null,
+    albumData.created_by || null,
+    albumData.updated_by || albumData.created_by || null,
   ];
 
   try {
@@ -207,10 +211,11 @@ const updateAlbum = async (albumId, albumData, photos) => {
   const [result] = await pool.query(
     `UPDATE gallery_albums
      SET title = ?, category = ?, status = ?, sort_order = ?, short_description = ?,
-         description = ?, cover_image = ?, meta_title = ?, meta_description = ?
+         description = ?, cover_image = ?, meta_title = ?, meta_description = ?, updated_by = ?
      WHERE album_id = ?`,
     [title, category || null, status || "Active", sort_order || 1, short_description || null,
-      description || null, cover_image || null, meta_title || null, meta_description || null, resolvedAlbumId]
+      description || null, cover_image || null, meta_title || null, meta_description || null,
+      albumData.updated_by || null, resolvedAlbumId]
   );
 
   if (!result.affectedRows) return null;
