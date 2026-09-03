@@ -28,6 +28,7 @@ const couponRouter = require("./src/routers/couponRouter");
 const customizationRouter = require("./src/routers/customizationRouter");
 const cartRouter = require("./src/routers/cartRouter");
 const orderRouter = require("./src/routers/orderRouter");
+const orderRouter = require("./src/routers/orderRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -108,6 +109,7 @@ app.use("/api/albums", albumRouter);
 app.use("/api/coupons", couponRouter);
 app.use("/api/customizations", customizationRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/orders", orderRouter);
 app.use("/api/orders", orderRouter);
 
 app.use("/api", (req, res) => {

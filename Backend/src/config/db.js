@@ -202,6 +202,42 @@ async function ensureDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
+    const createOrdersTableQuery = `
+      CREATE TABLE IF NOT EXISTS orders (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        order_id VARCHAR(255) NOT NULL UNIQUE,
+        customer_id VARCHAR(255), billing_type VARCHAR(100) NOT NULL,
+        order_date DATE NOT NULL, order_time VARCHAR(20) DEFAULT '00:00', total_items INT DEFAULT 0,
+        subtotal DECIMAL(12,2) DEFAULT 0, discount_amount DECIMAL(12,2) DEFAULT 0,
+        tax_amount DECIMAL(12,2) DEFAULT 0, total_amount DECIMAL(12,2) DEFAULT 0,
+        payment_method VARCHAR(50), payment_status VARCHAR(50), order_status VARCHAR(50), notes TEXT,
+        created_by VARCHAR(255), updated_by VARCHAR(255),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_orders_customer (customer_id), KEY idx_orders_date (order_date)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    const createOrderItemsTableQuery = `
+      CREATE TABLE IF NOT EXISTS order_items (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, item_id VARCHAR(255) NOT NULL UNIQUE,
+        order_id VARCHAR(255) NOT NULL, product_id VARCHAR(255), product_name VARCHAR(255) NOT NULL,
+        product_code VARCHAR(255), product_image VARCHAR(500) DEFAULT '', quantity INT DEFAULT 1, unit_price DECIMAL(12,2) DEFAULT 0,
+        discount DECIMAL(12,2) DEFAULT 0, tax DECIMAL(5,2) DEFAULT 0, total_price DECIMAL(12,2) DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_order_items_order (order_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    const createAddressesTableQuery = `
+      CREATE TABLE IF NOT EXISTS addresses (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, address_id VARCHAR(255) NOT NULL UNIQUE,
+        user_id VARCHAR(255), customer_id VARCHAR(255), order_id VARCHAR(255), address_type VARCHAR(50),
+        customer_name VARCHAR(255), mobile_number VARCHAR(50), alternate_mobile VARCHAR(50),
+        address_line1 TEXT, address_line2 TEXT, city VARCHAR(100), district VARCHAR(100), state VARCHAR(100),
+        country VARCHAR(100), pincode VARCHAR(20), landmark VARCHAR(255), is_default BOOLEAN DEFAULT FALSE,
+        status VARCHAR(50) DEFAULT 'Active', created_by VARCHAR(255), updated_by VARCHAR(255),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_addresses_order (order_id), KEY idx_addresses_customer (customer_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     await connection.query(createUsersTableQuery);
     await connection.query(createCategoriesTableQuery);
     await connection.query(createAlbumsTableQuery);
@@ -209,6 +245,9 @@ async function ensureDatabaseSchema() {
     await connection.query(createCartsTableQuery);
     await connection.query(createOrdersTableQuery);
     await connection.query(createOrderItemsTableQuery);
+    await connection.query(createOrdersTableQuery);
+    await connection.query(createOrderItemsTableQuery);
+    await connection.query(createAddressesTableQuery);
     console.log("✅ Database schema ready.");
   } finally {
     await connection.end();

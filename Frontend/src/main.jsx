@@ -32,6 +32,9 @@ import GalleryDetails from './Admin/Marketting/GalleryDetails.jsx'
 import Coupons from './Admin/Marketting/Coupons.jsx'
 import AdminCustomers from './Admin/AdminCustomers.jsx'
 import CustomerDetails from './Admin/CustomerDetails.jsx'
+import Billing from './Admin/Billings/Billing.jsx'
+import NewBilling from './Admin/Billings/NewBilling.jsx'
+import OrderDetails from './Admin/Billings/OrderDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 
 
@@ -181,6 +184,18 @@ const router = createHashRouter([
           {
             path: 'customers/:userId',
             element: <CustomerDetails />,
+          },
+          {
+            path: 'billing',
+            element: <Billing />,
+          },
+          {
+            path: 'billing/new',
+            element: <NewBilling />,
+          },
+          {
+            path: 'billing/:orderId',
+            element: <OrderDetails />,
           },
           {
             path: 'reviews',
