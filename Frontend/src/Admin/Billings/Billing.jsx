@@ -14,7 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import api, { API_URL } from "../../api";
+import api from "../../api";
 
 const emptyOrder = {
   id: "",
@@ -32,33 +32,6 @@ const products = [];
 
 const formatCurrency = (value) =>
   `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-
-const normalizeImageUrl = (value) => {
-  if (!value || typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (/^(data:|blob:|https?:\/\/)/i.test(trimmed)) return trimmed;
-  const baseUrl = API_URL.replace(/\/api\/?$/, "");
-  return `${baseUrl}${trimmed.startsWith("/") ? trimmed : `/${trimmed}`}`;
-};
-
-const getOrderImage = (value) => {
-  if (Array.isArray(value)) return getOrderImage(value[0]);
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-    try {
-      const parsed = JSON.parse(trimmed);
-      return parsed === value ? normalizeImageUrl(value) : getOrderImage(parsed);
-    } catch {
-      return normalizeImageUrl(trimmed);
-    }
-  }
-  if (value && typeof value === "object") {
-    return getOrderImage(value.url || value.image || value.src || value.path || "");
-  }
-  return "";
-};
 
 const statusClass = {
   Confirmed: "bg-[#e6f7ed] text-[#18794e]",
