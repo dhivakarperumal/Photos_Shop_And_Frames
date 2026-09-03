@@ -158,25 +158,46 @@ async function ensureDatabaseSchema() {
 
     const createOrdersTableQuery = `
       CREATE TABLE IF NOT EXISTS orders (
-        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-        order_id VARCHAR(255) NOT NULL UNIQUE,
-        customer_id VARCHAR(255), billing_type VARCHAR(100) NOT NULL,
-        order_date DATE NOT NULL, order_time VARCHAR(20) DEFAULT '00:00', total_items INT DEFAULT 0,
-        subtotal DECIMAL(12,2) DEFAULT 0, discount_amount DECIMAL(12,2) DEFAULT 0,
-        tax_amount DECIMAL(12,2) DEFAULT 0, total_amount DECIMAL(12,2) DEFAULT 0,
-        payment_method VARCHAR(50), payment_status VARCHAR(50), order_status VARCHAR(50), notes TEXT,
-        created_by VARCHAR(255), updated_by VARCHAR(255),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        KEY idx_orders_customer (customer_id), KEY idx_orders_date (order_date)
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL UNIQUE,
+        user_id VARCHAR(255) NULL,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_email VARCHAR(255) NULL,
+        customer_phone VARCHAR(50) NOT NULL,
+        shipping_address TEXT NOT NULL,
+        city VARCHAR(100) NULL,
+        state VARCHAR(100) NULL,
+        pincode VARCHAR(20) NULL,
+        total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        payment_method VARCHAR(50) NOT NULL DEFAULT 'Cash On Delivery',
+        payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        order_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        notes TEXT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_user_id (user_id),
+        KEY idx_order_status (order_status),
+        KEY idx_created_at (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
     const createOrderItemsTableQuery = `
       CREATE TABLE IF NOT EXISTS order_items (
-        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, item_id VARCHAR(255) NOT NULL UNIQUE,
-        order_id VARCHAR(255) NOT NULL, product_id VARCHAR(255), product_name VARCHAR(255) NOT NULL,
-        product_code VARCHAR(255), product_image VARCHAR(500) DEFAULT '', quantity INT DEFAULT 1, unit_price DECIMAL(12,2) DEFAULT 0,
-        discount DECIMAL(12,2) DEFAULT 0, tax DECIMAL(5,2) DEFAULT 0, total_price DECIMAL(12,2) DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_order_items_order (order_id)
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL,
+        product_id INT(11) NOT NULL,
+        product_name VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NULL,
+        size VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        quantity INT(11) NOT NULL DEFAULT 1,
+        total_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        customization_id VARCHAR(255) NULL,
+        slot_photos JSON NULL,
+        product_image VARCHAR(500) NULL,
+        frame_image VARCHAR(500) NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_order_id (order_id),
+        KEY idx_product_id (product_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
     const createAddressesTableQuery = `
