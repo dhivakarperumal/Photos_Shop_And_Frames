@@ -26,8 +26,7 @@ const getCartByUser = async (userId) => {
       p.product_images,
       p.frame_data,
       p.orientation,
-      p.size_variants,
-      p.stock_quantity
+      p.size_variants
     FROM carts c
     LEFT JOIN products p ON c.product_id = p.id
     WHERE c.user_id = ?
