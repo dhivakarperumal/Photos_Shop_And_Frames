@@ -114,7 +114,7 @@ const navItems = [
     ],
   },
 
-    {
+  {
     path: "/admin/gifts",
     label: "Gifts",
     icon: Gift,
@@ -147,7 +147,7 @@ const navItems = [
     children: [
       { path: "/admin/banners", label: "Banners", icon: Image },
       { path: "/admin/videos", label: "Videos Management", icon: Image },
-      { path: "/admin/albums",label: "Albums",icon: Album,},
+      { path: "/admin/albums", label: "Albums", icon: Album, },
       { path: "/admin/gallery", label: "Gallery", icon: Image },
       { path: "/admin/coupons", label: "Coupons & Offers", icon: Tag },
     ],
@@ -317,6 +317,14 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                         const SubIcon = sub.icon;
                         const isActive =
                           location.pathname === sub.path ||
+
+                          // Products
+                          (sub.path === "/admin/products" &&
+                            location.pathname === "/admin/products/add") ||
+
+                          // Product Categories
+                          (sub.path === "/admin/products/categories" &&
+                            location.pathname === "/admin/products/categories/add") ||
 
                           // All Projects
                           (sub.path === "/admin/projects" &&
