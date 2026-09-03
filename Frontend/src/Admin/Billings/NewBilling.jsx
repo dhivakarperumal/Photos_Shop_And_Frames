@@ -14,7 +14,7 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 const money = (value) =>
   `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 const fieldClass =
-  "mt-1 h-9 w-full rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#ff8a4c]";
+  "mt-1 h-9 w-full rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]";
 
 const parseVariants = (value) => {
   if (Array.isArray(value)) return value;
@@ -390,21 +390,25 @@ const NewBilling = () => {
   };
 
   return (
-    <div className="billing-page min-h-screen bg-[#f3f4f6] p-4 text-[#1f2937] md:p-6">
+    <div className="billing-page min-h-screen bg-[#f3f4f6] p-4 font-['Josefin_Sans'] text-[#1f2937] md:p-6">
       <div className="mx-auto max-w-[1500px]">
         <style>{`.billing-page table th:nth-child(6), .billing-page table td:nth-child(6) { display: none; }`}</style>
         <div className="mb-3 flex justify-end">
           <button
             type="button"
             onClick={() => setShowProductModal(true)}
-            className="rounded-md border bg-[#1c5922] border-[#1c5922] px-4 py-2 text-xs font-semibold text-white"
+            className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
           >
             <Plus className="mr-1 inline h-5 w-6" /> Add Item
           </button>
         </div>
 
-        <div className="grid gap-3 xl:grid-cols-2">
-          <div className="mt-5 space-y-3">
+        <div className="grid gap-3 ">
+          
+          <section className="rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3">
+            <h2 className="mb-4 text-sm font-bold">Customer Details</h2>
+
+            <div className="mt-5 space-y-3">
             <section className="rounded-lg border border-[#e5e7eb] bg-white p-4">
               <h2 className="mb-4 text-sm font-bold text-[#1f2937]">Order Details</h2>
               <div className="grid gap-3 md:grid-cols-3">
@@ -453,7 +457,7 @@ const NewBilling = () => {
                     setSelectedCustomer(null);
                   }}
                   placeholder="Search by name, email, or mobile number..."
-                  className="h-10 w-full rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#ff8a4c]"
+                  className="h-10 w-full rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                 />
                 {customerSearch && !selectedCustomer && (
                   <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white shadow-lg">
@@ -484,8 +488,6 @@ const NewBilling = () => {
               )}
             </section>
           </div>
-          <section className="rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3">
-            <h2 className="mb-4 text-sm font-bold">Customer Details</h2>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-[10px] font-semibold">
                 Name *
@@ -589,14 +591,14 @@ const NewBilling = () => {
           </section>
         </div>
 
-        <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md border border-[#ff9869] px-3 py-2 text-xs font-semibold text-[#ed6b26]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
+        <section className="mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3"><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Order Items</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">
           <section className="hidden rounded-lg border border-[#e5e7eb] bg-white p-3">
             <h2 className="text-sm font-bold">Order Notes</h2>
             <textarea
               placeholder="Enter order notes (optional)"
-              className="mt-3 h-24 w-full resize-none rounded-md border border-[#e5e7eb] p-3 text-xs outline-none focus:border-[#ff8a4c]"
+              className="mt-3 h-24 w-full resize-none rounded-md border border-[#e5e7eb] p-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
             />
           </section>
           <section className="rounded-lg border border-[#e5e7eb] bg-white p-3">
@@ -691,14 +693,14 @@ const NewBilling = () => {
             <button
               type="button"
               onClick={() => navigate("/admin/billing")}
-              className="rounded-md border border-[#e5e7eb] px-5 py-2 text-xs font-semibold"
+              className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-md border border-[#ff9869] px-5 py-2 text-xs font-semibold text-[#ed6b26]"
+              className="inline-flex items-center gap-2 rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"
             >
               <Printer className="h-4 w-4" /> Print Preview
             </button>
@@ -706,7 +708,7 @@ const NewBilling = () => {
               type="button"
               onClick={handleGenerateBill}
               disabled={!isCustomerFormValid}
-              className="inline-flex items-center gap-2 rounded-md bg-[#f56618] px-5 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Printer className="h-4 w-4" /> Generate Bill
             </button>
@@ -728,7 +730,7 @@ const NewBilling = () => {
                 <button
                   type="button"
                   onClick={() => setShowProductModal(false)}
-                  className="text-sm text-[#6b7280]"
+                  className="rounded-md bg-[#1a3c36] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#214a42]"
                 >
                   Close
                 </button>
@@ -814,7 +816,7 @@ const NewBilling = () => {
                 <button
                   type="button"
                   onClick={() => setShowProductModal(false)}
-                  className="rounded-md border border-[#e5e7eb] px-4 py-2 text-xs font-semibold"
+                  className="rounded-md bg-[#1a3c36] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"
                 >
                   Cancel
                 </button>
@@ -822,7 +824,7 @@ const NewBilling = () => {
                   type="button"
                   onClick={addSelectedProduct}
                   disabled={!selectedProductId}
-                  className="rounded-md bg-[#f56618] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                  className="rounded-md bg-[#1a3c36] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:opacity-50"
                 >
                   Add Product
                 </button>
