@@ -150,30 +150,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
     sessionStorage.setItem("admin_sidebar_scroll", e.currentTarget.scrollTop);
   };
 
-  /* ===== FETCH PENDING COUNT ===== */
-  useEffect(() => {
-    const fetchPendingCount = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/trainee-intern?limit=1&status=Pending`);
-
-        if (response.status === 404) {
-          setPendingCount(0);
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success && data.pagination) {
-          setPendingCount(data.pagination.total || 0);
-        }
-      } catch (err) {
-        setPendingCount(0);
-      }
-    };
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   /* ===== AUTO OPEN DROPDOWN WHEN CHILD ACTIVE ===== */
   useEffect(() => {
     navItems.forEach((item) => {

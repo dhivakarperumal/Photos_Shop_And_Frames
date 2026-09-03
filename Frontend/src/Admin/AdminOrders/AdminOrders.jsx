@@ -26,6 +26,21 @@ import {
 import api from "../../api";
 import toast from "react-hot-toast";
 
+const orderStatuses = [
+  { id: "NEW", name: "New Order" },
+  { id: "CONFIRMED", name: "Confirmed" },
+  { id: "PROCESSING", name: "Processing" },
+  { id: "READY", name: "Ready" },
+  { id: "OUT_FOR_DELIVERY", name: "Out for Delivery" },
+  { id: "DELIVERED", name: "Delivered" },
+  { id: "CANCELLED", name: "Cancelled" },
+  { id: "ON_HOLD", name: "On Hold" },
+  { id: "RETURNED", name: "Returned" },
+];
+
+const statusName = (status) =>
+  orderStatuses.find((option) => option.id === status)?.name || status;
+
 const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +49,8 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
+  const [statusDraft, setStatusDraft] = useState("");
 
   const fetchOrders = async () => {
     try {
@@ -100,7 +117,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       });
 
       if (res.data?.success) {
-        toast.success(`Order status updated to ${newStatus}`);
+        toast.success(`Order status updated to ${statusName(newStatus)}`);
         if (selectedOrder) {
           setSelectedOrder((prev) => ({ ...prev, order_status: newStatus }));
         }
@@ -109,10 +126,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             o.order_id === orderId ? { ...o, order_status: newStatus } : o
           )
         );
+        setStatusPopupOrderId(null);
       }
     } catch (err) {
       console.error("Update status error:", err);
-      toast.error("Failed to update status");
+      toast.error(err.response?.data?.message || "Failed to update status");
     } finally {
       setUpdatingStatus(false);
     }
@@ -200,6 +218,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] p-4 md:p-8">
+      <style>{`@keyframes status-popup-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } } .status-popup-card { animation: status-popup-in 180ms ease-out; }`}</style>
       <div className="mx-auto max-w-7xl">
         {/* HEADER */}
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -379,13 +398,59 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <span
-                            className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(
-                              order.order_status
-                            )}`}
-                          >
-                            {order.order_status}
-                          </span>
+                          <div className="relative inline-block">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setStatusPopupOrderId((current) => current === order.order_id ? null : order.order_id);
+                                setStatusDraft(order.order_status);
+                              }}
+                              className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${getStatusBadge(order.order_status)}`}
+                              title="Click to update order status"
+                            >
+                              {statusName(order.order_status)}
+                            </button>
+                            {statusPopupOrderId === order.order_id && (
+                              <div
+                                className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-label={`Update status for ${order.order_id}`}
+                                onMouseDown={(event) => event.target === event.currentTarget && setStatusPopupOrderId(null)}
+                              >
+                                <div className="status-popup-card w-full max-w-sm rounded-2xl border border-[#e5e7eb] bg-white p-5 text-left shadow-2xl">
+                                  <div className="mb-4 flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-[10px] font-bold uppercase tracking-wide text-[#6b7280]">Update Status</p>
+                                      <h3 className="mt-1 text-base font-bold text-[#1a3c36]">{order.order_id}</h3>
+                                    </div>
+                                    <button type="button" onClick={() => setStatusPopupOrderId(null)} className="rounded-md bg-[#1a3c36] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#235048]">Close</button>
+                                  </div>
+                                  <select
+                                    value={statusDraft}
+                                    onChange={(event) => setStatusDraft(event.target.value)}
+                                    disabled={updatingStatus}
+                                    className="h-10 w-full rounded-md border border-[#d8cfc3] bg-white px-3 text-xs font-semibold text-[#1a3c36] outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
+                                  >
+                                    {orderStatuses.map((status) => (
+                                      <option key={status.id} value={status.id}>{status.name}</option>
+                                    ))}
+                                    {!orderStatuses.some((status) => status.id === order.order_status) && (
+                                      <option value={order.order_status}>{statusName(order.order_status)}</option>
+                                    )}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusChange(order.order_id, statusDraft)}
+                                    disabled={updatingStatus || !statusDraft || statusDraft === order.order_status}
+                                    className="mt-3 w-full rounded-md bg-[#1a3c36] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#235048] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {updatingStatus ? "Updating..." : "Update Status"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="inline-flex items-center gap-1">

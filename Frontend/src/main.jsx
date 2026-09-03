@@ -211,7 +211,7 @@ const router = createHashRouter([
           },
           {
             path: 'orders/new',
-            element: <AdminOrders defaultStatus="Pending" />,
+            element: <AdminOrders defaultStatus="NEW" />,
           },
           {
             path: 'orders/delivery',
