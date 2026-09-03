@@ -163,30 +163,7 @@ const StockDetails = () => {
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1c1c1c]">All Stock</h1>
-            <p className="mt-2 text-[13px] text-[#6a6a6a]">
-              Dashboard <span className="mx-2 text-[#a8a8a8]">&gt;</span>
-              <span className="font-medium text-[#2c2c2c]">All Stock</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Upload className="h-4 w-4" />
-              Import
-            </button> */}
-            <button type="button" onClick={openStockReport} className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
-              <span className="text-lg">+</span>
-              Stock Report
-            </button>
-          </div>
-        </div>
+       
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           {statCards.map((stat, index) => (
@@ -259,6 +236,11 @@ const StockDetails = () => {
                   <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
+               <button type="button" onClick={openStockReport} className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]">
+              <span className="text-lg">+</span>
+              Stock Report
+            </button>
+         
             </div>
           </div>
 

@@ -58,7 +58,6 @@ const AddCategory = () => {
     categoryType: 'Frame',
     categoryName: 'Photo Frames',
     subCategories: ['Wooden Frames', 'Collage Frames'],
-    description: 'Premium handcrafted photo frames designed to preserve your special memories with timeless elegance.',
     sortOrder: 1,
     status: true,
     createdBy: profileName || 'Admin',
@@ -96,7 +95,6 @@ const AddCategory = () => {
             categoryType: item.category_type || 'Frame',
             categoryName: item.category_name || '',
             subCategories: Array.isArray(item.sub_categories) ? item.sub_categories : [],
-            description: item.description || '',
             sortOrder: Number(item.sort_order || 1),
             status: item.status !== 'Inactive',
             createdBy: item.created_by || profileName || 'Admin',
@@ -205,7 +203,6 @@ const AddCategory = () => {
       categoryType: 'Frame',
       categoryName: '',
       subCategories: [],
-      description: '',
       sortOrder: 1,
       status: true,
       createdBy: profileName || 'Admin',
@@ -226,7 +223,6 @@ const AddCategory = () => {
       category_type: formData.categoryType,
       category_name: formData.categoryName,
       sub_categories: formData.subCategories,
-      description: formData.description,
       category_image: normalizeImageUrl(uploadedImageUrl || previewUrl || ''),
       sort_order: formData.sortOrder,
       status: formData.status ? 'Active' : 'Inactive',
@@ -409,18 +405,6 @@ const AddCategory = () => {
                       })}
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#6b6b6b]">Description</label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={6}
-                    placeholder="Add a short description about the category"
-                    className="w-full rounded-2xl border border-[#e8e1d9] bg-white px-4 py-3 text-[15px] text-[#2a2a2a] shadow-sm outline-none transition placeholder:text-[#9a9a9a] focus:border-[#d4a553]"
-                  />
                 </div>
 
                 <div className="space-y-3">

@@ -86,7 +86,7 @@ const AdminCategories = () => {
     return categories.map((item, index) => ({
         id: item.category_id || `CAT${index + 1}`,
         name: item.category_name || 'Untitled Category',
-        description: item.description || 'No description added yet.',
+        subCategories: Array.isArray(item.sub_categories) ? item.sub_categories : [],
         products: productCounts[String(item.category_name || '').trim().toLowerCase()] || 0,
         status: item.status === 'Inactive' ? 'Inactive' : 'Active',
         parentCategory: item.parent_category || item.parent_category_name || '',
@@ -108,7 +108,7 @@ const AdminCategories = () => {
   const filteredCategories = listData
     .filter((item) => {
       const searchValue = searchTerm.toLowerCase();
-      const matchesSearch = [item.name, item.description].some((value) =>
+      const matchesSearch = [item.name, ...item.subCategories].some((value) =>
         String(value).toLowerCase().includes(searchValue)
       );
       const matchesStatus = selectedStatus === 'All Status' || item.status === selectedStatus;
@@ -131,33 +131,7 @@ const AdminCategories = () => {
   return (
     <div className="min-h-screen bg-[#f3f4f1] p-4 md:p-6">
       <div className="mx-auto max-w-[1500px]">
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1c1c1c]">Categories</h1>
-            <p className="mt-2 text-[13px] text-[#6a6a6a]">
-              Dashboard <span className="mx-2 text-[#a8a8a8]">&gt;</span>
-              <span className="font-medium text-[#2c2c2c]">Categories</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-            <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Upload className="h-4 w-4" />
-              Import
-            </button> */}
-            <Link
-              to="/admin/products/categories/add"
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
-            >
-              <Plus className="h-4 w-4" />
-              Add New Category
-            </Link>
-          </div>
-        </div>
+      
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {statValues.map((stat, index) => (
@@ -221,19 +195,7 @@ const AdminCategories = () => {
                 <option>Inactive</option>
               </select>
 
-              {/* <select
-                value={selectedParent}
-                onChange={(event) => setSelectedParent(event.target.value)}
-                className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
-              >
-                <option>All Parent Categories</option>
-                {parentCategories.map((parent) => <option key={parent}>{parent}</option>)}
-              </select> */}
-
-              {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]">
-                <Filter className="h-4 w-4 text-[#c69218]" />
-                Filter
-              </button> */}
+             
               </div>
             </div>
 
@@ -271,6 +233,13 @@ const AdminCategories = () => {
                   <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
+              <Link
+              to="/admin/products/categories/add"
+              className="inline-flex h-[46px] items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-[15px] font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] transition hover:bg-[#214a42]"
+            >
+              <Plus className="h-4 w-4" />
+              Add New Category
+            </Link>
             </div>
           </div>
 
@@ -329,7 +298,13 @@ const AdminCategories = () => {
                         {category.status}
                       </div>
 
-                      <p className="mt-3 text-[12px] leading-5 text-[#676767]">{category.description}</p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {category.subCategories.length ? category.subCategories.map((subCategory) => (
+                          <span key={subCategory} className="mt-8 rounded-full bg-[#fff7e9] px-2 py-1 text-[11px] text-[#8b5f22]">
+                            {subCategory}
+                          </span>
+                        )) : <span className="text-[12px] text-[#888]">No subcategories</span>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -340,7 +315,7 @@ const AdminCategories = () => {
                       <tr>
                         <th className="px-4 py-4">S.No</th>
                         <th className="px-4 py-4">Category</th>
-                        <th className="px-4 py-4">Description</th>
+                        <th className="px-4 py-4">Subcategories</th>
                         <th className="px-4 py-4">Products</th>
                         <th className="px-4 py-4">Status</th>
                         <th className="px-4 py-4 text-right">Actions</th>
@@ -362,7 +337,9 @@ const AdminCategories = () => {
                               <span className="font-medium text-[#202020]">{item.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-[#5d5d5d]">{item.description}</td>
+                          <td className="px-4 py-4 text-[#5d5d5d]">
+                            {item.subCategories.length ? item.subCategories.join(', ') : 'No subcategories'}
+                          </td>
                           <td className="px-4 py-4">{item.products}</td>
                           <td className="px-4 py-4">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${item.status === 'Active' ? 'bg-[#eaf7ef] text-[#2b7a4b]' : 'bg-[#fdf1f1] text-[#b85c5c]'}`}>
