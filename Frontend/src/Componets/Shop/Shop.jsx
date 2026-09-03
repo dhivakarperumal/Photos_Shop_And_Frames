@@ -111,12 +111,13 @@ const Shop = () => {
 
               <div id="shop-frame-slider" className="flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {visibleFrames.map((frame) => (
-                  <button key={frame.id} type="button" onClick={() => setSelectedFrameId(frame.id)} className={`w-[180px] shrink-0 snap-start text-left ${String(selectedFrameId) === String(frame.id) ? "text-[#1a3c36]" : "text-[#222]"}`}>
-                    <div className={`h-36 overflow-hidden rounded-xl border-2 bg-white ${String(selectedFrameId) === String(frame.id) ? "border-[#1a3c36]" : "border-transparent"}`}>
+                  <button key={frame.id} type="button" onClick={() => setSelectedFrameId(frame.id)} aria-label={`Select ${frame.orientation || "Photo frame"} frame`} className={`w-[180px] shrink-0 snap-start text-left ${String(selectedFrameId) === String(frame.id) ? "text-[#1a3c36]" : "text-[#222]"}`}>
+                    <div className={`relative h-36 overflow-hidden rounded-xl border-2 bg-white ${String(selectedFrameId) === String(frame.id) ? "border-[#1a3c36]" : "border-transparent"}`}>
                       <img src={frame.frame_image} alt={frame.frame_name} className="h-full w-full object-contain" />
+                      <span className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-xs">
+                        {frame.orientation || "Photo frame"}
+                      </span>
                     </div>
-                    <span className="mt-2 block truncate text-center text-sm font-bold">{frame.frame_name}</span>
-                    <span className="block text-center text-xs text-[#777]">{frame.orientation || "Photo frame"}</span>
                   </button>
                 ))}
                 {visibleFrames.length === 0 && <p className="w-full py-8 text-center text-sm text-[#777]">No frames available for this orientation.</p>}
