@@ -7,6 +7,7 @@ import {
   Eye,
   Filter,
   Image as ImageIcon,
+  IndianRupee,
   MapPin,
   Package,
   Phone,
@@ -154,6 +155,40 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
   const processingCount = orders.filter((o) => o.order_status === "Processing").length;
   const deliveredCount = orders.filter((o) => o.order_status === "Delivered").length;
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const metricCards = [
+    {
+      title: "Total Orders",
+      value: totalOrdersCount.toLocaleString(),
+      change: "18.6%",
+      icon: ShoppingCart,
+      color: "#22c55e",
+      wave: "#9be7b9",
+    },
+    {
+      title: "Total Revenue",
+      value: `₹${totalRevenue.toLocaleString("en-IN")}`,
+      change: "22.4%",
+      icon: IndianRupee,
+      color: "#f59e0b",
+      wave: "#f9d99b",
+    },
+    {
+      title: "Pending Orders",
+      value: pendingCount.toLocaleString(),
+      change: "15.3%",
+      icon: Clock,
+      color: "#06b6d4",
+      wave: "#93dce8",
+    },
+    {
+      title: "Delivered Orders",
+      value: deliveredCount.toLocaleString(),
+      change: "10.7%",
+      icon: CheckCircle,
+      color: "#a855f7",
+      wave: "#d8b4f5",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] p-4 md:p-8">
@@ -182,23 +217,40 @@ const AdminOrders = ({ defaultStatus = "All" }) => {
         </div>
 
         {/* METRICS ROW */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-xs">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#777]">Total Orders</p>
-            <p className="mt-1 text-2xl font-black text-[#1d2925]">{totalOrdersCount}</p>
-          </div>
-          <div className="rounded-2xl border border-[#eedac3] bg-[#fffaf2] p-4 shadow-xs">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#b07838]">Pending</p>
-            <p className="mt-1 text-2xl font-black text-[#b07838]">{pendingCount}</p>
-          </div>
-          <div className="rounded-2xl border border-[#c7d2fe] bg-[#f8faff] p-4 shadow-xs">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#4f46e5]">Processing</p>
-            <p className="mt-1 text-2xl font-black text-[#4f46e5]">{processingCount}</p>
-          </div>
-          <div className="rounded-2xl border border-[#a3e6be] bg-[#f2fbf6] p-4 shadow-xs">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#1b794b]">Delivered</p>
-            <p className="mt-1 text-2xl font-black text-[#1b794b]">{deliveredCount}</p>
-          </div>
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {metricCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.title}
+                className="relative flex min-h-[176px] flex-col overflow-hidden rounded-xl border border-[#e5e7eb] bg-white p-5 shadow-sm"
+              >
+                <div className="flex flex-1 items-start gap-4">
+                  <div
+                    className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full text-white"
+                    style={{ backgroundColor: card.color }}
+                  >
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <div className="min-w-0 pt-1">
+                    <p className="text-sm font-medium text-[#374151]">{card.title}</p>
+                    <p className="mt-2 truncate text-[1.75rem] font-bold leading-none text-[#111827]">
+                      {card.value}
+                    </p>
+                    <p className="mt-5 text-xs font-medium text-[#00a76f]">↗ {card.change}</p>
+                    <p className="mt-1 text-[11px] text-[#7c8798]">from last month</p>
+                  </div>
+                </div>
+                <div
+                  className="absolute bottom-0 left-0 h-6 w-full"
+                  style={{
+                    background: card.wave,
+                    clipPath: "ellipse(65% 75% at 55% 100%)",
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* SEARCH & FILTER BAR */}
