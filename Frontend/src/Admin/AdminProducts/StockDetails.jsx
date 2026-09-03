@@ -291,7 +291,7 @@ const StockDetails = () => {
               ))}
             </div>
           ) : (
-          <div className="overflow-hidden rounded-[16px] border border-[#e8e4df]">
+          <div className="w-full overflow-x-auto rounded-[16px] border border-[#e8e4df]">
             <table className="w-full min-w-[1200px] border-collapse bg-white text-left">
               <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
                 <tr>
