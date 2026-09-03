@@ -327,27 +327,28 @@ const GalleryManagement = () => {
           <div className="overflow-x-auto p-1">
             <table className="min-w-full border-separate border-spacing-0">
               <thead>
-                <tr className="text-left text-[12px] font-bold text-[#1f1d1b]">
+                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                  <th className="rounded-tl-md px-4 py-4 whitespace-nowrap">S.No</th>
                   <th className="px-4 py-4 whitespace-nowrap">Album</th>
                   <th className="px-4 py-4 whitespace-nowrap">Category</th>
                   <th className="px-4 py-4 whitespace-nowrap">Photos</th>
                   <th className="px-4 py-4 whitespace-nowrap">Views</th>
                   <th className="px-4 py-4 whitespace-nowrap">Status</th>
                   <th className="px-4 py-4 whitespace-nowrap">Created At</th>
-                  <th className="px-4 py-4 whitespace-nowrap">Actions</th>
+                  <th className="rounded-tr-md px-4 py-4 whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-10 text-center">
+                    <td colSpan="8" className="px-4 py-10 text-center">
                       <Loader2 className="h-8 w-8 animate-spin text-[#d4a843] mx-auto mb-2" />
                       <p className="text-[#6a6a6a] text-sm">Loading albums...</p>
                     </td>
                   </tr>
                 ) : filteredAlbums.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-4 py-10 text-center">
+                    <td colSpan="8" className="px-4 py-10 text-center">
                       <p className="text-[#6a6a6a] text-sm">No albums found.</p>
                     </td>
                   </tr>
@@ -360,6 +361,10 @@ const GalleryManagement = () => {
                         key={album.album_id}
                         className="border-b border-[#f0ebe6] align-middle transition-colors hover:bg-[#faf9f8]"
                       >
+                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#5d5d5d]">
+                          {filteredAlbums.indexOf(album) + 1}
+                        </td>
+
                         {/* Album Info */}
                         <td className="border-t border-[#f0ebe6] px-4 py-3">
                           <div className="flex items-center gap-3">
