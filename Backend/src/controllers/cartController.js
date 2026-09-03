@@ -36,6 +36,7 @@ const addToCart = async (req, res) => {
       price,
       quantity = 1,
       slot_photos,
+      preview_image,
     } = req.body;
 
     const finalUserId = user_id || req.user?.user_id || req.user?.id;
@@ -64,6 +65,7 @@ const addToCart = async (req, res) => {
       price: finalPrice,
       quantity: Number(quantity) || 1,
       slot_photos: slot_photos || null,
+      preview_image: preview_image || null,
     });
 
     res.status(201).json({

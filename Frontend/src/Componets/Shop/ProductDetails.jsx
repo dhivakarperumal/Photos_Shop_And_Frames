@@ -4,8 +4,12 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
+  Download,
+  Eye,
+  EyeOff,
   Heart,
   ImagePlus,
+  Layers,
   Package,
   RotateCw,
   Share2,
@@ -23,11 +27,130 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
 
+/**
+ * Generates an HTML5 canvas composite merging the frame template
+ * and all customer uploaded slot photos into a single whole frame image.
+ */
+const generateCompositeFrameBlobAndDataUrl = (
+  frameImageSrc,
+  slots = [],
+  customerPhotos = {},
+  demoPhotos = {}
+) => {
+  return new Promise((resolve) => {
+    if (!frameImageSrc) return resolve({ blob: null, dataUrl: null });
+
+    const frameImg = new Image();
+    frameImg.crossOrigin = "anonymous";
+    frameImg.src = frameImageSrc;
+
+    frameImg.onload = async () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const w = frameImg.naturalWidth || 1000;
+        const h = frameImg.naturalHeight || 1000;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+
+        // 1. Draw Frame background image
+        ctx.drawImage(frameImg, 0, 0, w, h);
+
+        const parsePercentage = (val, total) => {
+          if (typeof val === "string" && val.includes("%")) {
+            return (parseFloat(val) / 100) * total;
+          }
+          return parseFloat(val) || 0;
+        };
+
+        // 2. Draw each slot photo
+        for (const slot of slots || []) {
+          const photoSrc = customerPhotos[slot.id] || demoPhotos[slot.id];
+          if (!photoSrc) continue;
+
+          await new Promise((slotResolve) => {
+            const pImg = new Image();
+            pImg.crossOrigin = "anonymous";
+            pImg.src = photoSrc;
+
+            pImg.onload = () => {
+              ctx.save();
+              const sx = parsePercentage(slot.left, w);
+              const sy = parsePercentage(slot.top, h);
+              const sw = parsePercentage(slot.width, w);
+              const sh = parsePercentage(slot.height, h);
+
+              // Clip region (circle or rounded rectangle)
+              ctx.beginPath();
+              if (slot.shape === "circle") {
+                ctx.arc(sx + sw / 2, sy + sh / 2, Math.min(sw, sh) / 2, 0, Math.PI * 2);
+              } else {
+                const radius = Math.min(12, Math.min(sw, sh) * 0.05);
+                if (ctx.roundRect) {
+                  ctx.roundRect(sx, sy, sw, sh, radius);
+                } else {
+                  ctx.rect(sx, sy, sw, sh);
+                }
+              }
+              ctx.closePath();
+              ctx.clip();
+
+              // Calculate object-fit
+              const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
+              const slotRatio = sw / sh;
+              let dx = sx, dy = sy, dw = sw, dh = sh;
+
+              if (slot.objectFit === "contain") {
+                if (imgRatio > slotRatio) {
+                  dh = sw / imgRatio;
+                  dy = sy + (sh - dh) / 2;
+                } else {
+                  dw = sh * imgRatio;
+                  dx = sx + (sw - dw) / 2;
+                }
+              } else {
+                // cover
+                if (imgRatio > slotRatio) {
+                  dw = sh * imgRatio;
+                  dx = sx - (dw - sw) / 2;
+                } else {
+                  dh = sw / imgRatio;
+                  dy = sy - (dh - sh) / 2;
+                }
+              }
+
+              ctx.drawImage(pImg, dx, dy, dw, dh);
+              ctx.restore();
+              slotResolve();
+            };
+
+            pImg.onerror = () => slotResolve();
+          });
+        }
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        canvas.toBlob(
+          (blob) => {
+            resolve({ blob, dataUrl });
+          },
+          "image/jpeg",
+          0.92
+        );
+      } catch (err) {
+        console.error("Composite generation error:", err);
+        resolve({ blob: null, dataUrl: null });
+      }
+    };
+
+    frameImg.onerror = () => resolve({ blob: null, dataUrl: null });
+  });
+};
+
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart, toggleWishlist, wishlist } = useContext(StoreContext);
+  const { addToCart, wishlist } = useContext(StoreContext);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,11 +158,16 @@ const ProductDetails = () => {
   const [customerPhotos, setCustomerPhotos] = useState({});
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("customize"); // 'customize' | 'details'
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [customizationId, setCustomizationId] = useState(null);
+
+  // View mode: 'editor' (interactive frame with slots) vs 'preview' (whole merged composite photo)
+  const [viewMode, setViewMode] = useState("editor");
+  const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [compositeServerUrl, setCompositeServerUrl] = useState(null);
 
   const fileInputRefs = useRef({});
 
@@ -51,7 +179,6 @@ const ProductDetails = () => {
         if (res.data?.data) {
           const prod = res.data.data;
           setProduct(prod);
-          // Set first available variant as default
           if (prod.size_variants && prod.size_variants.length > 0) {
             setSelectedVariantIndex(0);
           }
@@ -74,9 +201,31 @@ const ProductDetails = () => {
   const sizeVariants = product?.size_variants || [];
   const selectedVariant = sizeVariants[selectedVariantIndex] || {};
   const inStock = (selectedVariant.stock ?? 1) > 0;
-  const isWishlisted = wishlist?.some(
-    (w) => w.product_id === product?.id || w.id === product?.id
-  );
+
+  // Refresh merged whole frame preview whenever customer photos change
+  useEffect(() => {
+    if (!frameData.frame_image) return;
+
+    let isMounted = true;
+    const updatePreview = async () => {
+      setGeneratingPreview(true);
+      const { dataUrl } = await generateCompositeFrameBlobAndDataUrl(
+        frameData.frame_image,
+        photoSlots,
+        customerPhotos,
+        product?.slot_photos || {}
+      );
+      if (isMounted) {
+        setMergedPreviewUrl(dataUrl);
+        setGeneratingPreview(false);
+      }
+    };
+
+    updatePreview();
+    return () => {
+      isMounted = false;
+    };
+  }, [customerPhotos, frameData.frame_image, photoSlots, product]);
 
   // Handle uploading user's personal photo into a slot
   const handleSlotUpload = async (slotId, event) => {
@@ -120,10 +269,14 @@ const ProductDetails = () => {
     });
   };
 
-  // Save customization into separate customized_photos table
+  /**
+   * Generates the whole merged frame composite, uploads it to /upload,
+   * and saves the whole photo in customized_photos.preview_image
+   * along with individual slot_photos in separate customized_photos table.
+   * Admin product in products table remains 100% UNTOUCHED.
+   */
   const ensureCustomizationSaved = async () => {
     const hasPhotos = Object.keys(customerPhotos).length > 0;
-    if (!hasPhotos) return null;
 
     setSavingCustomization(true);
     try {
@@ -133,19 +286,61 @@ const ProductDetails = () => {
         localStorage.getItem("frame_shop_guest_id") ||
         null;
 
+      // 1. Generate full composite (Whole Frame + Customer Photos merged on Canvas)
+      let wholeFramePhotoUrl = compositeServerUrl || frameData.frame_image || null;
+
+      const { blob } = await generateCompositeFrameBlobAndDataUrl(
+        frameData.frame_image,
+        photoSlots,
+        customerPhotos,
+        product?.slot_photos || {}
+      );
+
+      if (blob) {
+        const compFormData = new FormData();
+        compFormData.append("folder", "customizations");
+        compFormData.append(
+          "file",
+          blob,
+          `whole-frame-${product.id}-${Date.now()}.jpg`
+        );
+
+        try {
+          const compRes = await api.post("/upload", compFormData);
+          const uploadedUrl = compRes.data?.url || compRes.data?.urls?.[0];
+          if (uploadedUrl) {
+            wholeFramePhotoUrl = uploadedUrl;
+            setCompositeServerUrl(uploadedUrl);
+          }
+        } catch (uploadErr) {
+          console.warn("Composite upload fallback:", uploadErr);
+        }
+      }
+
+      // 2. Save both whole photo and individual photos in customized_photos table
+      const finalCustomizationId =
+        customizationId || `CUST-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
       const res = await api.post("/customizations", {
-        customization_id: customizationId || undefined,
+        customization_id: finalCustomizationId,
         user_id: activeUserId,
         product_id: product.id,
         slot_photos: customerPhotos,
-        preview_image: frameData.frame_image || null,
+        preview_image: wholeFramePhotoUrl,
       });
 
-      if (res.data?.success && res.data.data?.customization_id) {
-        setCustomizationId(res.data.data.customization_id);
-        return res.data.data.customization_id;
+      if (res.data?.success) {
+        setCustomizationId(finalCustomizationId);
+        return {
+          customization_id: finalCustomizationId,
+          preview_image: wholeFramePhotoUrl,
+        };
       }
-      return null;
+
+      return {
+        customization_id: finalCustomizationId,
+        preview_image: wholeFramePhotoUrl,
+      };
     } catch (err) {
       console.error("Save customization error:", err);
       return null;
@@ -163,14 +358,15 @@ const ProductDetails = () => {
 
     setAddingToCart(true);
     try {
-      const custId = await ensureCustomizationSaved();
+      const savedCust = await ensureCustomizationSaved();
 
       await addToCart(product, {
         size: selectedVariant.size || "Standard",
         price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
         quantity: Number(quantity),
-        customization_id: custId,
+        customization_id: savedCust?.customization_id || null,
         slot_photos: customerPhotos,
+        preview_image: savedCust?.preview_image || mergedPreviewUrl,
       });
     } finally {
       setAddingToCart(false);
@@ -184,7 +380,10 @@ const ProductDetails = () => {
       return;
     }
 
-    const custId = await ensureCustomizationSaved();
+    const savedCust = await ensureCustomizationSaved();
+    if (savedCust?.preview_image) {
+      setCompositeServerUrl(savedCust.preview_image);
+    }
     setIsCheckoutOpen(true);
   };
 
@@ -237,7 +436,7 @@ const ProductDetails = () => {
       quantity: Number(quantity),
       customization_id: customizationId,
       slot_photos: customerPhotos,
-      product_image: product.product_images?.[0] || frameData.frame_image,
+      product_image: compositeServerUrl || mergedPreviewUrl || product.product_images?.[0] || frameData.frame_image,
       frame_image: frameData.frame_image,
     },
   ];
@@ -256,112 +455,164 @@ const ProductDetails = () => {
 
         {/* TWO-COLUMN PRODUCT WORKSPACE */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* ================= LEFT COLUMN: LIVE FRAME CANVAS PREVIEW (7 COLS) ================= */}
+          {/* ================= LEFT COLUMN: LIVE FRAME CANVAS & MERGED WHOLE PREVIEW (7 COLS) ================= */}
           <div className="lg:col-span-7">
             <div className="sticky top-28 rounded-3xl border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-8">
-              {/* CANVAS HEADER */}
-              <div className="mb-4 flex items-center justify-between border-b border-[#f0e8dc] pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef6f3] text-[#1a3c36]">
-                    <Sparkles className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-[#1d2925]">Interactive Frame Canvas</h3>
-                    <p className="text-[11px] text-[#777]">
-                      {totalSlotsCount > 0
-                        ? `Customized ${customPhotoCount} of ${totalSlotsCount} photo slots`
-                        : "Ready for your photos"}
-                    </p>
+              {/* CANVAS HEADER WITH VIEW SWITCHER */}
+              <div className="mb-4 flex flex-col gap-3 border-b border-[#f0e8dc] pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef6f3] text-[#1a3c36]">
+                      <Sparkles className="h-4 w-4" />
+                    </span>
+                    <h3 className="text-sm font-bold text-[#1d2925]">
+                      {viewMode === "editor" ? "Interactive Photo Slots" : "Whole Merged Frame Preview"}
+                    </h3>
                   </div>
+                  <p className="mt-0.5 text-[11px] text-[#777]">
+                    {customPhotoCount > 0
+                      ? `${customPhotoCount} of ${totalSlotsCount} custom photos placed`
+                      : "Click slots to add your photos"}
+                  </p>
                 </div>
 
-                {customPhotoCount > 0 && (
-                  <span className="rounded-full bg-[#e8f6ed] px-3 py-1 text-xs font-bold text-[#1b794b]">
-                    ✓ {customPhotoCount} Photo{customPhotoCount !== 1 ? "s" : ""} Added
-                  </span>
-                )}
+                {/* VIEW MODE TOGGLE BUTTONS */}
+                <div className="inline-flex rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("editor")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                      viewMode === "editor"
+                        ? "bg-[#1a3c36] text-white shadow-xs"
+                        : "text-[#666] hover:text-[#1d2925]"
+                    }`}
+                  >
+                    <Layers className="h-3.5 w-3.5" /> Slot Editor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("preview")}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                      viewMode === "preview"
+                        ? "bg-[#1a3c36] text-white shadow-xs"
+                        : "text-[#666] hover:text-[#1d2925]"
+                    }`}
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Whole Frame Preview
+                  </button>
+                </div>
               </div>
 
               {/* FRAME STAGE */}
-              <div className="relative flex min-h-[420px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5efe7] p-4 sm:p-8">
+              <div className="relative flex min-h-[440px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5efe7] p-4 sm:p-8">
                 {frameData.frame_image ? (
-                  <div className="relative mx-auto w-full max-w-[480px] overflow-hidden rounded-xl shadow-xl">
-                    {/* FRAME BACKGROUND */}
-                    <img
-                      src={frameData.frame_image}
-                      alt={frameData.frame_name || product.product_name}
-                      className="block h-auto w-full select-none"
-                    />
-
-                    {/* PHOTO SLOTS OVERLAY */}
-                    {photoSlots.map((slot, idx) => {
-                      // Check if user uploaded a custom photo for this slot
-                      const userPhoto = customerPhotos[slot.id];
-                      // Otherwise, show admin demo photo as sample placeholder
-                      const demoPhoto = product.slot_photos?.[slot.id];
-                      const activePhoto = userPhoto || demoPhoto;
-
-                      return (
-                        <React.Fragment key={slot.id || idx}>
-                          <input
-                            ref={(el) => {
-                              fileInputRefs.current[slot.id] = el;
-                            }}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handleSlotUpload(slot.id, e)}
+                  viewMode === "preview" ? (
+                    /* ================= WHOLE MERGED COMPOSITE PREVIEW ================= */
+                    <div className="relative mx-auto w-full max-w-[500px] overflow-hidden rounded-xl shadow-2xl transition duration-300">
+                      {generatingPreview ? (
+                        <div className="flex h-80 w-full items-center justify-center bg-white/80">
+                          <div className="text-center">
+                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-[#b07838] border-t-transparent" />
+                            <p className="mt-2 text-xs font-semibold text-[#555]">
+                              Rendering whole frame photo...
+                            </p>
+                          </div>
+                        </div>
+                      ) : mergedPreviewUrl ? (
+                        <div>
+                          <img
+                            src={mergedPreviewUrl}
+                            alt="Whole Merged Frame Preview"
+                            className="block h-auto w-full select-none"
                           />
+                          <div className="absolute bottom-3 left-3 rounded-full bg-black/75 px-3 py-1 text-[11px] font-bold text-white shadow backdrop-blur-xs flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-[#22c55e]" /> Whole Merged Frame Ready
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-xs text-[#777]">
+                          Loading frame preview...
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* ================= INTERACTIVE SLOT PHOTO EDITOR ================= */
+                    <div className="relative mx-auto w-full max-w-[500px] overflow-hidden rounded-xl shadow-xl">
+                      {/* FRAME BACKGROUND */}
+                      <img
+                        src={frameData.frame_image}
+                        alt={frameData.frame_name || product.product_name}
+                        className="block h-auto w-full select-none"
+                      />
 
-                          <button
-                            type="button"
-                            onClick={() => fileInputRefs.current[slot.id]?.click()}
-                            title={`Click to upload your photo for ${slot.name || `Position ${idx + 1}`}`}
-                            className={`group absolute overflow-hidden border-2 transition ${
-                              userPhoto
-                                ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
-                                : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
-                            }`}
-                            style={{
-                              top: slot.top,
-                              left: slot.left,
-                              width: slot.width,
-                              height: slot.height,
-                              borderRadius: slot.shape === "circle" ? "9999px" : "6px",
-                            }}
-                          >
-                            {activePhoto ? (
-                              <div className="relative h-full w-full">
-                                <img
-                                  src={activePhoto}
-                                  alt={slot.name}
-                                  className="h-full w-full"
-                                  style={{ objectFit: slot.objectFit || "cover" }}
-                                />
-                                {userPhoto && (
-                                  <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
-                                    <Check className="h-2.5 w-2.5" />
+                      {/* PHOTO SLOTS OVERLAY */}
+                      {photoSlots.map((slot, idx) => {
+                        const userPhoto = customerPhotos[slot.id];
+                        const demoPhoto = product.slot_photos?.[slot.id];
+                        const activePhoto = userPhoto || demoPhoto;
+
+                        return (
+                          <React.Fragment key={slot.id || idx}>
+                            <input
+                              ref={(el) => {
+                                fileInputRefs.current[slot.id] = el;
+                              }}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleSlotUpload(slot.id, e)}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => fileInputRefs.current[slot.id]?.click()}
+                              title={`Click to upload your photo for ${slot.name || `Position ${idx + 1}`}`}
+                              className={`group absolute overflow-hidden border-2 transition ${
+                                userPhoto
+                                  ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
+                                  : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
+                              }`}
+                              style={{
+                                top: slot.top,
+                                left: slot.left,
+                                width: slot.width,
+                                height: slot.height,
+                                borderRadius: slot.shape === "circle" ? "9999px" : "6px",
+                              }}
+                            >
+                              {activePhoto ? (
+                                <div className="relative h-full w-full">
+                                  <img
+                                    src={activePhoto}
+                                    alt={slot.name}
+                                    className="h-full w-full"
+                                    style={{ objectFit: slot.objectFit || "cover" }}
+                                  />
+                                  {userPhoto && (
+                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                                      <Check className="h-2.5 w-2.5" />
+                                    </div>
+                                  )}
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                                    <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow">
+                                      Change Photo
+                                    </span>
                                   </div>
-                                )}
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
-                                  <span className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1d2925] shadow">
-                                    Change Photo
+                                </div>
+                              ) : (
+                                <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
+                                  <UploadCloud className="h-5 w-5 text-[#b07838]" />
+                                  <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
+                                    {slot.name || `Slot ${idx + 1}`}
                                   </span>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="flex h-full w-full flex-col items-center justify-center p-1 text-center">
-                                <UploadCloud className="h-5 w-5 text-[#b07838]" />
-                                <span className="mt-0.5 rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-[#1a3c36] shadow-xs">
-                                  {slot.name || `Slot ${idx + 1}`}
-                                </span>
-                              </div>
-                            )}
-                          </button>
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
+                              )}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  )
                 ) : (
                   <div className="flex h-72 w-full items-center justify-center">
                     {product.product_images?.[0] ? (
@@ -377,11 +628,24 @@ const ProductDetails = () => {
                 )}
               </div>
 
-              {/* NOTICE */}
-              <div className="mt-4 rounded-xl border border-[#f0e7dc] bg-[#faf8f5] p-3 text-center text-xs text-[#666]">
-                <p>
-                  💡 <span className="font-semibold text-[#1d2925]">Tip:</span> Click directly on the photo slots in the frame above or use the upload list on the right to place your photos.
-                </p>
+              {/* QUICK TOGGLE & TIP */}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#f0e7dc] bg-[#faf8f5] p-3 text-xs text-[#666]">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📸</span>
+                  <span>
+                    {viewMode === "editor"
+                      ? "Currently in Slot Editor mode. Click on any slot to upload photos."
+                      : "Currently in Whole Merged Frame Preview mode showing your combined result."}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode((m) => (m === "editor" ? "preview" : "editor"))}
+                  className="rounded-lg bg-[#1a3c36] px-3 py-1.5 font-bold text-white shadow-xs hover:bg-[#235048]"
+                >
+                  {viewMode === "editor" ? "Preview Whole Frame →" : "← Back to Slot Editor"}
+                </button>
               </div>
             </div>
           </div>
@@ -604,21 +868,21 @@ const ProductDetails = () => {
                   <button
                     type="button"
                     onClick={handleAddToCart}
-                    disabled={!inStock || addingToCart}
+                    disabled={!inStock || addingToCart || savingCustomization}
                     className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#1a3c36] bg-white text-xs font-bold text-[#1a3c36] shadow-sm transition hover:bg-[#1a3c36] hover:text-white disabled:opacity-50"
                   >
                     <ShoppingCart className="h-4 w-4" />
-                    {addingToCart ? "Adding..." : "Add to Cart"}
+                    {addingToCart || savingCustomization ? "Saving..." : "Add to Cart"}
                   </button>
 
                   <button
                     type="button"
                     onClick={handleBuyNow}
-                    disabled={!inStock}
+                    disabled={!inStock || savingCustomization}
                     className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-md transition hover:bg-[#235048] disabled:opacity-50"
                   >
                     <ShoppingBag className="h-4 w-4" />
-                    Buy Now
+                    {savingCustomization ? "Preparing..." : "Buy Now"}
                   </button>
                 </div>
               </div>
