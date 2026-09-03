@@ -54,16 +54,18 @@ const Billing = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await api.get("/orders");
+        const response = await api.get("/orders", {
+          params: { billing_type: "Shop Billing" },
+        });
         const savedOrders = Array.isArray(response.data?.data)
           ? response.data.data
           : [];
         const mappedOrders = savedOrders.map((order) => ({
           id: order.order_id,
           customer:
-            order.address?.customer_name || order.customer_id || "Customer",
-          phone: order.address?.mobile_number || "",
-          items: Number(order.total_items || order.items?.length || 0),
+            order.customer_name || order.address?.customer_name || order.customer_id || "Customer",
+          phone: order.customer_phone || order.address?.mobile_number || "",
+          items: Number(order.total_items || order.item_count || order.items?.length || 0),
           date: order.order_date
             ? new Date(order.order_date).toLocaleDateString("en-GB")
             : "-",
@@ -82,8 +84,15 @@ const Billing = () => {
           createdDate: order.created_at
             ? new Date(order.created_at).toISOString().slice(0, 10)
             : "",
-          email: order.address?.email || "",
-          address: order.address,
+          email: order.customer_email || order.address?.email || "",
+          address: order.address || {
+            customer_name: order.customer_name,
+            mobile_number: order.customer_phone,
+            address_line1: order.shipping_address,
+            city: order.city,
+            state: order.state,
+            pincode: order.pincode,
+          },
           orderItems: order.items || [],
         }));
         setOrders(mappedOrders);

@@ -27,6 +27,7 @@ const createOrder = async (req, res) => {
       const legacyResult = await orderModule.createOrder({
         orderData: {
           user_id: order.user_id || order.customer_id || null,
+          billing_type: order.billing_type || "Shop Billing",
           customer_name: address?.customer_name || order.customer_name || "Customer",
           customer_email: order.customer_email || "",
           customer_phone: address?.mobile_number || order.customer_phone || "",
@@ -87,6 +88,7 @@ const createOrder = async (req, res) => {
 
     const orderPayload = {
       user_id: user_id || req.user?.user_id || null,
+      billing_type: "Online Order",
       customer_name: customer_name.trim(),
       customer_email: (customer_email || "").trim(),
       customer_phone: customer_phone.trim(),
@@ -131,8 +133,8 @@ const createOrder = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
-    const { status, search } = req.query;
-    const orders = await orderModule.getAllOrders({ status, search });
+    const { status, search, billing_type } = req.query;
+    const orders = await orderModule.getAllOrders({ status, search, billing_type });
 
     res.status(200).json({
       success: true,

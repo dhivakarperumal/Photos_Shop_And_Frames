@@ -30,6 +30,7 @@ const createOrder = async ({ orderData, items = [] }) => {
         customer_email,
         customer_phone,
         shipping_address,
+        billing_type,
         city,
         state,
         pincode,
@@ -38,24 +39,25 @@ const createOrder = async ({ orderData, items = [] }) => {
         payment_status,
         order_status,
         notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const orderValues = [
       orderId,
       orderData.user_id || null,
       orderData.customer_name,
-      orderData.customer_email || null,
+      orderData.customer_email || "",
       orderData.customer_phone,
       orderData.shipping_address,
-      orderData.city || null,
-      orderData.state || null,
-      orderData.pincode || null,
+      orderData.billing_type || "Online Order",
+      orderData.city || "",
+      orderData.state || "",
+      orderData.pincode || "",
       Number(orderData.total_amount || 0),
       orderData.payment_method || "Cash On Delivery",
       orderData.payment_status || "Pending",
       orderData.order_status || "Pending",
-      orderData.notes || null,
+      orderData.notes || "",
     ];
 
     const [orderResult] = await connection.query(insertOrderQuery, orderValues);
@@ -81,7 +83,7 @@ const createOrder = async ({ orderData, items = [] }) => {
     for (const item of items) {
       const itemValues = [
         orderId,
-        Number(item.product_id || 0),
+        Number.parseInt(item.product_id ?? item.id, 10) || 0,
         item.product_name || "Custom Frame",
         item.category || "Photo Frames",
         item.size || "Standard",
@@ -129,6 +131,11 @@ const getAllOrders = async (filters = {}) => {
   if (filters.status && filters.status !== "All" && filters.status !== "All Status") {
     query += ` AND o.order_status = ?`;
     values.push(filters.status);
+  }
+
+  if (filters.billing_type) {
+    query += ` AND o.billing_type = ?`;
+    values.push(filters.billing_type);
   }
 
   if (filters.search) {

@@ -165,6 +165,7 @@ async function ensureDatabaseSchema() {
         customer_email VARCHAR(255) NULL,
         customer_phone VARCHAR(50) NOT NULL,
         shipping_address TEXT NOT NULL,
+        billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order',
         city VARCHAR(100) NULL,
         state VARCHAR(100) NULL,
         pincode VARCHAR(20) NULL,
@@ -219,6 +220,13 @@ async function ensureDatabaseSchema() {
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
     await connection.query(createOrdersTableQuery);
+    try {
+      await connection.query(
+        `ALTER TABLE orders ADD COLUMN billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order'`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createOrderItemsTableQuery);
     await connection.query(createAddressesTableQuery);
     console.log("✅ Database schema ready.");
