@@ -213,9 +213,16 @@ const Header = ({ onMenuClick }) => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    let target = "/admin/members";
-    if (location.pathname.includes("projects"))  target = "/admin/projects";
-    if (location.pathname.includes("employees")) target = "/admin/employees";
+    const query = searchQuery.trim().toLowerCase();
+    let target = "/admin/products";
+    if (query.includes("order")) target = "/admin/orders";
+    if (query.includes("bill")) target = "/admin/billing";
+    if (query.includes("customer") || query.includes("user")) target = "/admin/customers";
+    if (query.includes("stock")) target = "/admin/products/stock-details";
+    if (query.includes("categor")) target = "/admin/products/categories";
+    if (query.includes("frame")) target = "/admin/frames";
+    if (query.includes("album")) target = "/admin/albums";
+    if (query.includes("review")) target = "/admin/reviews";
     navigate(`${target}?search=${encodeURIComponent(searchQuery)}`);
     setShowSearch(false);
     setSearchQuery("");
@@ -373,46 +380,47 @@ const Header = ({ onMenuClick }) => {
       </header>
 
       {showSearch && (
-        <div ref={searchRef} className="absolute right-4 top-20 z-50 w-[min(92vw,420px)] rounded-2xl border border-gray-200 bg-[#111827] text-white shadow-2xl">
-          <form onSubmit={handleSearch} className="p-3 border-b border-white/10">
-            <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-3 py-2">
-              <Search size={15} className="text-white/50" />
+        <div ref={searchRef} className="absolute right-4 top-20 z-50 w-[min(92vw,420px)] rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl">
+          <form onSubmit={handleSearch} className="p-3 border-b border-gray-100">
+            <div className="flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+              <Search size={15} className="text-gray-400" />
               <input
                 ref={inputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search employees, projects, tasks..."
-                className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+                placeholder="Search products, orders, billing..."
+                className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="p-1 rounded-md hover:bg-white/10"
+                  className="p-1 rounded-md hover:bg-gray-200"
                   aria-label="Clear search"
                 >
-                  <X size={14} className="text-white/60" />
+                  <X size={14} className="text-gray-500" />
                 </button>
               )}
             </div>
           </form>
 
           <div className="px-5 py-3">
-            <p className="text-[11px] text-white/30 uppercase tracking-widest mb-2">Quick Links</p>
+            <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2">Quick Links</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { label: "Employees", path: "/admin/employees" },
-                { label: "Projects", path: "/admin/projects" },
-                { label: "Attendance", path: "/admin/attendance" },
-                { label: "Payroll", path: "/admin/payroll" },
-                { label: "Reports", path: "/admin/reports" },
+                { label: "Products", path: "/admin/products" },
+                { label: "Categories", path: "/admin/products/categories" },
+                { label: "Stock", path: "/admin/products/stock-details" },
+                { label: "Orders", path: "/admin/orders" },
+                { label: "Billing", path: "/admin/billing" },
+                { label: "Customers", path: "/admin/customers" },
               ].map((l) => (
                 <Link
                   key={l.path}
                   to={l.path}
                   onClick={() => setShowSearch(false)}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 hover:text-primary text-white/60 text-xs transition border border-white/8"
+                  className="px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-primary/10 hover:text-primary text-gray-600 text-xs transition border border-gray-200"
                 >
                   {l.label}
                 </Link>
@@ -420,9 +428,9 @@ const Header = ({ onMenuClick }) => {
             </div>
           </div>
 
-          <div className="px-5 py-2 text-[10px] text-white/20 flex justify-between border-t border-white/5">
-            <span>Press <kbd className="bg-white/10 px-1 rounded">Enter</kbd> to search</span>
-            <span>Press <kbd className="bg-white/10 px-1 rounded">Esc</kbd> to close</span>
+          <div className="px-5 py-2 text-[10px] text-gray-400 flex justify-between border-t border-gray-100">
+            <span>Press <kbd className="bg-gray-100 px-1 rounded">Enter</kbd> to search</span>
+            <span>Press <kbd className="bg-gray-100 px-1 rounded">Esc</kbd> to close</span>
           </div>
         </div>
       )}
