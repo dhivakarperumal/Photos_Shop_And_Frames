@@ -1,5 +1,4 @@
 ﻿const { getDB } = require("../config/db");
-const { v4: uuidv4 } = require("uuid");
 
 // Auto-initialize tables
 const initGalleryTables = async () => {
@@ -40,8 +39,25 @@ const initGalleryTables = async () => {
 
 setTimeout(initGalleryTables, 2000); // Give DB time to connect
 
+const getNextGalleryId = async () => {
+  const query = `
+    SELECT album_id
+    FROM gallery_albums
+    WHERE album_id REGEXP '^GAL[0-9]+$'
+    ORDER BY CAST(SUBSTRING(album_id, 4) AS UNSIGNED) DESC
+    LIMIT 1
+  `;
+
+  const pool = getDB();
+  const [rows] = await pool.query(query);
+  const lastId = rows?.[0]?.album_id || "GAL000";
+  const lastNumber = Number(String(lastId).replace(/\D/g, "")) || 0;
+
+  return `GAL${String(lastNumber + 1).padStart(3, "0")}`;
+};
+
 const createAlbum = async (albumData, photos = []) => {
-  const album_id = uuidv4();
+  const album_id = await getNextGalleryId();
   const {
     title,
     category,
@@ -157,6 +173,7 @@ const deleteAlbum = async (albumId) => {
 };
 
 module.exports = {
+  getNextGalleryId,
   createAlbum,
   getAllAlbums,
   getAlbumById,

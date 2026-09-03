@@ -1,5 +1,18 @@
 ﻿const galleryModule = require("../modules/galleryModule");
 
+const getNextGalleryId = async (req, res) => {
+  try {
+    const nextGalleryId = await galleryModule.getNextGalleryId();
+    return res.status(200).json({ success: true, data: nextGalleryId });
+  } catch (error) {
+    console.error("Get next gallery id error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to generate gallery ID",
+    });
+  }
+};
+
 const createAlbum = async (req, res) => {
   try {
     const {
@@ -97,6 +110,7 @@ const deleteAlbum = async (req, res) => {
 };
 
 module.exports = {
+  getNextGalleryId,
   createAlbum,
   getAllAlbums,
   getAlbumById,

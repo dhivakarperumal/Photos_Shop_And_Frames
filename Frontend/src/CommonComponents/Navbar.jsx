@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../PrivateRouter/AuthContext";
+import { isAdminRole } from "../PrivateRouter/roleUtils";
 import {
   FiChevronDown,
   FiMenu,
@@ -48,7 +49,7 @@ const Navbar = () => {
   const profileRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, userProfile } = useAuth();
+  const { user, logout, userProfile, role } = useAuth();
 
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
@@ -262,14 +263,19 @@ const Navbar = () => {
                         </div>
 
                         <div className="p-2">
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => setProfileDropdown(false)}
-                          >
-                            <span>Profile</span>
-                            <FiUser className="text-base text-[#7a7a7a]" />
-                          </button>
+                          {isAdminRole(role) && (
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                              onClick={() => {
+                                setProfileDropdown(false);
+                                navigate("/admin");
+                              }}
+                            >
+                              <span>Admin Panel</span>
+                              <FiUser className="text-base text-[#7a7a7a]" />
+                            </button>
+                          )}
 
                           <button
                             type="button"

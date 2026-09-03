@@ -30,6 +30,7 @@ const AddGalleryAlbum = () => {
   const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
+    gallery_id: "GAL001",
     title: "",
     category: "",
     status: "Active",
@@ -52,6 +53,7 @@ const AddGalleryAlbum = () => {
         const response = await api.get(`/gallery/${editAlbumId}`);
         const album = response?.data?.data || {};
         setFormData({
+          gallery_id: album.album_id || editAlbumId,
           title: album.title || "",
           category: album.category || "",
           status: album.status || "Active",
@@ -86,7 +88,18 @@ const AddGalleryAlbum = () => {
       }
     };
 
+    const fetchNextGalleryId = async () => {
+      try {
+        const response = await api.get("/gallery/next-id");
+        const nextId = response?.data?.data || "GAL001";
+        setFormData((previous) => ({ ...previous, gallery_id: nextId }));
+      } catch (error) {
+        console.error("Failed to get next gallery ID:", error);
+      }
+    };
+
     if (isEditing) fetchAlbumForEdit();
+    if (!isEditing) fetchNextGalleryId();
     fetchCategories();
   }, [editAlbumId, isEditing]);
 
@@ -223,6 +236,19 @@ const AddGalleryAlbum = () => {
             <div className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-sm">
               <div className="space-y-5">
                 {/* Album Title */}
+                <div>
+                  <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
+                    Gallery ID
+                  </label>
+                  <input
+                    type="text"
+                    name="gallery_id"
+                    value={formData.gallery_id}
+                    readOnly
+                    className="w-full rounded-xl border border-[#d1d5db] bg-[#f9fafb] px-4 py-2.5 text-[14px] font-semibold text-[#4b5563] outline-none"
+                  />
+                </div>
+
                 <div>
                   <label className="mb-1.5 block text-[14px] font-semibold text-[#1f1d1b]">
                     Album Title <span className="text-red-500">*</span>
