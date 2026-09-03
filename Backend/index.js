@@ -28,7 +28,6 @@ const couponRouter = require("./src/routers/couponRouter");
 const customizationRouter = require("./src/routers/customizationRouter");
 const cartRouter = require("./src/routers/cartRouter");
 const orderRouter = require("./src/routers/orderRouter");
-const orderRouter = require("./src/routers/orderRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
