@@ -295,6 +295,7 @@ const StockDetails = () => {
             <table className="w-full min-w-[1200px] border-collapse bg-white text-left">
               <thead className="bg-[#f7f4ef] text-[13px] font-semibold text-[#333333]">
                 <tr>
+                  <th className="px-4 py-4">S.No</th>
                   <th className="px-4 py-4">Product</th>
                   <th className="px-4 py-4">SKU</th>
                   <th className="px-4 py-4">Category</th>
@@ -303,13 +304,13 @@ const StockDetails = () => {
                   <th className="px-4 py-4">Available Stock</th>
                   <th className="px-4 py-4">Reserved</th>
                   <th className="px-4 py-4">Status</th>
-                  <th className="px-4 py-4">Last Updated</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedRows.map((item) => (
+                {paginatedRows.map((item, index) => (
                   <tr key={item.id} className="border-t border-[#efefef] text-[13px] text-[#444444]">
+                    <td className="px-4 py-4">{index + 1}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-[#e7e0d8] bg-[#f5f1ec]">
@@ -347,7 +348,6 @@ const StockDetails = () => {
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-pre-line text-[#5b5b5b]">{item.lastUpdated}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button type="button" onClick={() => openStockEditor(item)} className="rounded-lg border border-[#e7e0d8] bg-white p-2 text-[#4d4d4d] hover:bg-[#f8f6f3]" aria-label={`Edit stock for ${item.product}`} title="Edit stock">

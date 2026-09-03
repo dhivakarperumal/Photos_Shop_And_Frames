@@ -172,6 +172,7 @@ const FramesList = () => {
               <table className="w-full min-w-[700px] border-collapse text-left">
                 <thead className="bg-[#f7f4ef] text-xs font-semibold text-[#333]">
                   <tr>
+                    <th className="px-4 py-4">S.No</th>
                     <th className="px-4 py-4">Frame</th>
                     <th className="px-4 py-4">Orientation</th>
                     <th className="px-4 py-4">Photo Slots</th>
@@ -179,8 +180,9 @@ const FramesList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredFrames.map((frame) => (
+                  {filteredFrames.map((frame,index) => (
                     <tr key={frame.id} className="border-t border-[#efefef] text-sm text-[#444]">
+                      <td className="px-4 py-4">{index + 1}</td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <img src={frame.frame_image} alt={frame.frame_name} className="h-12 w-12 rounded-lg bg-[#f6f2ec] object-contain" />

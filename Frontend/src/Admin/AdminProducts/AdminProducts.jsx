@@ -214,28 +214,6 @@ const AdminProducts = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* <button className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d9d6d2] bg-white px-4 text-[15px] font-medium text-[#2d2d2d] shadow-sm transition hover:bg-[#faf7f3]">
-              <Download className="h-4 w-4" />
-              Export
-            </button> */}
-
-            {/* VIEW FRAMES BUTTON */}
-            {/* <Link
-              to="/admin/frames"
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#8b6528] shadow-sm transition hover:bg-[#fff5e0]"
-            >
-              <Eye className="h-4 w-4 text-[#d4a843]" />
-              View Frames
-            </Link> */}
-
-            {/* ADD FRAME SETUP BUTTON */}
-            {/* <Link
-              to="/admin/products/frame-setup"
-              className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#d4a843] bg-[#fffbf2] px-4 text-[15px] font-semibold text-[#9b6b2d] shadow-sm transition hover:bg-[#fff5e0]"
-            >
-              <Layers className="h-4 w-4 text-[#d4a843]" />
-              Add Frame Setup
-            </Link> */}
 
             {/* ADD NEW PRODUCT BUTTON */}
             <Link
@@ -329,19 +307,7 @@ const AdminProducts = () => {
                 <option value="Inactive">Inactive</option>
               </select>
 
-              {/* <button
-                type="button"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedCategory('All Categories');
-                  setSelectedStatus('All Status');
-                  setSortBy('latest');
-                }}
-                className="inline-flex h-[46px] items-center gap-2 rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d]"
-              >
-                <Filter className="h-4 w-4 text-[#c69218]" />
-                Clear
-              </button> */}
+              
               </div>
             </div>
 
@@ -438,6 +404,7 @@ const AdminProducts = () => {
                 <table className="min-w-full border-separate border-spacing-0">
                   <thead>
                     <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                      <th className="px-4 py-4">S.No</th>
                       <th className="px-4 py-4">Product</th>
                       <th className="px-4 py-4">Category</th>
                       <th className="px-4 py-4">Price</th>
@@ -455,6 +422,7 @@ const AdminProducts = () => {
 
                       return (
                         <tr key={product.id || index} className="border-t border-[#f0ebe6] align-middle">
+                          <td className="px-4 py-4">{index + 1}</td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[#e7e0d8] bg-[#f5f1ec]">
