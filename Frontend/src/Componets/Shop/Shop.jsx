@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Eye, ImagePlus, Package, RotateCw } from "lucide-react";
+import { Eye, ImagePlus, Package } from "lucide-react";
 import api from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 
@@ -10,7 +10,6 @@ const Shop = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [frames, setFrames] = useState([]);
-  const [selectedFrameId, setSelectedFrameId] = useState("All");
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [loading, setLoading] = useState(true);
 
@@ -41,18 +40,17 @@ const Shop = () => {
 
   const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
-    const matchesFrame = selectedFrameId === "All" || String(p.frame_id) === String(selectedFrameId);
     const matchesOrientation = selectedOrientation === "All" || (p.orientation || "Portrait").toLowerCase() === selectedOrientation.toLowerCase();
-    return matchesCategory && matchesFrame && matchesOrientation;
+    return matchesCategory && matchesOrientation;
   });
 
-  const visibleFrames = selectedOrientation === "All"
-    ? frames
-    : frames.filter((frame) => (frame.orientation || "Portrait").toLowerCase() === selectedOrientation.toLowerCase());
+  const orientationCards = ["Portrait", "Landscape", "Square"].map((orientation) => ({
+    orientation,
+    frame: frames.find((item) => (item.orientation || "Portrait").toLowerCase() === orientation.toLowerCase()),
+  }));
 
   const selectOrientation = (orientation) => {
     setSelectedOrientation(orientation);
-    setSelectedFrameId("All");
   };
 
   return (
@@ -78,49 +76,25 @@ const Shop = () => {
             </span>
           </div>
 
-          {/* FRAME TYPE SLIDER */}
+          {/* FRAME ORIENTATION SELECTOR */}
           {frames.length > 0 && (
-            <section className="mb-8 rounded-2xl bg-[#f1f1f1] px-5 py-6 md:px-6" aria-label="Explore frame types">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#b07838]">Explore frame types</p>
-                  <h2 className="mt-1 text-xl font-bold text-[#171717] sm:text-2xl">Find the right shape for your memory</h2>
-                </div>
-                <div className="hidden items-center gap-2 sm:flex">
-                  <button type="button" onClick={() => document.getElementById("shop-frame-slider")?.scrollBy({ left: -280, behavior: "smooth" })} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d8d2ca] bg-white text-[#444]" aria-label="Previous frame types"><ChevronLeft className="h-4 w-4" /></button>
-                  <button type="button" onClick={() => document.getElementById("shop-frame-slider")?.scrollBy({ left: 280, behavior: "smooth" })} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d8d2ca] bg-white text-[#444]" aria-label="Next frame types"><ChevronRight className="h-4 w-4" /></button>
-                </div>
-              </div>
-
-              <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {["All", "Portrait", "Landscape", "Square"].map((orientation) => (
+            <section className="mb-8 rounded-2xl bg-[#f1f1f1] px-3 py-5 sm:px-5 md:px-6" aria-label="Choose frame orientation">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {orientationCards.map(({ orientation, frame }) => (
                   <button
                     key={orientation}
                     type="button"
                     onClick={() => selectOrientation(orientation)}
-                    className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-bold transition ${selectedOrientation === orientation
-                      ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-sm"
-                      : "border-[#e1d9cf] bg-white text-[#444] hover:border-[#b07838]"
-                      }`}
+                    disabled={!frame}
+                    aria-label={`Show ${orientation} frames`}
+                    className={`text-left transition ${selectedOrientation === orientation ? "text-[#1a3c36]" : "text-[#171717]"} disabled:cursor-not-allowed disabled:opacity-50`}
                   >
-                    {orientation !== "All" && <RotateCw className="h-4 w-4" />}
-                    {orientation === "All" ? "All Frames" : orientation}
-                  </button>
-                ))}
-              </div>
-
-              <div id="shop-frame-slider" className="flex snap-x gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {visibleFrames.map((frame) => (
-                  <button key={frame.id} type="button" onClick={() => setSelectedFrameId(frame.id)} aria-label={`Select ${frame.orientation || "Photo frame"} frame`} className={`w-[180px] shrink-0 snap-start text-left ${String(selectedFrameId) === String(frame.id) ? "text-[#1a3c36]" : "text-[#222]"}`}>
-                    <div className={`relative h-36 overflow-hidden rounded-xl border-2 bg-white ${String(selectedFrameId) === String(frame.id) ? "border-[#1a3c36]" : "border-transparent"}`}>
-                      <img src={frame.frame_image} alt={frame.frame_name} className="h-full w-full object-contain" />
-                      <span className="absolute bottom-2 left-2 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-xs">
-                        {frame.orientation || "Photo frame"}
-                      </span>
+                    <div className={`h-52 overflow-hidden rounded-xl border-2 bg-white sm:h-56 ${selectedOrientation === orientation ? "border-[#1a3c36]" : "border-transparent"}`}>
+                      {frame ? <img src={frame.frame_image} alt={`${orientation} frame`} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-[#888]">No frame added</div>}
                     </div>
+                    <span className="mt-3 block text-center text-lg font-bold">{orientation}</span>
                   </button>
                 ))}
-                {visibleFrames.length === 0 && <p className="w-full py-8 text-center text-sm text-[#777]">No frames available for this orientation.</p>}
               </div>
             </section>
           )}
