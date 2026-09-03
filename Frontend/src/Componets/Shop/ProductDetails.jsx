@@ -210,6 +210,11 @@ const ProductDetails = () => {
           if (prod.size_variants && prod.size_variants.length > 0) {
             setSelectedVariantIndex(0);
           }
+          if (prod.frame_data?.slot_adjustments) {
+            setPhotoAdjustments(prod.frame_data.slot_adjustments);
+          } else if (prod.slot_adjustments) {
+            setPhotoAdjustments(prod.slot_adjustments);
+          }
         } else {
           toast.error("Product not found");
         }

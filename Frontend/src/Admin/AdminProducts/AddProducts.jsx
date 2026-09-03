@@ -311,7 +311,9 @@ const AddProducts = () => {
               setSlotPhotos(loadedPhotos);
             }
 
-            if (p.slot_adjustments && typeof p.slot_adjustments === "object") {
+            if (p.frame_data?.slot_adjustments && typeof p.frame_data.slot_adjustments === "object") {
+              setSlotAdjustments(p.frame_data.slot_adjustments);
+            } else if (p.slot_adjustments && typeof p.slot_adjustments === "object") {
               setSlotAdjustments(p.slot_adjustments);
             }
           } else {
@@ -629,6 +631,7 @@ const AddProducts = () => {
           frame_name: selectedFrame.frame_name,
           frame_image: selectedFrame.frame_image,
           photo_slots: selectedFrame.photo_slots || [],
+          slot_adjustments: slotAdjustments,
         },
         slot_photos: slotPhotosMap,
         slot_adjustments: slotAdjustments,
@@ -1288,10 +1291,6 @@ const AddProducts = () => {
                       );
                     })}
                   </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
             </div>
@@ -1322,6 +1321,32 @@ const AddProducts = () => {
             </button>
           </div>
         </form>
+
+        {/* PHOTO ADJUST MODAL FOR ADMIN DEMO PHOTOS */}
+        <PhotoAdjustModal
+          isOpen={Boolean(adjustingSlot)}
+          onClose={() => setAdjustingSlot(null)}
+          photoSrc={
+            adjustingSlot
+              ? slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
+              : null
+          }
+          slot={adjustingSlot}
+          initialAdjustment={
+            adjustingSlot
+              ? slotAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
+              : { panX: 0, panY: 0, scale: 1.0 }
+          }
+          onSave={(adj) => {
+            if (adjustingSlot) {
+              setSlotAdjustments((prev) => ({
+                ...prev,
+                [adjustingSlot.id]: adj,
+              }));
+              toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
+            }
+          }}
+        />
       </div>
     </div>
   );
