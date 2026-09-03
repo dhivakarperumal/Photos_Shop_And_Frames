@@ -13,8 +13,8 @@ const statusOptions = [
   ["CONFIRMED", "Confirmed"],
   ["PROCESSING", "Processing"],
   ["PACKING", "Packing"],
-  ["SHIPPED", "Shipped"],
   ["READY", "Ready"],
+  ["SHIPPED", "Shipped"],
   ["OUT_FOR_DELIVERY", "Out for Delivery"],
   ["DELIVERED", "Delivered"],
   ["CANCELLED", "Cancelled"],
@@ -29,6 +29,23 @@ const normalizeStatus = (status) => {
   if (value === "OUT FOR DELIVERY") return "OUT_FOR_DELIVERY";
   if (value === "ON HOLD") return "ON_HOLD";
   return value || "NEW";
+};
+
+const getVisibleStatusOptions = (currentStatus) => {
+  const normalizedStatus = normalizeStatus(currentStatus);
+  const workflowStatuses = statusOptions.slice(0, 9);
+  const currentIndex = workflowStatuses.findIndex(([value]) => value === normalizedStatus);
+  const visibleWorkflowStatuses = currentIndex >= 0
+    ? workflowStatuses.slice(currentIndex)
+    : [[normalizedStatus, currentStatus]];
+  const specialStatuses = statusOptions.slice(9);
+
+  return [
+    ...visibleWorkflowStatuses,
+    ...specialStatuses.filter(
+      ([value]) => !visibleWorkflowStatuses.some(([visibleValue]) => visibleValue === value)
+    ),
+  ];
 };
 
 const imageUrl = (value) => {
@@ -149,8 +166,8 @@ const NewOrderDetails = () => {
           <div className="flex flex-col items-end gap-2">
             <label className="text-xs font-bold text-[#66736e]" htmlFor="new-order-status">Update Status</label>
             <select id="new-order-status" value={statusDraft} onChange={(event) => { const nextStatus = event.target.value; if (nextStatus === "SHIPPED") { setStatusDraft(nextStatus); setShowShippingPopup(true); return; } const reason = nextStatus === "CANCELLED" ? window.prompt("Enter cancellation reason") || "" : ""; setCancellationReason(reason); if (nextStatus !== "CANCELLED" || reason.trim()) handleStatusUpdate(nextStatus, reason); }} disabled={updatingStatus} className="h-10 min-w-48 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]">
-              {statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              {!statusOptions.some(([value]) => value === statusDraft) && <option value={statusDraft}>{order.order_status}</option>}
+              {getVisibleStatusOptions(order.order_status).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              {!getVisibleStatusOptions(order.order_status).some(([value]) => value === statusDraft) && <option value={statusDraft}>{order.order_status}</option>}
             </select>
             {showShippingPopup && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Shipping details"><div className="w-full max-w-sm rounded-2xl border border-[#e8dfd2] bg-white p-5 shadow-2xl"><h2 className="text-lg font-black text-[#1a3c36]">Shipping Details</h2><p className="mt-1 text-xs text-[#66736e]">Enter the details before marking this order as shipped.</p><div className="mt-4 space-y-3"><input type="datetime-local" value={shippingDetails.shipped_at} onChange={(event) => setShippingDetails((previous) => ({ ...previous, shipped_at: event.target.value }))} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" /><input value={shippingDetails.docket_number} onChange={(event) => setShippingDetails((previous) => ({ ...previous, docket_number: event.target.value }))} placeholder="Docket number" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 text-xs outline-none focus:border-[#1a3c36]" /><input value={shippingDetails.courier_name} onChange={(event) => setShippingDetails((previous) => ({ ...previous, courier_name: event.target.value }))} placeholder="Courier name" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 text-xs outline-none focus:border-[#1a3c36]" /></div><div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => { setShowShippingPopup(false); setStatusDraft(normalizeStatus(order.order_status)); }} className="rounded-lg border border-[#d8cfc3] px-3 py-2 text-xs font-bold text-[#66736e]">Cancel</button><button type="button" onClick={() => handleStatusUpdate("SHIPPED", "")} disabled={updatingStatus || !shippingDetails.shipped_at || !shippingDetails.docket_number.trim() || !shippingDetails.courier_name.trim()} className="rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{updatingStatus ? "Updating..." : "Submit Shipped"}</button></div></div></div>}
           </div>
