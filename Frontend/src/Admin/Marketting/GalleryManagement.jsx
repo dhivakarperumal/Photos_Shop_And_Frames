@@ -211,7 +211,7 @@ const GalleryManagement = () => {
         <div className="rounded-2xl border border-[#e7e0d8] bg-white p-2 shadow-sm">
           
           {/* TOOLBAR */}
-          <div className="p-3 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between border-b border-[#f0ebe6]">
+          <div className="p-3 flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:justify-between mt-2">
             
             {/* Search & Filters */}
             <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap lg:shrink-0">
@@ -225,10 +225,6 @@ const GalleryManagement = () => {
                   className="h-[42px] w-full rounded-xl border border-[#dfe2e5] bg-white pl-9 pr-3 text-[13px] text-[#2d2d2d] outline-none placeholder:text-[#8a8a8a] focus:border-[#d2bc8a]"
                 />
               </div>
-
-             
-
-              
             </div>
 
             {/* Sort & View Toggles */}
@@ -284,31 +280,7 @@ const GalleryManagement = () => {
             </div>
           </div>
 
-          {/* TABS */}
-          <div className="flex gap-6 px-4 pt-4 border-b border-[#f0ebe6]">
-            <button
-              onClick={() => setActiveTab("albums")}
-              className={`pb-3 text-[14px] font-semibold transition-colors relative ${
-                activeTab === "albums" ? "text-[#1a3c36]" : "text-[#7a7a7a] hover:text-[#1a3c36]"
-              }`}
-            >
-              Albums ({totalAlbums})
-              {activeTab === "albums" && (
-                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#1a3c36] rounded-t-full" />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("photos")}
-              className={`pb-3 text-[14px] font-semibold transition-colors relative ${
-                activeTab === "photos" ? "text-[#1a3c36]" : "text-[#7a7a7a] hover:text-[#1a3c36]"
-              }`}
-            >
-              Photos ({totalPhotos})
-              {activeTab === "photos" && (
-                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#1a3c36] rounded-t-full" />
-              )}
-            </button>
-          </div>
+          
 
           {/* TABLE CONTENT */}
           <div className="overflow-x-auto p-1">
@@ -367,7 +339,6 @@ const GalleryManagement = () => {
                   <th className="px-4 py-4 whitespace-nowrap">Album</th>
                   <th className="px-4 py-4 whitespace-nowrap">Category</th>
                   <th className="px-4 py-4 whitespace-nowrap">Photos</th>
-                  <th className="px-4 py-4 whitespace-nowrap">Views</th>
                   <th className="px-4 py-4 whitespace-nowrap">Status</th>
                   <th className="px-4 py-4 whitespace-nowrap">Created At</th>
                   <th className="rounded-tr-md px-4 py-4 whitespace-nowrap">Actions</th>
@@ -429,11 +400,6 @@ const GalleryManagement = () => {
                             <ImageIcon className="h-4 w-4 text-[#8a8a8a]" />
                             {album.photo_count || 0}
                           </div>
-                        </td>
-
-                        {/* Views */}
-                        <td className="border-t border-[#f0ebe6] px-4 py-3 text-[13px] text-[#4d4d4d]">
-                          0
                         </td>
 
                         {/* Status */}
