@@ -47,6 +47,19 @@ async function addColumns() {
     console.log("\nAdding columns to orders table...");
     try {
       await connection.query(
+        `ALTER TABLE orders ADD COLUMN order_date DATE NULL`
+      );
+      console.log("✅ Added order_date to orders table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  order_date already exists in orders table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
         `ALTER TABLE orders ADD COLUMN order_time VARCHAR(20) DEFAULT '00:00'`
       );
       console.log("✅ Added order_time to orders table");

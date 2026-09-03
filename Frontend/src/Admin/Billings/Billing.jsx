@@ -31,6 +31,13 @@ const products = [];
 const formatCurrency = (value) =>
   `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
+const toDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const statusClass = {
   Confirmed: "bg-[#e6f7ed] text-[#18794e]",
   Preparing: "bg-[#e9f1ff] text-[#3069c5]",
@@ -47,6 +54,11 @@ const Billing = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [viewMode, setViewMode] = useState("table");
   const [receivedAmount, setReceivedAmount] = useState("");
+  const [datePreset, setDatePreset] = useState("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -63,8 +75,8 @@ const Billing = () => {
             order.customer_name || order.address?.customer_name || order.customer_id || "Customer",
           phone: order.customer_phone || order.address?.mobile_number || "",
           items: Number(order.total_items || order.item_count || order.items?.length || 0),
-          date: order.order_date
-            ? new Date(order.order_date).toLocaleDateString("en-GB")
+          date: (order.order_date || order.created_at)
+            ? new Date(order.order_date || order.created_at).toLocaleDateString("en-GB")
             : "-",
           time: order.created_at
             ? new Date(order.created_at).toLocaleTimeString("en-US", {
@@ -75,8 +87,8 @@ const Billing = () => {
           amount: Number(order.total_amount || 0),
           status: order.order_status || "Pending",
           paymentStatus: order.payment_status || "Pending",
-          orderDate: order.order_date
-            ? new Date(order.order_date).toISOString().slice(0, 10)
+          orderDate: (order.order_date || order.created_at)
+            ? new Date(order.order_date || order.created_at).toISOString().slice(0, 10)
             : "",
           createdDate: order.created_at
             ? new Date(order.created_at).toISOString().slice(0, 10)
@@ -104,17 +116,54 @@ const Billing = () => {
   }, []);
 
   const filteredOrders = useMemo(
-    () =>
-      orders.filter((order) => {
+    () => {
+      const today = new Date();
+      let rangeStart = "";
+      let rangeEnd = "";
+
+      if (datePreset === "today") {
+        rangeStart = rangeEnd = toDateKey(today);
+      } else if (datePreset === "yesterday") {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        rangeStart = rangeEnd = toDateKey(yesterday);
+      } else if (datePreset === "thisWeek") {
+        const weekStart = new Date(today);
+        const day = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
+        rangeStart = toDateKey(weekStart);
+        rangeEnd = toDateKey(today);
+      } else if (datePreset === "thisMonth") {
+        rangeStart = toDateKey(new Date(today.getFullYear(), today.getMonth(), 1));
+        rangeEnd = toDateKey(today);
+      } else if (datePreset === "lastMonth") {
+        rangeStart = toDateKey(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+        rangeEnd = toDateKey(new Date(today.getFullYear(), today.getMonth(), 0));
+      } else if (datePreset === "custom") {
+        rangeStart = customStartDate;
+        rangeEnd = customEndDate;
+      }
+
+      return orders.filter((order) => {
         const query = search.toLowerCase();
         const matchesSearch =
           !query ||
           `${order.id} ${order.customer} ${order.phone}`
             .toLowerCase()
             .includes(query);
-        return matchesSearch;
-      }),
-    [orders, search],
+        const matchesDate =
+          (!rangeStart || order.orderDate >= rangeStart) &&
+          (!rangeEnd || order.orderDate <= rangeEnd);
+        return matchesSearch && matchesDate;
+      });
+    },
+    [orders, search, datePreset, customStartDate, customEndDate],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ordersPerPage));
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ordersPerPage,
+    currentPage * ordersPerPage,
   );
 
   const selectedOrderItems = selectedOrder?.orderItems || [];
@@ -324,16 +373,59 @@ const Billing = () => {
         <div className="grid gap-3 xl:grid-cols-[1.1fr] mt-8">
           <section className="rounded-lg border border-[#e5e7eb] bg-white p-3">
             <div className="mb-3 flex flex-col gap-2 md:flex-row">
-              <div className="flex flex-1 gap-2">
+              <div className="flex flex-1 flex-col gap-2 md:flex-row">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7280]" />
                   <input
                     value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Search by Order ID / Customer / Mobile..."
-                    className="h-12 w-1/2 rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#ff8a4c]"
+                    className="h-12 w-1/2 rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
                   />
                 </div>
+                <select
+                  value={datePreset}
+                  onChange={(event) => {
+                    setDatePreset(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="h-12 w-full rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36] md:w-44"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="thisWeek">This Week</option>
+                  <option value="thisMonth">This Month</option>
+                  <option value="lastMonth">Last Month</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+                {datePreset === "custom" && (
+                  <div className="flex w-full gap-2 md:w-auto">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(event) => {
+                        setCustomStartDate(event.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-12 min-w-0 rounded-md border border-[#e5e7eb] bg-white px-2 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
+                      aria-label="Start date"
+                    />
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(event) => {
+                        setCustomEndDate(event.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-12 min-w-0 rounded-md border border-[#e5e7eb] bg-white px-2 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
+                      aria-label="End date"
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex overflow-hidden rounded-md border border-[#e5e7eb] bg-white">
                 <button
@@ -377,12 +469,12 @@ const Billing = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order, index) => (
+                  {paginatedOrders.map((order, index) => (
                     <tr
                       key={order.id}
                       className={`border-b border-[#f0f1f3] ${selectedOrder?.id === order.id ? "bg-[#fffaf7]" : ""}`}
                     >
-                      <td className="px-2 py-3 text-[#6b7280]">{index + 1}</td>
+                      <td className="px-2 py-3 text-[#6b7280]">{(currentPage - 1) * ordersPerPage + index + 1}</td>
                       <td className="px-2 py-3 font-semibold text-[#ed5d19]">
                         {order.id}
                         <div className="font-normal text-[#6b7280]">
@@ -423,7 +515,7 @@ const Billing = () => {
               </table>
             </div>
             <div className="card-mode-only hidden grid-cols-1 gap-3 p-1 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <article
                   key={order.id}
                   className="rounded-lg border border-[#e5e7eb] bg-white p-4 shadow-sm"
@@ -475,8 +567,17 @@ const Billing = () => {
                 </p>
               )}
             </div>
-            <div className="mt-3 text-[11px] text-[#6b7280]">
-              Showing 1 to {filteredOrders.length} of {orders.length} orders
+            <div className="mt-3 flex flex-col gap-2 text-[11px] text-[#6b7280] sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                Showing {filteredOrders.length ? (currentPage - 1) * ordersPerPage + 1 : 0} to {Math.min(currentPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length} orders
+              </span>
+              {filteredOrders.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1} className="rounded-md bg-[#1a3c36] px-3 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+                  <span>Page {currentPage} of {totalPages}</span>
+                  <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages} className="rounded-md bg-[#1a3c36] px-3 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+                </div>
+              )}
             </div>
             {selectedOrder && (
               <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#fffaf7] p-4">

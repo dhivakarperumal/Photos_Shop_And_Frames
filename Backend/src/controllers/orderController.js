@@ -9,6 +9,7 @@ const createOrder = async (req, res) => {
       customer_email,
       customer_phone,
       shipping_address,
+      order_date,
       city,
       state,
       pincode,
@@ -31,6 +32,7 @@ const createOrder = async (req, res) => {
           customer_name: address?.customer_name || order.customer_name || "Customer",
           customer_email: order.customer_email || "",
           customer_phone: address?.mobile_number || order.customer_phone || "",
+          order_date: order.order_date || null,
           shipping_address: [
             address?.door_number,
             address?.street_name,
@@ -103,6 +105,7 @@ const createOrder = async (req, res) => {
       customer_email: (customer_email || "").trim(),
       customer_phone: customer_phone.trim(),
       shipping_address: shipping_address.trim(),
+      order_date: order_date || null,
       city: (city || "").trim(),
       state: (state || "").trim(),
       pincode: (pincode || "").trim(),

@@ -170,6 +170,7 @@ async function ensureDatabaseSchema() {
         customer_phone VARCHAR(50) NOT NULL,
         shipping_address TEXT NOT NULL,
         billing_type VARCHAR(50) NOT NULL DEFAULT 'Online Order',
+        order_date DATE NULL,
         city VARCHAR(100) NULL,
         state VARCHAR(100) NULL,
         pincode VARCHAR(20) NULL,
