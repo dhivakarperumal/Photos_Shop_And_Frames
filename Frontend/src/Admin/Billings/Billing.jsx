@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Check,
-  ChevronDown,
   Edit3,
   Eye,
   List,
@@ -27,7 +26,6 @@ const emptyOrder = {
   status: "Pending",
   orderItems: [],
 };
-const ALL_ORDERS = "All Orders";
 const products = [];
 
 const formatCurrency = (value) =>
@@ -47,7 +45,6 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [activeStatus, setActiveStatus] = useState(ALL_ORDERS);
   const [viewMode, setViewMode] = useState("table");
   const [receivedAmount, setReceivedAmount] = useState("");
 
@@ -115,11 +112,9 @@ const Billing = () => {
           `${order.id} ${order.customer} ${order.phone}`
             .toLowerCase()
             .includes(query);
-        const matchesStatus =
-          activeStatus === ALL_ORDERS || order.status === activeStatus;
-        return matchesSearch && matchesStatus;
+        return matchesSearch;
       }),
-    [search, activeStatus],
+    [orders, search],
   );
 
   const selectedOrderItems = selectedOrder?.orderItems || [];
@@ -339,21 +334,6 @@ const Billing = () => {
                     className="h-12 w-1/2 rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#ff8a4c]"
                   />
                 </div>
-                <label className="relative w-36">
-                  <select
-                    value={activeStatus}
-                    onChange={(event) => setActiveStatus(event.target.value)}
-                    className="h-12 w-full appearance-none rounded-md border border-[#e5e7eb] bg-white px-3 pr-8 text-xs outline-none"
-                  >
-                    <option>All Orders</option>
-                    <option>Confirmed</option>
-                    <option>Preparing</option>
-                    <option>Ready</option>
-                    <option>Completed</option>
-                    <option>Cancelled</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7280]" />
-                </label>
               </div>
               <div className="flex overflow-hidden rounded-md border border-[#e5e7eb] bg-white">
                 <button
