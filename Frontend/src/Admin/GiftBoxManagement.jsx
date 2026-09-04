@@ -731,13 +731,8 @@ const GiftBoxManagement = () => {
 
         <section className="overflow-hidden rounded-2xl border border-[#e1e6df] bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[#edf0eb] px-5 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-            <div>
-              <h2 className="text-lg font-bold text-[#263a34]">Gift Boxes</h2>
-              <p className="mt-0.5 text-xs text-[#89948d]">
-                {filteredBoxes.length} boxes in your catalog
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            
+            <div className="flex flex-1 flex-col gap-2 sm:flex-row">
               <label className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ba69f]" />
                 <input
@@ -747,9 +742,11 @@ const GiftBoxManagement = () => {
                     setPage(1);
                   }}
                   placeholder="Search gift boxes..."
-                  className={`${inputClass} h-10 pl-9 sm:w-56`}
+                  className={`${inputClass} h-10 pl-9 sm:w-full sm:max-w-[420px]`}
                 />
               </label>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
               <label className="relative">
                 <select
                   value={categoryFilter}
@@ -782,10 +779,41 @@ const GiftBoxManagement = () => {
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#89948d]" />
               </label>
+              <label className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className={`${inputClass} h-10 appearance-none pr-9 sm:w-36`}
+                >
+                  <option>All Status</option>
+                  <option>Active</option>
+                  <option>Inactive</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#89948d]" />
+              </label>
+              <label className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(event) => setSortBy(event.target.value)}
+                  className={`${inputClass} h-10 appearance-none pr-9 sm:w-40`}
+                >
+                  <option value="latest">Sort by: Latest</option>
+                  <option value="name">Sort by: Name</option>
+                  <option value="stock-low">Sort by: Stock</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#89948d]" />
+              </label>
+              <div className="flex h-10 overflow-hidden rounded-lg border border-[#dfe5df] bg-white">
+                <button type="button" onClick={() => setViewMode("table")} title="Table view" className={`flex w-10 items-center justify-center ${viewMode === "table" ? "bg-[#1f5d4d] text-white" : "text-[#718079] hover:bg-[#f3f7f3]"}`}><Table2 className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setViewMode("grid")} title="Grid view" className={`flex w-10 items-center justify-center ${viewMode === "grid" ? "bg-[#1f5d4d] text-white" : "text-[#718079] hover:bg-[#f3f7f3]"}`}><LayoutGrid className="h-4 w-4" /></button>
+              </div>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className={viewMode === "grid" ? "hidden" : "overflow-x-auto"}>
             <table className="w-full min-w-[1260px] text-left text-sm">
               <thead className="bg-[#f7f9f6] text-[10px] uppercase tracking-[0.1em] text-[#7c8881]">
                 <tr>
@@ -915,6 +943,14 @@ const GiftBoxManagement = () => {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className={viewMode === "grid" ? "grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3" : "hidden"}>
+            {pageBoxes.map((box) => (
+              <article key={box.id} className="overflow-hidden rounded-xl border border-[#e1e6df] bg-[#fbfcfa] transition hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex h-40 items-center justify-center bg-[#eef4ee]">{box.image ? <img src={box.image} alt="" className="h-full w-full object-cover" /> : <Gift className="h-10 w-10 text-[#9aaa9f]" />}</div>
+                <div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[10px] font-bold text-[#588070]">{box.id}</p><h3 className="mt-1 font-bold text-[#263a34]">{box.name}</h3></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}>{box.stockStatus}</span></div><p className="text-xs text-[#77847c]">{box.category} <span className="mx-1">·</span> {box.subCategory || "-"}</p><div className="flex items-center justify-between border-t border-[#e7ece6] pt-3"><div><p className="text-[10px] uppercase tracking-wide text-[#919d95]">Selling Price</p><p className="font-bold text-[#bd713a]">{money(box.sellingPrice)}</p></div><p className="text-xs font-semibold text-[#68776f]">{box.currentStock} in stock</p><button type="button" onClick={() => openEdit(box)} title="Edit gift box" className="rounded-md p-2 text-[#688279] hover:bg-[#eaf3ed]"><Edit3 className="h-4 w-4" /></button></div></div>
+              </article>
+            ))}
           </div>
           <div className="flex items-center justify-between border-t border-[#edf0eb] px-5 py-3 text-xs text-[#87928c]">
             <span>
