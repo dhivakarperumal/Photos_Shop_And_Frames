@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Package } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import api from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 import ProductCard from "../../CommonComponents/ProductCard";
@@ -10,6 +11,8 @@ const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategoryType = searchParams.get("categoryType") || "All";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,8 +37,13 @@ const Shop = () => {
 
   const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategory === "All" || p.category === selectedCategory;
+    const matchesCategoryType = selectedCategoryType === "All" || categories.some((category) =>
+      String(category.category_name || "").trim().toLowerCase() === String(p.category || "").trim().toLowerCase()
+      && String(category.category_type || "").trim().toLowerCase() === selectedCategoryType.toLowerCase()
+      && (category.status || "Active") === "Active"
+    );
     const matchesOrientation = selectedOrientation === "All" || (p.orientation || "Portrait").toLowerCase() === selectedOrientation.toLowerCase();
-    return matchesCategory && matchesOrientation;
+    return matchesCategory && matchesCategoryType && matchesOrientation;
   });
 
   const orientationCards = ["Portrait", "Landscape", "Square"];
@@ -93,7 +101,10 @@ const Shop = () => {
           <div className="mb-8 flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setSelectedCategory("All")}
+              onClick={() => {
+                setSelectedCategory("All");
+                setSearchParams({});
+              }}
               className={`rounded-full px-4 py-2 text-xs font-bold transition ${selectedCategory === "All"
                 ? "bg-[#1a3c36] text-white shadow-sm"
                 : "border border-[#e0d6c8] bg-white text-[#555] hover:border-[#b07838]"
@@ -106,7 +117,10 @@ const Shop = () => {
               <button
                 key={cat.id || cat.category_id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.category_name)}
+                onClick={() => {
+                  setSelectedCategory(cat.category_name);
+                  setSearchParams({});
+                }}
                 className={`rounded-full px-4 py-2 text-xs font-bold transition ${selectedCategory === cat.category_name
                   ? "bg-[#1a3c36] text-white shadow-sm"
                   : "border border-[#e0d6c8] bg-white text-[#555] hover:border-[#b07838]"
