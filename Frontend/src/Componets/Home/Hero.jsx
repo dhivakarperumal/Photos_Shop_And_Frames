@@ -1,112 +1,268 @@
-import React from 'react'
-import { FiArrowRight, FiUpload, FiCheckCircle, FiClock, FiShield, FiImage, FiGift, FiLayers, FiGrid, FiPackage } from 'react-icons/fi'
+import React from "react";
+import {
+  FiArrowRight,
+  FiUpload,
+  FiCheckCircle,
+  FiClock,
+  FiShield,
+  FiImage,
+  FiGift,
+  FiLayers,
+  FiGrid,
+  FiPackage,
+  FiCamera,
+  FiCreditCard,
+  FiUser,
+  FiScissors,
+  FiMaximize
+} from "react-icons/fi";
 
 const features = [
-  { icon: FiCheckCircle, title: 'Premium Quality', subtitle: 'High Quality Materials' },
-  { icon: FiClock, title: 'Fast Delivery', subtitle: 'On Time Delivery' },
-  { icon: FiShield, title: 'Secure Upload', subtitle: 'Your Photos Safe' },
-]
+  {
+    icon: FiCheckCircle,
+    title: "Premium Quality",
+    subtitle: "High Quality Materials",
+  },
+  {
+    icon: FiClock,
+    title: "Fast Delivery",
+    subtitle: "On Time Delivery",
+  },
+  {
+    icon: FiShield,
+    title: "Secure Upload",
+    subtitle: "Your Photos Safe",
+  },
+];
 
 const services = [
-  { icon: FiImage, title: 'Photo Printing', subtitle: 'High Quality Prints' },
-  { icon: FiGrid, title: 'Custom Frames', subtitle: 'Design Your Frame' },
-  { icon: FiLayers, title: 'Canvas Printing', subtitle: 'Premium Canvas' },
-  { icon: FiPackage, title: 'Photo Albums', subtitle: 'Save Your Memories' },
-  { icon: FiGift, title: 'Passport Photos', subtitle: 'Instant & Trusted' },
-  { icon: FiGift, title: 'Photo Gifts', subtitle: 'Personalized Gifts' },
-  { icon: FiImage, title: 'Lamination', subtitle: 'Long Lasting Finish' },
-  { icon: FiGrid, title: 'Wall Decor', subtitle: 'Stylish & Modern' },
-]
+  {
+    icon: FiCamera,
+    title: "Photo Printing",
+    subtitle: "High Quality Prints",
+  },
+  {
+    icon: FiMaximize,
+    title: "Custom Frames",
+    subtitle: "Design Your Frame",
+  },
+  {
+    icon: FiImage,
+    title: "Canvas Printing",
+    subtitle: "Premium Canvas",
+  },
+  {
+    icon: FiCreditCard,
+    title: "Photo Albums",
+    subtitle: "Save Your Memories",
+  },
+  {
+    icon: FiUser,
+    title: "Passport Photos",
+    subtitle: "Instant & Trusted",
+  },
+  {
+    icon: FiGift,
+    title: "Photo Gifts",
+    subtitle: "Personalized Gifts",
+  },
+  {
+    icon: FiLayers,
+    title: "Lamination",
+    subtitle: "Long Lasting Finish",
+  },
+  {
+    icon: FiGrid,
+    title: "Wall Decor",
+    subtitle: "Stylish & Modern",
+  },
+];
 
 const Hero = () => {
   return (
-    <section className="mt-[130px] bg-[#f7f4ef] px-4 py-6 md:px-6 lg:px-10">
-      <div className="mx-auto max-w-[1480px] rounded-[20px] bg-[#f8f5f0] p-4 md:p-8 lg:p-10">
-        <div className="grid items-center gap-8 lg:grid-cols-[1.3fr_1fr_0.7fr]">
-          <div className="space-y-6">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#b5863d]">
-              Premium Quality
-            </p>
+    <section className="bg-[#f7f4ee] px-3 py-3 sm:px-4 md:py-5">
+      {/* PAGE CONTAINER */}
+      <div className="page-container mx-auto w-full max-w-[1480px]">
+        <div className="relative overflow-hidden rounded-[24px] bg-[#f8f5ef] px-5 py-7 shadow-sm sm:px-7 md:px-10 md:py-9 lg:px-12 lg:py-10">
 
-            <h1 className="text-4xl font-black leading-[0.9] tracking-[-0.06em] text-[#171717] md:text-6xl lg:text-[5rem]">
-              Turn Your Memories
-              <span className="mt-2 block text-[#d2a14b] italic font-light">Into Something Beautiful</span>
-            </h1>
+          {/* Soft Background Decorations */}
+          <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-[#d5aa62]/10 blur-3xl" />
 
-            <p className="max-w-xl text-base leading-8 text-[#4d4d4d] md:text-lg">
-              Premium photo printing, custom frames, canvas prints and personalized gifts — all in one place.
-            </p>
+          <div className="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-[#d5aa62]/10 blur-3xl" />
 
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <button className="inline-flex items-center justify-center gap-3 rounded-2xl bg-[#111111] px-7 py-4 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition hover:scale-[1.01]">
-                Shop Frames
-                <FiArrowRight className="text-lg" />
-              </button>
+          {/* ================= HERO CONTENT ================= */}
+          <div className="relative grid items-center gap-8 lg:grid-cols-[1.15fr_1fr_0.55fr] xl:gap-10">
 
-              <button className="inline-flex items-center justify-center gap-3 rounded-2xl border border-[#d2a14b] bg-[#f1e0b0] px-7 py-4 text-sm font-bold uppercase tracking-[0.08em] text-[#1c1c1c] shadow-[0_10px_20px_rgba(210,161,75,0.18)] transition hover:scale-[1.01]">
-                Upload Your Photo
-                <FiUpload className="text-lg" />
-              </button>
+            {/* ================= LEFT CONTENT ================= */}
+            <div className="z-10">
+
+              <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#a9782e] sm:text-sm">
+                Premium Quality
+              </p>
+
+              <h1 className="max-w-[650px] text-[2.4rem] font-black leading-[0.95] tracking-[-0.055em] text-[#171717] sm:text-5xl md:text-6xl lg:text-[4.2rem] xl:text-[4.6rem]">
+                Turn Your Memories
+                <span className="mt-2 block font-light italic tracking-[-0.04em] text-[#c18d38]">
+                  Into Something Beautiful
+                </span>
+              </h1>
+
+              <p className="mt-5 max-w-[620px] text-sm leading-6 text-[#555] sm:text-base sm:leading-7">
+                Premium photo printing, custom frames, canvas prints and
+                personalized gifts — all in one place.
+              </p>
+
+              {/* Buttons */}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+
+                <button
+                  type="button"
+                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg bg-[#171717] px-6 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#252525]"
+                >
+                  Shop Frames
+                  <FiArrowRight className="text-base transition-transform duration-300 group-hover:translate-x-1" />
+                </button>
+
+                <button
+                  type="button"
+                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg border border-[#c99945] bg-[#d5a342] px-6 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_8px_20px_rgba(190,140,55,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#c49135]"
+                >
+                  Upload Your Photo
+                  <FiUpload className="text-base transition-transform duration-300 group-hover:-translate-y-0.5" />
+                </button>
+
+              </div>
+
+              {/* ================= FEATURES ================= */}
+              <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-3">
+
+                {features.map(({ icon: Icon, title, subtitle }) => (
+                  <div
+                    key={title}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#222] bg-white text-[#222]">
+                      <Icon className="text-base" />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-bold text-[#222] sm:text-[13px]">
+                        {title}
+                      </p>
+
+                      <p className="mt-0.5 text-[10px] text-[#666] sm:text-[11px]">
+                        {subtitle}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+              </div>
             </div>
 
-            <div className="grid gap-4 pt-2 md:grid-cols-3">
-              {features.map(({ icon: Icon, title, subtitle }) => (
-                <div key={title} className="flex items-start gap-3">
-                  <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full border border-[#1d1d1d] bg-white text-[#1d1d1d]">
-                    <Icon className="text-sm" />
+            {/* ================= FRAME IMAGE ================= */}
+            <div className="relative flex items-center justify-center">
+
+              {/* Glow */}
+              <div className="absolute h-64 w-64 rounded-full bg-[#cda15d]/10 blur-3xl sm:h-80 sm:w-80" />
+
+              <div className="relative w-full max-w-[390px]">
+
+                {/* Frame Shadow */}
+                <div className="absolute inset-x-5 bottom-2 h-8 rounded-full bg-black/20 blur-2xl" />
+
+                {/* Actual Frame */}
+                <img
+                  src="/assets/family-frame.png"
+                  alt="Family Photo Frame"
+                  className="relative z-10 mx-auto w-full object-contain drop-shadow-[0_25px_25px_rgba(0,0,0,0.22)]"
+                />
+
+              </div>
+            </div>
+
+            {/* ================= OFFER ================= */}
+            <div className="flex items-center justify-center lg:justify-end">
+
+              <div className="relative flex h-[145px] w-[145px] items-center justify-center rounded-full border-[2px] border-dashed border-[#c99746] bg-[#f9f4e9] shadow-[0_12px_30px_rgba(0,0,0,0.08)] sm:h-[160px] sm:w-[160px]">
+
+                {/* Small decorative dots */}
+                <span className="absolute -left-1 top-7 h-2 w-2 rounded-full bg-[#c99746]" />
+                <span className="absolute -right-1 bottom-8 h-2 w-2 rounded-full bg-[#c99746]" />
+
+                <div className="text-center">
+
+                  <p className="text-[30px] font-black leading-none text-[#1b1b1b]">
+                    10%
+                  </p>
+
+                  <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#222]">
+                    Off
+                  </p>
+
+                  <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#666]">
+                    On First Order
+                  </p>
+
+                  <p className="mt-2 text-[9px] font-bold text-[#b17d2f]">
+                    Use Code: FIRST10
+                  </p>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ================= SERVICES BAR ================= */}
+          <div className="relative mt-8 overflow-hidden rounded-[20px] bg-[#171717] shadow-[0_12px_30px_rgba(0,0,0,0.18)] md:mt-10">
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+
+              {services.map(({ icon: Icon, title, subtitle }, index) => (
+                <div
+                  key={title}
+                  className={`
+                    group flex min-h-[112px] cursor-pointer flex-col
+                    items-center justify-center px-3 py-4 text-center
+                    transition-all duration-300
+                    hover:bg-[#222]
+                    ${index !== services.length - 1
+                      ? "border-b border-[#343434] sm:border-r"
+                      : ""
+                    }
+                    ${index === 1 || index === 3 || index === 5
+                      ? "sm:border-r"
+                      : ""
+                    }
+                  `}
+                >
+
+                  {/* Icon */}
+                  <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-lg border border-[#b7893e]/70 bg-[#202020] text-[#d3a34d] transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-[#292929]">
+                    <Icon className="text-lg" />
                   </div>
-                  <div>
-                    <div className="text-base font-bold text-[#1d1d1d]">{title}</div>
-                    <div className="text-sm text-[#5b5b5b]">{subtitle}</div>
-                  </div>
+
+                  {/* Title */}
+                  <p className="text-[11px] font-bold leading-tight text-[#f2d29a] sm:text-xs">
+                    {title}
+                  </p>
+
+                  {/* Subtitle */}
+                  <p className="mt-1 text-[9px] leading-tight text-[#bdbdbd]">
+                    {subtitle}
+                  </p>
+
                 </div>
               ))}
+
             </div>
           </div>
 
-          <div className="relative flex justify-center">
-            <div className="absolute -left-8 top-16 hidden h-40 w-40 rounded-full bg-[#dcb77e]/15 blur-3xl lg:block" />
-            <div className="absolute -right-8 bottom-8 hidden h-32 w-32 rounded-full bg-[#dcb77e]/15 blur-3xl lg:block" />
-
-            <div className="relative">
-              <div className="absolute left-1/2 top-2 h-6 w-6 -translate-x-1/2 rounded-full bg-[#dcb77e]/20 blur-xl" />
-
-              <div className="flex h-[18rem] w-[18rem] items-center justify-center bg-[#f3efe8] shadow-[0_30px_40px_rgba(0,0,0,0.15)] md:h-[21rem] md:w-[21rem]">
-                <div className="flex h-[13rem] w-[13rem] items-center justify-center rounded-xl bg-gradient-to-br from-[#d0dfe9] via-[#f0ddca] to-[#cddde3] text-5xl shadow-inner md:h-[15rem] md:w-[15rem]">
-                  👨‍👩‍👧‍👦
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center lg:justify-end">
-            <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-[3px] border-[#d2a14b] bg-[#f8f3ea] text-center shadow-[0_12px_24px_rgba(0,0,0,0.08)]">
-              <div className="flex flex-col items-center justify-center">
-                <span className="text-3xl font-black text-[#171717]">10%</span>
-                <span className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#171717]">Off</span>
-                <span className="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[#666]">On First Order</span>
-                <span className="mt-1 text-[10px] font-semibold text-[#b5863d]">Use code: FIRST10</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-10 rounded-[18px] bg-[#111111] px-4 py-5 md:px-6">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-8">
-            {services.map(({ icon: Icon, title, subtitle }) => (
-              <div key={title} className="flex min-h-[120px] flex-col items-center justify-center rounded-xl border border-[#d2a14b]/60 bg-[#111111] p-3 text-center text-white shadow-[inset_0_0_0_1px_rgba(210,161,75,0.3)]">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-[#d2a14b] bg-[#1b1b1b] text-[#d2a14b]">
-                  <Icon className="text-xl" />
-                </div>
-                <div className="text-lg font-bold text-[#f5d39d]">{title}</div>
-                <div className="mt-1 text-xs text-[#d2d2d2]">{subtitle}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </section>
-  )
-}
+  );
+};
 
-export default Hero
+export default Hero;
