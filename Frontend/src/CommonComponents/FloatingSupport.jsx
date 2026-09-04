@@ -86,7 +86,7 @@ const FloatingSupport = () => {
       {/* Chatbot panel */}
       {showChatBot && <ChatBot isOpen={chatOpen} onClose={() => setChatOpen(false)} />}
 
-      {/* Floating button container – always fixed to bottom-right */}
+      {/* Floating button container – fixed to bottom right */}
       <div className="floating-support-container">
         {/* WhatsApp button - visible on all user UI pages */}
         {showUserUIWidgets && (
