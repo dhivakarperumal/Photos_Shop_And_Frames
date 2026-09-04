@@ -8,6 +8,7 @@ import ScrollToTop from "./CommonComponents/ScrollToTop";
 import FloatingSupport from "./CommonComponents/FloatingSupport";
 import Loader from "./CommonComponents/Loader";
 import CartSidebar from "./CommonComponents/CartSidebar";
+import FavoritesSidebar from "./CommonComponents/FavoritesSidebar";
 import { useAuth } from "./PrivateRouter/AuthContext";
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
         <FloatingSupport />
       </div>
       <CartSidebar />
+      <FavoritesSidebar />
       <Outlet />
       <Toaster
         position="top-right"

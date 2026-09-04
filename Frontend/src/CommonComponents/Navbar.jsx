@@ -51,7 +51,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, userProfile, role } = useAuth();
-  const { cart = [], openCart } = useContext(StoreContext) || {};
+  const { cart = [], wishlist = [], openCart, openFavorites } = useContext(StoreContext) || {};
 
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
@@ -244,9 +244,9 @@ const Navbar = () => {
                   <FiSearch className="text-lg" />
                 </button>
 
-                <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Favorites">
+                <button type="button" onClick={() => (openFavorites ? openFavorites() : navigate("/account"))} className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Open favorites">
                   <FiHeart className="text-lg" />
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">3</span>
+                  {wishlist.length > 0 && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">{wishlist.length}</span>}
                 </button>
 
                 <button

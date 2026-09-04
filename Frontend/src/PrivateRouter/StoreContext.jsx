@@ -25,6 +25,9 @@ export const StoreProvider = ({ children }) => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const openCart = useCallback(() => setIsCartOpen(true), []);
     const closeCart = useCallback(() => setIsCartOpen(false), []);
+    const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+    const openFavorites = useCallback(() => setIsFavoritesOpen(true), []);
+    const closeFavorites = useCallback(() => setIsFavoritesOpen(false), []);
 
     useEffect(() => {
         if (user) {
@@ -331,6 +334,7 @@ export const StoreProvider = ({ children }) => {
             loadingCart, loadingWishlist,
             fetchCart, fetchWishlist,
             isCartOpen, setIsCartOpen, openCart, closeCart,
+            isFavoritesOpen, openFavorites, closeFavorites,
             productsCache, setProductsCache,
             videosCache, setVideosCache,
             bannersCache, setBannersCache,
