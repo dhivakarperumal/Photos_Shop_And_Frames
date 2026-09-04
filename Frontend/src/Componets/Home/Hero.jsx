@@ -760,80 +760,81 @@ const Hero = () => {
                   TRUST FEATURES
               ================================================= */}
 
-              <div
-                className="
-                  mt-8
-                  grid
-                  grid-cols-1
-                  gap-4
-                  sm:grid-cols-3
-                  sm:gap-3
-                "
-              >
-                {features.map(
-                  ({
-                    icon: Icon,
-                    title,
-                    subtitle,
-                  }) => (
-                    <div
-                      key={title}
-                      className="
-                        flex
-                        items-center
-                        gap-3
-                      "
-                    >
-                      <div
-                        className="
-                          flex
-                          h-9
-                          w-9
-                          shrink-0
-                          items-center
-                          justify-center
-                          rounded-full
-                          border
-                          border-[#1b1b1b]
-                          bg-white
-                          text-[#1b1b1b]
-                          shadow-xs
-                        "
-                      >
-                        <Icon
-                          className="text-base"
-                        />
-                      </div>
+              <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  {features.map(({ icon: Icon, title, subtitle }) => (
+    <div
+      key={title}
+      className="
+        group
+        flex
+        items-center
+        gap-3
+        rounded-xl
+        border
+        border-[#e5dccb]
+        bg-white/80
+        px-3
+        py-3
+        shadow-[0_4px_14px_rgba(0,0,0,0.06)]
+        transition-all
+        duration-300
+        hover:-translate-y-1
+        hover:border-[#cda25b]
+        hover:shadow-[0_8px_20px_rgba(0,0,0,0.10)]
+      "
+    >
+      {/* Icon */}
+      <div
+        className="
+          flex
+          h-10
+          w-10
+          shrink-0
+          items-center
+          justify-center
+          rounded-lg
+          border
+          border-[#d5b477]
+          bg-[#faf6ed]
+          text-[#b17d2f]
+          transition-all
+          duration-300
+          group-hover:bg-[#c18d38]
+          group-hover:text-white
+        "
+      >
+        <Icon className="text-base" />
+      </div>
 
-                      <div>
-                        <p
-                          className="
-                            text-xs
-                            sm:text-[13px]
-                            font-bold
-                            leading-tight
-                            text-[#1b1b1b]
-                          "
-                        >
-                          {title}
-                        </p>
+      {/* Content */}
+      <div className="min-w-0">
+        <p
+          className="
+            text-xs
+            font-bold
+            leading-tight
+            text-[#1b1b1b]
+            sm:text-[13px]
+          "
+        >
+          {title}
+        </p>
 
-                        <p
-                          className="
-                            mt-0.5
-                            text-[10px]
-                            sm:text-[11px]
-                            leading-tight
-                            text-[#666]
-                          "
-                        >
-                          {subtitle}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
+        <p
+          className="
+            mt-1
+            text-[10px]
+            leading-tight
+            text-[#666]
+            sm:text-[11px]
+          "
+        >
+          {subtitle}
+        </p>
+      </div>
+    </div>
+  ))}
+</div>
             </div>
 
             {/* =================================================
