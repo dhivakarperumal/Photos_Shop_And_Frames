@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import api from "../api";
+import toast from "react-hot-toast";
 
 const categories = [
   "Birthday Gift Box",
@@ -506,10 +507,12 @@ const GiftBoxManagement = () => {
             ? previous.map((box) => (box.id === editingId ? normalized : box))
             : [normalized, ...previous],
         );
+        toast.success(editingId ? "Gift box updated successfully!" : "Gift box created successfully!");
       }
       setIsPanelOpen(false);
     } catch (error) {
       console.error("Could not save gift box:", error);
+      toast.error(error.response?.data?.message || "Failed to save gift box");
     }
   };
 
@@ -615,8 +618,10 @@ const GiftBoxManagement = () => {
     try {
       await api.delete(`/gift-boxes/${id}`);
       setBoxes((previous) => previous.filter((box) => box.id !== id));
+      toast.success("Gift box deleted successfully!");
     } catch (error) {
       console.error("Could not delete gift box:", error);
+      toast.error(error.response?.data?.message || "Failed to delete gift box");
     }
   };
 
