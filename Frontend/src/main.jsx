@@ -114,6 +114,10 @@ const router = createHashRouter([
         path: 'gifts',
         element: <Gifts />,
       },
+      {
+        path: 'frames',
+        element: <Frames />,
+      },
 
       {
         path: 'admin',
