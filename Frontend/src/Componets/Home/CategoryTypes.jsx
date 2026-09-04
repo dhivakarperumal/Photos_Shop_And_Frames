@@ -20,16 +20,15 @@ const normalizeImageUrl = (value) => {
 
 const CategoryTypes = ({ categories }) => {
   return (
-    <section className="bg-[#f7f3ed] py-12 sm:py-16">
+    <section className="border-t border-[#dfd4c5] bg-[#f7f3ed] py-7 sm:py-9">
       <PageContainer>
-        <div className="flex items-end justify-between border-b border-[#dfd4c5] pb-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#b07838]">Shop by category</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight text-[#1d2925] sm:text-4xl">Made for every memory.</h2>
-          </div>
+        <div className="flex items-center justify-center gap-3">
+          <span className="h-px w-16 bg-[#cdbda9] sm:w-28" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#b07838]">Shop by category</p>
+          <span className="h-px w-16 bg-[#cdbda9] sm:w-28" />
         </div>
 
-        <div className="mt-8 grid grid-cols-1 justify-items-center gap-8 sm:grid-cols-3">
+        <div className="mx-auto mt-6 grid max-w-[560px] grid-cols-3 justify-items-center gap-5 sm:mt-7 sm:gap-10">
           {categoryDefinitions.map(({ key, label, icon: Icon }, index) => {
             const category = categories.find((item) => {
               const type = String(item.category_type || "").trim().toLowerCase();
@@ -42,13 +41,13 @@ const CategoryTypes = ({ categories }) => {
               <Link
                 key={key}
                 to={`/shop?categoryType=${encodeURIComponent(label)}`}
-                className="group flex w-full max-w-[220px] flex-col items-center text-center"
+                className="group flex w-24 flex-col items-center text-center sm:w-32"
               >
-                <div className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border-8 border-white shadow-[0_8px_24px_rgba(54,44,34,0.14)] transition duration-300 group-hover:scale-105 group-hover:shadow-[0_12px_30px_rgba(54,44,34,0.2)] ${index % 2 === 0 ? "bg-[#f4e4d1] text-[#a05c2a]" : "bg-[#dfeaf8] text-[#3f7db8]"}`}>
-                  {image ? <img src={image} alt={`${label} category`} className="h-full w-full object-cover" /> : <Icon className="h-14 w-14" />}
+                <div className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-[0_5px_16px_rgba(54,44,34,0.14)] transition duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_22px_rgba(54,44,34,0.2)] ${index % 2 === 0 ? "bg-[#f4e4d1] text-[#a05c2a]" : "bg-[#dfeaf8] text-[#3f7db8]"}`}>
+                  {image ? <img src={image} alt={`${label} category`} className="h-full w-full object-cover" /> : <Icon className="h-9 w-9 sm:h-11 sm:w-11" />}
                 </div>
-                <h3 className="mt-4 text-2xl font-black text-[#1d2925]">{label}</h3>
-                <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#1a3c36]">
+                <h3 className="mt-2 text-base font-black text-[#1d2925] sm:text-lg">{label}</h3>
+                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-[#1a3c36] sm:text-xs">
                   Explore <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-1 group-hover:-translate-y-1" />
                 </span>
               </Link>
