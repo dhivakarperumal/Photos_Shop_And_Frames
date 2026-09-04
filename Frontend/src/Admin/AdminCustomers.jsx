@@ -536,7 +536,7 @@ const AdminCustomers = () => {
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                  <tr className="bg-[#f7f9f6] text-left text-sm font-semibold text-[#374151]">
                     <th className="rounded-tl-md px-4 py-4">S No</th>
                     <th className="px-4 py-4">Customer</th>
                     <th className="px-4 py-4">Email</th>
