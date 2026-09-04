@@ -4,14 +4,14 @@ const PageHeader = ({ title, background = "/images/pageheader.jpg" }) => {
 
   return (
     <div
-      className="relative flex h-[170px] w-full items-center justify-center overflow-hidden text-white sm:h-[190px] md:h-[210px]"
+      className="relative flex h-[210px] w-full items-center justify-center overflow-hidden text-white sm:h-[235px] md:h-[260px]"
       style={{
         backgroundImage: `url(${background})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="absolute inset-0 bg-[#17342f]/65"></div>
+      <div className="absolute inset-0 bg-[#17342f]/35"></div>
       <div className="absolute inset-x-0 bottom-0 h-1 bg-[#d5a65a]"></div>
 
       <div className="relative px-4 text-center">
