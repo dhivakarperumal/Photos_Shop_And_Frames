@@ -556,8 +556,8 @@ const Hero = () => {
   const mobileImage =
     currentBanner.mobile_image
       ? resolveAssetUrl(
-          currentBanner.mobile_image
-        )
+        currentBanner.mobile_image
+      )
       : desktopImage;
 
   /* =======================================================
@@ -568,33 +568,29 @@ const Hero = () => {
     <section
       className="
         bg-[#f7f4ee]
+        overflow-x-hidden
         px-0
         py-0
       "
     >
-      <PageContainer>
-        <div
-          onMouseEnter={() =>
-            setIsHovered(true)
-          }
-          onMouseLeave={() =>
-            setIsHovered(false)
-          }
-          className="
+
+      <div
+        onMouseEnter={() =>
+          setIsHovered(true)
+        }
+        onMouseLeave={() =>
+          setIsHovered(false)
+        }
+        className="
             relative
-            overflow-hidden
-            rounded-[24px]
-            bg-[#f8f5ef]
-            px-5
-            py-7
-            shadow-xs
-            sm:px-7
-            md:px-10
-            md:py-9
-            lg:px-12
-            lg:py-10
+            min-w-0
+            overflow-x-hidden
+            py-6
+            sm:py-8
+            md:py-10
           "
-        >
+      >
+        <PageContainer>
           {/* =================================================
               AMBIENT BACKGROUND
           ================================================= */}
@@ -634,6 +630,7 @@ const Hero = () => {
           <div
             className="
               relative
+              min-w-0
               grid
               items-center
               gap-8
@@ -650,6 +647,7 @@ const Hero = () => {
             <div
               className="
                 z-10
+                min-w-0
                 lg:col-span-6
                 xl:col-span-6
               "
@@ -888,13 +886,12 @@ const Hero = () => {
                 relative
                 z-10
                 flex
+                min-w-0
                 min-h-[300px]
                 items-center
                 justify-center
                 lg:col-span-6
                 xl:col-span-6
-                lg:-my-10
-                lg:-mr-12
               "
             >
               <div
@@ -911,7 +908,6 @@ const Hero = () => {
                     relative
                     h-full
                     overflow-hidden
-                    rounded-r-[24px]
                   "
                 >
                   <picture>
@@ -953,6 +949,8 @@ const Hero = () => {
                             "none";
                         }}
                         className="
+                          block
+                          max-w-full
                           w-full
                           h-full
                           min-h-[300px]
@@ -1177,16 +1175,14 @@ const Hero = () => {
                       transition-all
                       duration-300
 
-                      ${
-                        index ===
+                      ${index ===
                         currentIndex
-                          ? "w-7 bg-[#c18d38]"
-                          : "w-2 bg-[#171717]/25 hover:bg-[#171717]/50"
+                        ? "w-7 bg-[#c18d38]"
+                        : "w-2 bg-[#171717]/25 hover:bg-[#171717]/50"
                       }
                     `}
-                    aria-label={`Go to banner ${
-                      index + 1
-                    }`}
+                    aria-label={`Go to banner ${index + 1
+                      }`}
                   />
                 )
               )}
@@ -1244,19 +1240,17 @@ const Hero = () => {
                       duration-300
                       hover:bg-[#222]
 
-                      ${
-                        index !==
+                      ${index !==
                         services.length - 1
-                          ? "border-b border-[#343434] sm:border-r"
-                          : ""
+                        ? "border-b border-[#343434] sm:border-r"
+                        : ""
                       }
 
-                      ${
-                        index === 1 ||
+                      ${index === 1 ||
                         index === 3 ||
                         index === 5
-                          ? "sm:border-r"
-                          : ""
+                        ? "sm:border-r"
+                        : ""
                       }
                     `}
                   >
@@ -1309,8 +1303,9 @@ const Hero = () => {
               )}
             </div>
           </div>
-        </div>
-      </PageContainer>
+        </PageContainer>
+      </div>
+
     </section>
   );
 };
