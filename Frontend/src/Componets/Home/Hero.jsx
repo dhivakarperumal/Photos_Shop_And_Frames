@@ -1,21 +1,36 @@
-import React from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
+import api from "../../api";
 import {
   FiArrowRight,
   FiUpload,
   FiCheckCircle,
-  FiClock,
+  FiTruck,
   FiShield,
   FiImage,
   FiGift,
   FiLayers,
   FiGrid,
-  FiPackage,
   FiCamera,
-  FiCreditCard,
   FiUser,
-  FiScissors,
-  FiMaximize
+  FiBook,
+  FiMaximize,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
+
+const DEFAULT_BANNER = {
+  id: "default",
+  title: "Turn Your Memories",
+  subtitle: "Into Something Beautiful",
+  description:
+    "Premium photo printing, custom frames, canvas prints and personalized gifts — all in one place.",
+  image: "/images/hero-banner.png",
+  mobile_image: "",
+  link: "/shop",
+  type: "hero",
+  active: 1,
+};
 
 const features = [
   {
@@ -24,7 +39,7 @@ const features = [
     subtitle: "High Quality Materials",
   },
   {
-    icon: FiClock,
+    icon: FiTruck,
     title: "Fast Delivery",
     subtitle: "On Time Delivery",
   },
@@ -40,204 +55,331 @@ const services = [
     icon: FiCamera,
     title: "Photo Printing",
     subtitle: "High Quality Prints",
+    link: "/shop",
   },
   {
     icon: FiMaximize,
     title: "Custom Frames",
     subtitle: "Design Your Frame",
+    link: "/shop",
   },
   {
     icon: FiImage,
     title: "Canvas Printing",
     subtitle: "Premium Canvas",
+    link: "/shop",
   },
   {
-    icon: FiCreditCard,
+    icon: FiBook,
     title: "Photo Albums",
     subtitle: "Save Your Memories",
+    link: "/shop",
   },
   {
     icon: FiUser,
     title: "Passport Photos",
     subtitle: "Instant & Trusted",
+    link: "/shop",
   },
   {
     icon: FiGift,
     title: "Photo Gifts",
     subtitle: "Personalized Gifts",
+    link: "/shop",
   },
   {
     icon: FiLayers,
     title: "Lamination",
     subtitle: "Long Lasting Finish",
+    link: "/shop",
   },
   {
     icon: FiGrid,
     title: "Wall Decor",
     subtitle: "Stylish & Modern",
+    link: "/shop",
   },
 ];
 
+const resolveAssetUrl = (url) => {
+  if (!url) return "/images/hero-banner.png";
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  const clean = String(url).replace(/\\/g, "/");
+  const path = clean.startsWith("/") ? clean : `/${clean}`;
+  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+  return `${backendUrl}${path}`;
+};
+
 const Hero = () => {
+  const [banners, setBanners] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Fetch banners from /api/banners
+  const fetchBanners = useCallback(async () => {
+    try {
+      const response = await api.get("/banners");
+      const data = Array.isArray(response.data) ? response.data : [];
+      // Filter for active hero banners
+      const activeHeroes = data.filter(
+        (b) => (b.type === "hero" || !b.type) && (b.active === 1 || b.active === true || b.active === "1")
+      );
+      setBanners(activeHeroes);
+    } catch (error) {
+      console.warn("Could not load banners, using fallback hero banner:", error);
+      setBanners([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBanners();
+  }, [fetchBanners]);
+
+  const heroBanners = useMemo(() => {
+    return banners.length > 0 ? banners : [DEFAULT_BANNER];
+  }, [banners]);
+
+  // Autoplay carousel if multiple hero banners exist
+  useEffect(() => {
+    if (heroBanners.length <= 1 || isHovered) return;
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % heroBanners.length);
+    }, 6500);
+
+    return () => clearInterval(timer);
+  }, [heroBanners.length, isHovered]);
+
+  const currentBanner = heroBanners[currentIndex] || DEFAULT_BANNER;
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev === 0 ? heroBanners.length - 1 : prev - 1));
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setCurrentIndex((prev) => (prev + 1) % heroBanners.length);
+  };
+
+  // Helper to render headline with cursive accent line
+  const renderHeading = (title, subtitle) => {
+    const rawTitle = title || DEFAULT_BANNER.title;
+    const rawSubtitle = subtitle !== undefined && subtitle !== null ? subtitle : DEFAULT_BANNER.subtitle;
+
+    if (rawSubtitle && rawSubtitle.trim()) {
+      return (
+        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+          {rawTitle}
+          <span className="mt-1 sm:mt-2 block font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.3rem] xl:text-[3.8rem] tracking-normal leading-[1.1]">
+            {rawSubtitle}
+          </span>
+        </h1>
+      );
+    }
+
+    // If subtitle is empty, see if title has "Into " to highlight
+    const lower = rawTitle.toLowerCase();
+    const intoIndex = lower.indexOf("into ");
+    if (intoIndex !== -1) {
+      const part1 = rawTitle.substring(0, intoIndex).trim();
+      const part2 = rawTitle.substring(intoIndex).trim();
+      return (
+        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+          {part1}
+          <span className="mt-1 sm:mt-2 block font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.3rem] xl:text-[3.8rem] tracking-normal leading-[1.1]">
+            {part2}
+          </span>
+        </h1>
+      );
+    }
+
+    return (
+      <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+        {rawTitle}
+      </h1>
+    );
+  };
+
+  const imageSrc = resolveAssetUrl(currentBanner.image);
+
   return (
     <section className="bg-[#f7f4ee] px-3 py-3 sm:px-4 md:py-5">
       {/* PAGE CONTAINER */}
       <div className="page-container mx-auto w-full max-w-[1480px]">
-        <div className="relative overflow-hidden rounded-[24px] bg-[#f8f5ef] px-5 py-7 shadow-sm sm:px-7 md:px-10 md:py-9 lg:px-12 lg:py-10">
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="relative overflow-hidden rounded-[24px] bg-[#f8f5ef] px-5 py-7 shadow-xs sm:px-7 md:px-10 md:py-9 lg:px-12 lg:py-10"
+        >
+          {/* Soft Ambient Background Lighting */}
+          <div className="pointer-events-none absolute -left-28 -top-28 h-72 w-72 rounded-full bg-[#d5aa62]/15 blur-3xl" />
+          <div className="pointer-events-none absolute -right-28 bottom-0 h-80 w-80 rounded-full bg-[#d5aa62]/15 blur-3xl" />
 
-          {/* Soft Background Decorations */}
-          <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-[#d5aa62]/10 blur-3xl" />
-
-          <div className="pointer-events-none absolute -right-32 bottom-0 h-80 w-80 rounded-full bg-[#d5aa62]/10 blur-3xl" />
-
-          {/* ================= HERO CONTENT ================= */}
-          <div className="relative grid items-center gap-8 lg:grid-cols-[1.15fr_1fr_0.55fr] xl:gap-10">
-
-            {/* ================= LEFT CONTENT ================= */}
-            <div className="z-10">
-
-              <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.2em] text-[#a9782e] sm:text-sm">
+          {/* ================= HERO MAIN GRID: LEFT CONTENT & RIGHT IMAGE ================= */}
+          <div className="relative grid items-center gap-8 lg:grid-cols-12 lg:gap-10 xl:gap-12">
+            {/* ================= LEFT CONTENT (lg:col-span-6) ================= */}
+            <div className="z-10 lg:col-span-6 xl:col-span-6">
+              {/* Category / Quality Tag */}
+              <p className="mb-2 sm:mb-3 text-xs sm:text-sm font-black uppercase tracking-[0.22em] text-[#a9782e]">
                 Premium Quality
               </p>
 
-              <h1 className="max-w-[650px] text-[2.4rem] font-black leading-[0.95] tracking-[-0.055em] text-[#171717] sm:text-5xl md:text-6xl lg:text-[4.2rem] xl:text-[4.6rem]">
-                Turn Your Memories
-                <span className="mt-2 block font-light italic tracking-[-0.04em] text-[#c18d38]">
-                  Into Something Beautiful
-                </span>
-              </h1>
+              {/* Dynamic Title and Cursive Subtitle */}
+              {renderHeading(currentBanner.title, currentBanner.subtitle)}
 
-              <p className="mt-5 max-w-[620px] text-sm leading-6 text-[#555] sm:text-base sm:leading-7">
-                Premium photo printing, custom frames, canvas prints and
-                personalized gifts — all in one place.
+              {/* Description Paragraph */}
+              <p className="mt-4 sm:mt-5 max-w-[580px] text-sm sm:text-base leading-relaxed text-[#555]">
+                {currentBanner.description || DEFAULT_BANNER.description}
               </p>
 
-              {/* Buttons */}
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-
-                <button
-                  type="button"
-                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg bg-[#171717] px-6 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_8px_20px_rgba(0,0,0,0.15)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#252525]"
+              {/* Action Buttons */}
+              <div className="mt-6 sm:mt-7 flex flex-wrap items-center gap-3 sm:gap-4">
+                <Link
+                  to={currentBanner.link || "/shop"}
+                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg bg-[#171717] px-6 text-xs sm:text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_6px_20px_rgba(0,0,0,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#272727]"
                 >
-                  Shop Frames
+                  <span>Shop Frames</span>
                   <FiArrowRight className="text-base transition-transform duration-300 group-hover:translate-x-1" />
-                </button>
+                </Link>
 
-                <button
-                  type="button"
-                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg border border-[#c99945] bg-[#d5a342] px-6 text-xs font-bold uppercase tracking-[0.08em] text-white shadow-[0_8px_20px_rgba(190,140,55,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#c49135]"
+                <Link
+                  to="/shop"
+                  className="group inline-flex h-12 items-center justify-center gap-3 rounded-lg border border-[#c99945] bg-[#d5a342] px-6 text-xs sm:text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_6px_20px_rgba(190,140,55,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#c49135]"
                 >
-                  Upload Your Photo
+                  <span>Upload Your Photo</span>
                   <FiUpload className="text-base transition-transform duration-300 group-hover:-translate-y-0.5" />
-                </button>
-
+                </Link>
               </div>
 
-              {/* ================= FEATURES ================= */}
-              <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-3">
-
+              {/* Features / Trust Badges */}
+              <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-3">
                 {features.map(({ icon: Icon, title, subtitle }) => (
-                  <div
-                    key={title}
-                    className="flex items-center gap-3"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#222] bg-white text-[#222]">
+                  <div key={title} className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#1b1b1b] bg-white text-[#1b1b1b] shadow-xs">
                       <Icon className="text-base" />
                     </div>
 
                     <div>
-                      <p className="text-xs font-bold text-[#222] sm:text-[13px]">
+                      <p className="text-xs sm:text-[13px] font-bold text-[#1b1b1b] leading-tight">
                         {title}
                       </p>
-
-                      <p className="mt-0.5 text-[10px] text-[#666] sm:text-[11px]">
+                      <p className="mt-0.5 text-[10px] sm:text-[11px] text-[#666] leading-tight">
                         {subtitle}
                       </p>
                     </div>
                   </div>
                 ))}
-
               </div>
             </div>
 
-            {/* ================= FRAME IMAGE ================= */}
-            <div className="relative flex items-center justify-center">
-
-              {/* Glow */}
-              <div className="absolute h-64 w-64 rounded-full bg-[#cda15d]/10 blur-3xl sm:h-80 sm:w-80" />
-
-              <div className="relative w-full max-w-[390px]">
-
-                {/* Frame Shadow */}
-                <div className="absolute inset-x-5 bottom-2 h-8 rounded-full bg-black/20 blur-2xl" />
-
-                {/* Actual Frame */}
-                <img
-                  src="/assets/family-frame.png"
-                  alt="Family Photo Frame"
-                  className="relative z-10 mx-auto w-full object-contain drop-shadow-[0_25px_25px_rgba(0,0,0,0.22)]"
-                />
-
-              </div>
-            </div>
-
-            {/* ================= OFFER ================= */}
-            <div className="flex items-center justify-center lg:justify-end">
-
-              <div className="relative flex h-[145px] w-[145px] items-center justify-center rounded-full border-[2px] border-dashed border-[#c99746] bg-[#f9f4e9] shadow-[0_12px_30px_rgba(0,0,0,0.08)] sm:h-[160px] sm:w-[160px]">
-
-                {/* Small decorative dots */}
-                <span className="absolute -left-1 top-7 h-2 w-2 rounded-full bg-[#c99746]" />
-                <span className="absolute -right-1 bottom-8 h-2 w-2 rounded-full bg-[#c99746]" />
-
-                <div className="text-center">
-
-                  <p className="text-[30px] font-black leading-none text-[#1b1b1b]">
-                    10%
-                  </p>
-
-                  <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#222]">
-                    Off
-                  </p>
-
-                  <p className="mt-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#666]">
-                    On First Order
-                  </p>
-
-                  <p className="mt-2 text-[9px] font-bold text-[#b17d2f]">
-                    Use Code: FIRST10
-                  </p>
-
+            {/* ================= RIGHT IMAGE & FLOATING DISCOUNT BADGE (lg:col-span-6) ================= */}
+            <div className="relative z-10 flex items-center justify-center lg:col-span-6 xl:col-span-6">
+              <div className="relative w-full max-w-[560px]">
+                {/* Visual Frame / Image Container */}
+                <div className="relative overflow-hidden rounded-[22px] bg-white/60 shadow-[0_16px_36px_rgba(0,0,0,0.12)] border border-[#e8dfcf] transition-all duration-500">
+                  <img
+                    key={currentBanner.id || currentIndex}
+                    src={imageSrc}
+                    alt={currentBanner.title || "Featured Frame Collection"}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "/images/hero-banner.png";
+                    }}
+                    className="w-full h-[260px] sm:h-[340px] md:h-[390px] lg:h-[430px] object-cover object-center transition-all duration-700 hover:scale-[1.01]"
+                  />
                 </div>
+
+                {/* Floating Discount Circular Badge matching screenshot */}
+                <div className="pointer-events-none absolute -top-3 -right-3 sm:top-3 sm:right-3 md:top-4 md:right-4 z-20 flex h-[120px] w-[120px] sm:h-[142px] sm:w-[142px] md:h-[155px] md:w-[155px] items-center justify-center rounded-full border-[2px] border-dashed border-[#cda25b] bg-[#fbf7ee]/95 shadow-[0_10px_25px_rgba(0,0,0,0.1)] backdrop-blur-xs">
+                  {/* Small decorative dots on border */}
+                  <span className="absolute -left-1 top-6 sm:top-8 h-2 w-2 rounded-full bg-[#cda25b]" />
+                  <span className="absolute -right-1 bottom-6 sm:bottom-8 h-2 w-2 rounded-full bg-[#cda25b]" />
+
+                  <div className="text-center px-2">
+                    <p className="text-xl sm:text-2xl md:text-[28px] font-black leading-none text-[#1b1b1b]">
+                      10% OFF
+                    </p>
+                    <p className="mt-1 text-[8px] sm:text-[9.5px] md:text-[10.5px] font-black uppercase tracking-[0.14em] text-[#222]">
+                      On First Order
+                    </p>
+                    <p className="mt-1.5 text-[8px] sm:text-[9.5px] font-bold text-[#b17d2f]">
+                      Use Code: FIRST10
+                    </p>
+                  </div>
+                </div>
+
+                {/* Carousel Arrow Controls (if multiple active hero banners) */}
+                {heroBanners.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePrev}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-xs transition hover:bg-black"
+                      aria-label="Previous Banner"
+                    >
+                      <FiChevronLeft size={20} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-md backdrop-blur-xs transition hover:bg-black"
+                      aria-label="Next Banner"
+                    >
+                      <FiChevronRight size={20} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-
           </div>
+
+          {/* Carousel Dot Indicators (if multiple banners) */}
+          {heroBanners.length > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {heroBanners.map((b, idx) => (
+                <button
+                  key={b.id || idx}
+                  type="button"
+                  onClick={() => setCurrentIndex(idx)}
+                  className={`h-2 transition-all duration-300 rounded-full ${
+                    idx === currentIndex
+                      ? "w-7 bg-[#c18d38]"
+                      : "w-2 bg-[#171717]/25 hover:bg-[#171717]/50"
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* ================= SERVICES BAR ================= */}
           <div className="relative mt-8 overflow-hidden rounded-[20px] bg-[#171717] shadow-[0_12px_30px_rgba(0,0,0,0.18)] md:mt-10">
-
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
-
-              {services.map(({ icon: Icon, title, subtitle }, index) => (
-                <div
+              {services.map(({ icon: Icon, title, subtitle, link }, index) => (
+                <Link
+                  to={link}
                   key={title}
                   className={`
                     group flex min-h-[112px] cursor-pointer flex-col
                     items-center justify-center px-3 py-4 text-center
                     transition-all duration-300
                     hover:bg-[#222]
-                    ${index !== services.length - 1
-                      ? "border-b border-[#343434] sm:border-r"
-                      : ""
+                    ${
+                      index !== services.length - 1
+                        ? "border-b border-[#343434] sm:border-r"
+                        : ""
                     }
-                    ${index === 1 || index === 3 || index === 5
-                      ? "sm:border-r"
-                      : ""
+                    ${
+                      index === 1 || index === 3 || index === 5
+                        ? "sm:border-r"
+                        : ""
                     }
                   `}
                 >
-
                   {/* Icon */}
                   <div className="mb-2.5 flex h-10 w-10 items-center justify-center rounded-lg border border-[#b7893e]/70 bg-[#202020] text-[#d3a34d] transition-all duration-300 group-hover:-translate-y-1 group-hover:bg-[#292929]">
                     <Icon className="text-lg" />
@@ -252,13 +394,10 @@ const Hero = () => {
                   <p className="mt-1 text-[9px] leading-tight text-[#bdbdbd]">
                     {subtitle}
                   </p>
-
-                </div>
+                </Link>
               ))}
-
             </div>
           </div>
-
         </div>
       </div>
     </section>
