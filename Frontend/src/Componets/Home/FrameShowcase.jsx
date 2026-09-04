@@ -16,8 +16,8 @@ const FrameShowcase = ({ frames }) => {
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[#d5a65a]"><Sparkles className="h-4 w-4" /> Frame collection</p>
-          <h2 className="mt-3 max-w-xl text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl">Give your memories a place to live.</h2>
-          <p className="mt-4 max-w-lg text-sm leading-6 text-[#b9c1bc]">Handpicked frame styles made to turn everyday photographs into something worth looking at every day.</p>
+          {/* <h2 className="mt-3 max-w-xl text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl">Give your memories a place to live.</h2>
+          <p className="mt-4 max-w-lg text-sm leading-6 text-[#b9c1bc]">Handpicked frame styles made to turn everyday photographs into something worth looking at every day.</p> */}
         </div>
         <span className="self-start text-xs font-bold uppercase tracking-[0.18em] text-[#91a49b] md:self-auto">View our frame styles</span>
       </div>
@@ -35,11 +35,11 @@ const FrameShowcase = ({ frames }) => {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleFrames.length ? visibleFrames.slice(0, 4).map((frame) => (
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {visibleFrames.length ? visibleFrames.slice(0, 5).map((frame) => (
           <article key={frame.id || frame.uuid || frame.frame_name} className="overflow-hidden bg-[#25332e]">
-            <div className="flex aspect-[4/5] items-center justify-center bg-[#e8e0d1] p-8">{frame.frame_image ? <img src={frame.frame_image} alt={frame.frame_name} className="h-full w-full object-contain" /> : <ImagePlus className="h-12 w-12 text-[#b4a993]" />}</div>
-            <div className="px-4 py-4"><p className="text-sm font-bold">{frame.frame_name}</p><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#91a49b]">{frame.orientation || "Portrait"}</p></div>
+            <div className="flex aspect-[4/3] items-center justify-center bg-[#e8e0d1] p-5">{frame.frame_image ? <img src={frame.frame_image} alt={frame.frame_name} className="h-full w-full object-contain" /> : <ImagePlus className="h-10 w-10 text-[#b4a993]" />}</div>
+            <div className="px-3 py-3"><p className="truncate text-sm font-bold">{frame.frame_name}</p><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[#91a49b]">{frame.orientation || "Portrait"}</p></div>
           </article>
         )) : (
           <div className="col-span-full border border-dashed border-[#486057] px-5 py-12 text-center text-sm text-[#b9c1bc]">No {selectedOrientation.toLowerCase()} frames are available yet.</div>
