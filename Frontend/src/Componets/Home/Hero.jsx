@@ -1047,8 +1047,10 @@ const Hero = () => {
               mt-8
               overflow-hidden
               rounded-[20px]
-              bg-[#171717]
-              shadow-[0_12px_30px_rgba(0,0,0,0.18)]
+              border
+              border-[#e5dccb]
+              bg-[#eee4d6]
+              shadow-[0_8px_24px_rgba(54,44,34,0.08)]
               md:mt-10
             "
           >
@@ -1086,11 +1088,11 @@ const Hero = () => {
                       text-center
                       transition-all
                       duration-300
-                      hover:bg-[#222]
+                      hover:bg-[#faf6ed]
 
                       ${index !==
                         services.length - 1
-                        ? "border-b border-[#343434] sm:border-r"
+                        ? "border-b border-[#e5dccb] sm:border-r"
                         : ""
                       }
 
@@ -1112,13 +1114,13 @@ const Hero = () => {
                         justify-center
                         rounded-lg
                         border
-                        border-[#b7893e]/70
-                        bg-[#202020]
-                        text-[#d3a34d]
+                        border-[#d5b477]
+                        bg-[#faf6ed]
+                        text-[#b17d2f]
                         transition-all
                         duration-300
                         group-hover:-translate-y-1
-                        group-hover:bg-[#292929]
+                        group-hover:bg-[#f1e4cf]
                       "
                     >
                       <Icon className="text-lg" />
@@ -1129,7 +1131,7 @@ const Hero = () => {
                         text-[11px]
                         font-bold
                         leading-tight
-                        text-[#f2d29a]
+                        text-[#1b1b1b]
                         sm:text-xs
                       "
                     >
@@ -1141,7 +1143,7 @@ const Hero = () => {
                         mt-1
                         text-[9px]
                         leading-tight
-                        text-[#bdbdbd]
+                        text-[#666]
                       "
                     >
                       {subtitle}
