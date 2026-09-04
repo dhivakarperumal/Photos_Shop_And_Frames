@@ -1,5 +1,18 @@
 const { getDB } = require("../config/db");
 
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [value];
+  }
+};
+
 const getNextAlbumId = async () => {
   const query = `
     SELECT product_id
@@ -49,8 +62,8 @@ const resolveUniqueAlbumId = async (requestedId) => {
 
 const mapRow = (row) => ({
   ...row,
-  product_images: row.product_images ? JSON.parse(row.product_images) : [],
-  keywords: row.keywords ? JSON.parse(row.keywords) : [],
+  product_images: parseJsonArray(row.product_images),
+  keywords: parseJsonArray(row.keywords),
   customization_available: Boolean(row.customization_available),
   customer_name_printing: Boolean(row.customer_name_printing),
   photo_upload_required: Boolean(row.photo_upload_required),

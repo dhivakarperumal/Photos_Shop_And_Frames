@@ -42,6 +42,7 @@ import NewBilling from './Admin/Billings/NewBilling.jsx'
 import OrderDetails from './Admin/Billings/OrderDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
 import AdminProfile from './Admin/AdminProfile.jsx'
+import GiftBoxManagement from './Admin/GiftBoxManagement.jsx'
 
 
 import { AuthProvider } from './PrivateRouter/AuthContext.jsx'
@@ -118,6 +119,10 @@ const router = createHashRouter([
           {
             path: 'products',
             element: <AdminProducts />,
+          },
+          {
+            path: 'gifts',
+            element: <GiftBoxManagement />,
           },
           {
             path: 'products/add',

@@ -29,6 +29,7 @@ const pageInfo = {
   "/admin/products/categories/add": { title: "Add Category",             icon: Plus },
   "/admin/products/stock-details":  { title: "Stock Details",           icon: Package },
   "/admin/products":                { title: "Products",               icon: Package },
+  "/admin/gifts":                   { title: "Gifts",                  icon: Package },
   "/admin/products/add":             { title: "Add Product",             icon: Plus },
   "/admin/customers":               { title: "Customers",              icon: Users },
   "/admin/reviews":                 { title: "Reviews",                icon: HeartPulse },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowDownUp,
   ArrowUpRight,
@@ -32,11 +32,14 @@ import toast from 'react-hot-toast';
 
 const AdminProducts = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [productsList, setProductsList] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedCategory, setSelectedCategory] = useState(
+    location.pathname === '/admin/gifts' ? 'Gift' : 'All Categories'
+  );
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [sortBy, setSortBy] = useState('latest');
   const [viewMode, setViewMode] = useState('table');
@@ -124,7 +127,10 @@ const AdminProducts = () => {
         p.category.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesCategory =
-        selectedCategory === 'All Categories' || p.category === selectedCategory;
+        selectedCategory === 'All Categories' ||
+        (selectedCategory === 'Gift'
+          ? p.category.toLowerCase().includes('gift')
+          : p.category === selectedCategory);
 
       const matchesStatus =
         selectedStatus === 'All Status' ||
@@ -290,6 +296,7 @@ const AdminProducts = () => {
                 className="h-[46px] rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 text-[14px] font-medium text-[#2d2d2d] outline-none focus:border-[#d2bc8a]"
               >
                 <option value="All Categories">All Categories</option>
+                <option value="Gift">Gifts</option>
                 {categoriesList.map((cat) => (
                   <option key={cat.category_id || cat.id} value={cat.category_name}>
                     {cat.category_name}
