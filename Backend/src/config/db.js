@@ -74,6 +74,7 @@ async function ensureDatabaseSchema() {
         enquiry_type VARCHAR(100),
         product_category VARCHAR(255),
         product_name VARCHAR(255),
+        frame_image VARCHAR(500),
         quantity INT DEFAULT 1,
         budget DECIMAL(10,2) DEFAULT 0,
         message TEXT,
@@ -81,6 +82,7 @@ async function ensureDatabaseSchema() {
         frame_type VARCHAR(255),
         customization TEXT,
         reference_image VARCHAR(500),
+        uploaded_images JSON NULL,
         status VARCHAR(50) DEFAULT 'New',
         priority VARCHAR(50) DEFAULT 'Medium',
         source VARCHAR(100),
@@ -262,6 +264,16 @@ async function ensureDatabaseSchema() {
     await connection.query(createUsersTableQuery);
     await connection.query(createCategoriesTableQuery);
     await connection.query(createEnquiriesTableQuery);
+    try {
+      await connection.query(`ALTER TABLE enquiries ADD COLUMN uploaded_images JSON NULL`);
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    try {
+      await connection.query(`ALTER TABLE enquiries ADD COLUMN frame_image VARCHAR(500) NULL AFTER product_name`);
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createAlbumsTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);

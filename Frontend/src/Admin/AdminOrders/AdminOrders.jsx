@@ -15,6 +15,7 @@ import {
   IndianRupee,
   MapPin,
   Package,
+  Pencil,
   Phone,
   Plus,
   RefreshCw,
@@ -73,8 +74,10 @@ const statusName = (status) =>
 const imageUrl = (value) => {
   if (!value || typeof value !== "string") return "";
   if (/^(data:|blob:|https?:\/\/)/i.test(value)) return value;
+  const normalizedPath = `/${value.replace(/^\/+/, "")}`;
+  if (/^\/api\/?$/i.test(API_URL)) return normalizedPath;
   const baseUrl = API_URL.replace(/\/api\/?$/, "");
-  return `${baseUrl}${value.startsWith("/") ? value : `/${value}`}`;
+  return `${baseUrl}${normalizedPath}`;
 };
 
 const productPhotos = (value) => {
@@ -98,8 +101,19 @@ const productPhotoEntries = (value) => {
     .filter(([, photo]) => photo);
 };
 
+const enquiryImages = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [value];
+  } catch {
+    return value ? [value] : [];
+  }
+};
+
 const enquiryDefaults = {
-  enquiryId: "ENQ001",
+  enquiryId: "",
   customerName: "Dhivakar",
   mobileNumber: "9876543210",
   whatsappNumber: "9876543210",
@@ -107,6 +121,7 @@ const enquiryDefaults = {
   enquiryType: "Frame",
   productCategory: "Photo Frames",
   productName: "Customized LED Photo Frame",
+  frameImage: "",
   quantity: 2,
   budget: 1500,
   message: "Need customized birthday photo frame",
@@ -143,10 +158,15 @@ const getStatusOptions = (currentStatus) => {
 const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrderButton = false, todayOnly = false, readOnlyStatus = false }) => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
+  const [enquiries, setEnquiries] = useState([]);
+  const [loadingEnquiries, setLoadingEnquiries] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [viewEnquiryProduct, setViewEnquiryProduct] = useState(null);
+  const [editingEnquiryId, setEditingEnquiryId] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
@@ -222,6 +242,26 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   }, [activeStatus, allowedStatuses, todayOnly]);
 
   useEffect(() => {
+    if (!showNewOrderButton) return;
+
+    const fetchEnquiries = async () => {
+      try {
+        setLoadingEnquiries(true);
+        const response = await api.get("/enquiries");
+        setEnquiries(Array.isArray(response.data?.data) ? response.data.data : []);
+      } catch (error) {
+        console.error("Fetch enquiries error:", error);
+        toast.error("Failed to load enquiries");
+        setEnquiries([]);
+      } finally {
+        setLoadingEnquiries(false);
+      }
+    };
+
+    fetchEnquiries();
+  }, [showNewOrderButton]);
+
+  useEffect(() => {
     if (!showEnquiryPopup) return;
 
     const fetchEnquiryCategories = async () => {
@@ -282,13 +322,14 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     if (!files.length) return;
 
     const formData = new FormData();
-    formData.append("folder", "products");
+    formData.append("folder", "enquiries");
     files.forEach((file) => formData.append("files", file));
 
     try {
       const response = await api.post("/upload", formData);
       const uploadedUrls = response.data?.urls || (response.data?.url ? [response.data.url] : []);
       setEnquiryUploadedPhotos((previous) => [...previous, ...uploadedUrls.map(imageUrl)]);
+      if (uploadedUrls[0]) setEnquiry((previous) => ({ ...previous, referenceImage: uploadedUrls[0] }));
       toast.success(`${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded`);
     } catch (error) {
       console.error("Enquiry photo upload error:", error);
@@ -303,7 +344,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     if (!file || !file.type.startsWith("image/")) return;
 
     const formData = new FormData();
-    formData.append("folder", "products");
+    formData.append("folder", "enquiries");
     formData.append("file", file);
 
     try {
@@ -324,14 +365,82 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     event.preventDefault();
     try {
       const updatedAt = new Date().toISOString().slice(0, 10);
-      const response = await api.post("/enquiries", { ...enquiry, updatedAt });
+      const frameImage = selectedEnquiryProduct?.frame_data?.frame_image || selectedEnquiryProduct?.product_images?.[0] || enquiry.frameImage || "";
+      const uploadedImages = [...productPhotos(selectedEnquiryProduct?.slot_photos), ...enquiryUploadedPhotos]
+        .filter((image, index, images) => images.indexOf(image) === index);
+      const payload = {
+        ...enquiry,
+        enquiryId: editingEnquiryId ? enquiry.enquiryId : "",
+        frameImage,
+        referenceImage: uploadedImages[0] || enquiry.referenceImage || "",
+        uploadedImages,
+        updatedAt,
+      };
+      const response = editingEnquiryId
+        ? await api.put(`/enquiries/${editingEnquiryId}`, payload)
+        : await api.post("/enquiries", payload);
       if (!response.data?.success) throw new Error(response.data?.message || "Failed to save enquiry");
       setEnquiry((previous) => ({ ...previous, updatedAt }));
       setShowEnquiryPopup(false);
-      toast.success("New enquiry saved successfully");
+      setEditingEnquiryId(null);
+      toast.success(editingEnquiryId ? "Enquiry updated successfully" : "New enquiry saved successfully");
+      const refreshed = await api.get("/enquiries");
+      setEnquiries(Array.isArray(refreshed.data?.data) ? refreshed.data.data : []);
     } catch (error) {
       console.error("Save enquiry error:", error);
       toast.error(error.response?.data?.message || "Failed to save enquiry");
+    }
+  };
+
+  const enquiryToForm = (item) => ({
+    ...enquiryDefaults,
+    enquiryId: item.enquiry_id || item.enquiryId || item.id,
+    customerName: item.customer_name || "", mobileNumber: item.mobile_number || "",
+    whatsappNumber: item.whatsapp_number || "", email: item.email || "",
+    enquiryType: item.enquiry_type || "", productCategory: item.product_category || "",
+    productName: item.product_name || "", quantity: item.quantity || 1, budget: item.budget || 0,
+    frameImage: item.frame_image || "",
+    referenceImage: item.reference_image || "",
+    uploadedImages: enquiryImages(item.uploaded_images),
+    message: item.message || "", size: item.size || "", frameType: item.frame_type || "",
+    customization: item.customization || "", status: item.status || "New", priority: item.priority || "Medium",
+    source: item.source || "Website", assignedTo: item.assigned_to || "Admin",
+    followUpDate: item.follow_up_date ? String(item.follow_up_date).slice(0, 10) : "",
+    followUpNotes: item.follow_up_notes || "", quotationAmount: item.quotation_amount || 0,
+    createdAt: item.created_at ? String(item.created_at).slice(0, 10) : "",
+    updatedAt: item.updated_at ? String(item.updated_at).slice(0, 10) : "",
+  });
+
+  const handleEditEnquiry = (item) => {
+    setEnquiry(enquiryToForm(item));
+    setEnquiryUploadedPhotos(enquiryToForm(item).uploadedImages.map(imageUrl));
+    setEditingEnquiryId(item.enquiry_id || item.id);
+    setShowEnquiryPopup(true);
+  };
+
+  const handleViewEnquiry = async (item) => {
+    setSelectedEnquiry({ ...item, uploaded_images: enquiryImages(item.uploaded_images) });
+    setViewEnquiryProduct(null);
+    if (!item.product_name) return;
+    try {
+      const response = await api.get("/products");
+      const products = Array.isArray(response.data?.data) ? response.data.data : [];
+      setViewEnquiryProduct(products.find((product) => product.product_name === item.product_name) || null);
+    } catch (error) {
+      console.warn("Could not load enquiry frame preview:", error);
+    }
+  };
+
+  const handleDeleteEnquiry = async (item) => {
+    const enquiryId = item.enquiry_id || item.id;
+    if (!window.confirm(`Delete enquiry ${enquiryId}?`)) return;
+    try {
+      await api.delete(`/enquiries/${enquiryId}`);
+      setEnquiries((previous) => previous.filter((entry) => (entry.enquiry_id || entry.id) !== enquiryId));
+      setSelectedEnquiry(null);
+      toast.success("Enquiry deleted successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete enquiry");
     }
   };
 
@@ -545,7 +654,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             {showNewOrderButton && (
               <button
                 type="button"
-                onClick={() => setShowEnquiryPopup(true)}
+                onClick={() => { setEditingEnquiryId(null); setEnquiry(enquiryDefaults); setEnquiryUploadedPhotos([]); setEnquiryReplacedPhotos({}); setShowEnquiryPopup(true); }}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
               >
                 <Plus className="h-4 w-4" /> Add New Order
@@ -570,7 +679,23 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
           </div>
         </div>
 
-        {/* ORDERS TABLE */}
+        {showNewOrderButton ? (
+          <div className="overflow-hidden rounded-3xl border border-[#e8dfd2] bg-white shadow-xs">
+            {loadingEnquiries ? (
+              <div className="py-20 text-center text-sm text-[#777]">Loading enquiries...</div>
+            ) : enquiries.length === 0 ? (
+              <div className="py-20 text-center text-sm text-[#777]"><Package className="mx-auto h-12 w-12 text-[#ccc]" /><p className="mt-3 font-semibold text-[#444]">No enquiries found.</p></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
+                  <thead><tr className="border-b border-[#f0e8dc] bg-[#faf8f4] font-bold text-[#555]"><th className="px-4 py-3.5">Enquiry ID</th><th className="px-4 py-3.5">Customer</th><th className="px-4 py-3.5">Product</th><th className="px-4 py-3.5">Requirements</th><th className="px-4 py-3.5">Follow-up</th><th className="px-4 py-3.5">Status</th><th className="px-4 py-3.5">Priority</th><th className="px-4 py-3.5 text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-[#f2ebdf]">{enquiries.map((item) => <tr key={item.enquiry_id || item.id} className="text-[#333] transition hover:bg-[#fbf9f6]"><td className="whitespace-nowrap px-4 py-4 font-mono font-bold text-[#1a3c36]">{item.enquiry_id}</td><td className="px-4 py-4"><p className="font-bold">{item.customer_name}</p><p className="text-[11px] text-[#777]">{item.mobile_number}</p></td><td className="px-4 py-4"><p className="font-semibold">{item.product_name || "-"}</p><p className="text-[11px] text-[#777]">{item.enquiry_type} · {item.product_category}</p></td><td className="max-w-56 px-4 py-4"><p>{item.frame_type || "-"} · {item.size || "-"}</p><p className="truncate text-[11px] text-[#777]">{item.customization || item.message || "-"}</p></td><td className="whitespace-nowrap px-4 py-4"><p>{item.follow_up_date ? new Date(item.follow_up_date).toLocaleDateString("en-IN") : "-"}</p><p className="max-w-40 truncate text-[11px] text-[#777]">{item.follow_up_notes || "No notes"}</p></td><td className="px-4 py-4"><span className="rounded-full border border-[#eedac3] bg-[#fff8eb] px-2.5 py-1 text-[11px] font-bold text-[#b07838]">{item.status || "New"}</span></td><td className="px-4 py-4 font-semibold">{item.priority || "Medium"}</td><td className="px-4 py-4 text-right"><div className="inline-flex items-center gap-1"><button type="button" onClick={() => handleViewEnquiry(item)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#d8cfc3] bg-white px-2.5 text-xs font-bold text-[#1a3c36] hover:bg-[#eef5f3]" title="View enquiry"><Eye className="h-3.5 w-3.5" /> View</button><button type="button" onClick={() => handleEditEnquiry(item)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#1a3c36] hover:bg-[#eef5f3]" title="Edit enquiry" aria-label={`Edit ${item.enquiry_id}`}><Pencil className="h-3.5 w-3.5" /></button><button type="button" onClick={() => handleDeleteEnquiry(item)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f2dada] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]" title="Delete enquiry" aria-label={`Delete ${item.enquiry_id}`}><Trash2 className="h-3.5 w-3.5" /></button></div></td></tr>)}</tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+        /* ORDERS TABLE */
         <div className="overflow-hidden rounded-3xl border border-[#e8dfd2] bg-white shadow-xs">
           {loading ? (
             <div className="py-20 text-center">
@@ -815,7 +940,26 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             </>
           )}
         </div>
+        )}
       </div>
+
+      {selectedEnquiry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="enquiry-details-title" onMouseDown={(event) => event.target === event.currentTarget && setSelectedEnquiry(null)}>
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#f0e8dc] pb-4">
+              <div><p className="text-[10px] font-bold uppercase tracking-widest text-[#b07838]">Enquiry details</p><h2 id="enquiry-details-title" className="mt-1 text-xl font-black text-[#1a3c36]">{selectedEnquiry.enquiry_id}</h2></div>
+              <button type="button" onClick={() => setSelectedEnquiry(null)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f4eee6] text-[#555]" aria-label="Close enquiry details"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mt-5 grid gap-4 text-xs sm:grid-cols-2">
+              {[['Customer', selectedEnquiry.customer_name], ['Mobile', selectedEnquiry.mobile_number], ['WhatsApp', selectedEnquiry.whatsapp_number], ['Email', selectedEnquiry.email], ['Product', selectedEnquiry.product_name], ['Category', selectedEnquiry.product_category], ['Quantity', selectedEnquiry.quantity], ['Budget', `₹${selectedEnquiry.budget || 0}`], ['Size', selectedEnquiry.size], ['Frame Type', selectedEnquiry.frame_type], ['Status', selectedEnquiry.status], ['Priority', selectedEnquiry.priority], ['Source', selectedEnquiry.source], ['Assigned To', selectedEnquiry.assigned_to], ['Follow-up Date', selectedEnquiry.follow_up_date ? new Date(selectedEnquiry.follow_up_date).toLocaleDateString('en-IN') : '-'], ['Quotation', `₹${selectedEnquiry.quotation_amount || 0}`]].map(([label, value]) => <div key={label} className="rounded-xl bg-[#faf8f4] p-3"><p className="font-semibold text-[#66736e]">{label}</p><p className="mt-1 font-bold text-[#1d2925]">{value || '-'}</p></div>)}
+              <div className="rounded-xl bg-[#faf8f4] p-3 sm:col-span-2"><p className="font-semibold text-[#66736e]">Message / Customization</p><p className="mt-1 whitespace-pre-wrap font-bold text-[#1d2925]">{selectedEnquiry.message || selectedEnquiry.customization || '-'}</p></div>
+              <div className="rounded-xl bg-[#faf8f4] p-3 sm:col-span-2"><p className="font-semibold text-[#66736e]">Follow-up Notes</p><p className="mt-1 whitespace-pre-wrap font-bold text-[#1d2925]">{selectedEnquiry.follow_up_notes || '-'}</p></div>
+            </div>
+            {(selectedEnquiry.frame_image || selectedEnquiry.reference_image || selectedEnquiry.uploaded_images || viewEnquiryProduct?.frame_data?.frame_image || viewEnquiryProduct?.product_images?.[0]) && <div className="mt-5 rounded-2xl border border-[#e8dfd2] bg-[#faf8f4] p-4"><p className="mb-3 text-xs font-bold uppercase tracking-wider text-[#b07838]">Frame Preview &amp; Customer Images</p><div className="grid gap-4 sm:grid-cols-2">{(selectedEnquiry.frame_image || viewEnquiryProduct?.frame_data?.frame_image || viewEnquiryProduct?.product_images?.[0]) && <div><p className="mb-2 text-xs font-semibold text-[#66736e]">Selected Frame</p><div className="relative mx-auto aspect-[3/4] max-h-[28rem] w-full max-w-sm overflow-hidden rounded-xl border border-[#e8dfd2] bg-white"><img src={imageUrl(selectedEnquiry.frame_image || viewEnquiryProduct?.frame_data?.frame_image || viewEnquiryProduct.product_images[0])} alt={selectedEnquiry.product_name || 'Frame product'} className="absolute inset-0 h-full w-full object-contain" />{(viewEnquiryProduct?.frame_data?.photo_slots || []).map((slot, index) => { const photo = enquiryImages(selectedEnquiry.uploaded_images)[index] || (index === 0 ? selectedEnquiry.reference_image : ""); return photo ? <img key={`${slot.id || index}-${photo}`} src={imageUrl(photo)} alt={`Customer photo ${index + 1}`} className="absolute object-cover" style={{ top: slot.top, left: slot.left, width: slot.width, height: slot.height, borderRadius: slot.shape === "circle" ? "9999px" : undefined }} /> : null; })}</div></div>}{enquiryImages(selectedEnquiry.uploaded_images).concat(selectedEnquiry.reference_image ? [selectedEnquiry.reference_image] : []).filter((image, index, images) => images.indexOf(image) === index).map((image, index) => <div key={`${image}-${index}`}><p className="mb-2 text-xs font-semibold text-[#66736e]">Customer Image {index + 1}</p><img src={imageUrl(image)} alt={`Customer reference ${index + 1}`} className="h-56 w-full rounded-xl border border-[#e8dfd2] bg-white object-contain" /></div>)}</div></div>}
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#f0e8dc] pt-4"><button type="button" onClick={() => { setSelectedEnquiry(null); handleEditEnquiry(selectedEnquiry); }} className="inline-flex items-center gap-1.5 rounded-xl bg-[#1a3c36] px-4 py-2.5 text-xs font-bold text-white"><Pencil className="h-3.5 w-3.5" /> Edit Enquiry</button><button type="button" onClick={() => setSelectedEnquiry(null)} className="rounded-xl border border-[#d8cfc3] px-4 py-2.5 text-xs font-bold text-[#66736e]">Close</button></div>
+          </div>
+        </div>
+      )}
 
       {/* ================= ORDER DETAILS & CUSTOMIZED PHOTOS INSPECTOR MODAL ================= */}
       {selectedOrder && (
@@ -1122,7 +1266,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             <div className="flex items-start justify-between gap-4 border-b border-[#f0e8dc] pb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-[#b07838]">Enquiry to order</p>
-                <h2 id="new-enquiry-title" className="mt-1 text-xl font-black text-[#1a3c36]">Add New Order</h2>
+                <h2 id="new-enquiry-title" className="mt-1 text-xl font-black text-[#1a3c36]">{editingEnquiryId ? "Edit Enquiry" : "Add New Order"}</h2>
                 <p className="mt-1 text-xs text-[#66736e]">Capture the customer requirements and follow-up details.</p>
               </div>
               <button type="button" onClick={() => setShowEnquiryPopup(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f4eee6] text-[#555] hover:bg-[#e7dfd4]" aria-label="Close new order popup">
@@ -1137,7 +1281,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                   {[["enquiryId", "Enquiry ID"], ["customerName", "Customer Name"], ["mobileNumber", "Mobile Number"], ["whatsappNumber", "WhatsApp Number"], ["email", "Email"]].map(([name, label]) => (
                     <label key={name} className={name === "customerName" ? "lg:col-span-2" : ""}>
                       <span className="mb-1.5 block font-semibold text-[#66736e]">{label}</span>
-                      <input name={name} value={enquiry[name]} onChange={handleEnquiryChange} type={name === "email" ? "email" : "text"} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" />
+                      <input name={name} value={name === "enquiryId" && !editingEnquiryId ? "Auto-generated on save" : enquiry[name]} onChange={name === "enquiryId" ? undefined : handleEnquiryChange} readOnly={name === "enquiryId"} type={name === "email" ? "email" : "text"} className={`h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36] ${name === "enquiryId" ? "cursor-not-allowed bg-[#f5f2ed] text-[#66736e]" : ""}`} />
                     </label>
                   ))}
                 </div>
@@ -1195,7 +1339,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
             <div className="mt-6 flex justify-end gap-2 border-t border-[#f0e8dc] pt-4">
               <button type="button" onClick={() => setShowEnquiryPopup(false)} className="rounded-xl border border-[#d8cfc3] px-4 py-2.5 text-xs font-bold text-[#66736e] hover:bg-[#faf8f4]">Cancel</button>
-              <button type="submit" className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#235048]">Save Enquiry</button>
+              <button type="submit" className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#235048]">{editingEnquiryId ? "Update Enquiry" : "Save Enquiry"}</button>
             </div>
           </form>
         </div>
