@@ -678,7 +678,7 @@ const Hero = () => {
                   className="
                     group
                     inline-flex
-                      lg:h-[560px]
+                    h-12
                     items-center
                     justify-center
                     gap-3
@@ -851,7 +851,7 @@ const Hero = () => {
                 justify-center
                 sm:h-[360px]
                 lg:col-span-6
-                lg:h-[420px]
+                lg:h-[560px]
                 xl:col-span-6
               "
             >
