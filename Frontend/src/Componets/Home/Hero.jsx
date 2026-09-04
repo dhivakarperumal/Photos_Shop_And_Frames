@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api";
+import PageContainer from "../../CommonComponents/PageContainer";
 
 import {
   FiArrowRight,
@@ -573,14 +574,7 @@ const Hero = () => {
         md:py-5
       "
     >
-      <div
-        className="
-          page-container
-          mx-auto
-          w-full
-          max-w-[1480px]
-        "
-      >
+      <PageContainer>
         <div
           onMouseEnter={() =>
             setIsHovered(true)
@@ -895,17 +889,20 @@ const Hero = () => {
                 relative
                 z-10
                 flex
+                min-h-[300px]
                 items-center
                 justify-center
                 lg:col-span-6
                 xl:col-span-6
+                lg:-my-10
+                lg:-mr-12
               "
             >
               <div
                 className="
                   relative
                   w-full
-                  max-w-[560px]
+                  self-stretch
                 "
               >
                 {/* Image */}
@@ -913,12 +910,9 @@ const Hero = () => {
                 <div
                   className="
                     relative
+                    h-full
                     overflow-hidden
-                    rounded-[22px]
-                    border
-                    border-[#e8dfcf]
-                    bg-white/60
-                    shadow-[0_16px_36px_rgba(0,0,0,0.12)]
+                    rounded-r-[24px]
                   "
                 >
                   <picture>
@@ -961,10 +955,8 @@ const Hero = () => {
                         }}
                         className="
                           w-full
-                          h-[260px]
-                          sm:h-[340px]
-                          md:h-[390px]
-                          lg:h-[430px]
+                          h-full
+                          min-h-[300px]
                           object-cover
                           object-center
                           transition-all
@@ -1319,7 +1311,7 @@ const Hero = () => {
             </div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     </section>
   );
 };
