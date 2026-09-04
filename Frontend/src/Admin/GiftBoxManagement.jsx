@@ -11,18 +11,18 @@ import {
   Gift,
   Image as ImageIcon,
   ImagePlus,
+  LayoutGrid,
   Package,
   Plus,
   Search,
   ShoppingBag,
   Sparkles,
+  Table2,
   Trash2,
   UserRound,
   X,
 } from "lucide-react";
 import api from "../api";
-
-const STORAGE_KEY = "qframes-gift-boxes";
 
 const categories = [
   "Birthday Gift Box",
@@ -213,6 +213,25 @@ const statusForStock = (stock, minimum) => {
   return "Available";
 };
 
+const normalizeGiftBox = (giftBox) => ({
+  ...giftBox,
+  id: giftBox.gift_box_id || giftBox.id,
+  code: giftBox.gift_box_id || giftBox.id,
+  subCategory: giftBox.sub_category || giftBox.subCategory || "",
+  items: Array.isArray(giftBox.gift_items)
+    ? giftBox.gift_items
+    : Array.isArray(giftBox.items)
+      ? giftBox.items
+      : [],
+  mrp: Number(giftBox.mrp || 0),
+  discount: Number(giftBox.discount_percentage ?? giftBox.discount ?? 0),
+  sellingPrice: Number(giftBox.selling_price ?? giftBox.sellingPrice ?? 0),
+  currentStock: Number(giftBox.current_stock ?? giftBox.currentStock ?? 0),
+  stockStatus: giftBox.stock_status || giftBox.stockStatus || "Available",
+  image: giftBox.image || giftBox.images?.[0] || "",
+  images: Array.isArray(giftBox.images) ? giftBox.images : [],
+});
+
 const statusClasses = {
   Available: "bg-[#e8f6ed] text-[#237548]",
   "Low Stock": "bg-[#fff4db] text-[#a66a00]",
@@ -232,17 +251,14 @@ const inputClass =
   "w-full rounded-lg border border-[#dedfd9] bg-white px-3 py-2.5 text-sm text-[#23312e] outline-none transition placeholder:text-[#abb0aa] focus:border-[#2d7560] focus:ring-2 focus:ring-[#2d7560]/10";
 
 const GiftBoxManagement = () => {
-  const [boxes, setBoxes] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : initialBoxes;
-    } catch {
-      return initialBoxes;
-    }
-  });
+  const [boxes, setBoxes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [stockFilter, setStockFilter] = useState("All Stock Status");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [sortBy, setSortBy] = useState("latest");
+  const [viewMode, setViewMode] = useState("table");
   const [page, setPage] = useState(1);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -261,8 +277,20 @@ const GiftBoxManagement = () => {
   const pageSize = 6;
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(boxes));
-  }, [boxes]);
+    const loadGiftBoxes = async () => {
+      try {
+        const response = await api.get("/gift-boxes");
+        const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+        setBoxes(rows.map(normalizeGiftBox));
+      } catch (error) {
+        console.error("Could not load gift boxes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGiftBoxes();
+  }, []);
 
   useEffect(() => {
     const loadGiftCategories = async () => {
@@ -288,7 +316,8 @@ const GiftBoxManagement = () => {
 
   const filteredBoxes = useMemo(
     () =>
-      boxes.filter((box) => {
+      boxes
+        .filter((box) => {
         const query = search.toLowerCase();
         const matchesSearch =
           !query ||
@@ -300,9 +329,16 @@ const GiftBoxManagement = () => {
           box.category === categoryFilter;
         const matchesStock =
           stockFilter === "All Stock Status" || box.stockStatus === stockFilter;
-        return matchesSearch && matchesCategory && matchesStock;
+        const matchesStatus =
+          statusFilter === "All Status" || (box.status || "Active") === statusFilter;
+        return matchesSearch && matchesCategory && matchesStock && matchesStatus;
+      })
+      .sort((first, second) => {
+        if (sortBy === "name") return first.name.localeCompare(second.name);
+        if (sortBy === "stock-low") return first.currentStock - second.currentStock;
+        return new Date(second.created_at || 0) - new Date(first.created_at || 0);
       }),
-    [boxes, search, categoryFilter, stockFilter],
+    [boxes, search, categoryFilter, stockFilter, statusFilter, sortBy],
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredBoxes.length / pageSize));
@@ -421,7 +457,7 @@ const GiftBoxManagement = () => {
     });
   };
 
-  const saveBox = (event) => {
+  const saveBox = async (event) => {
     event.preventDefault();
     const nextBox = {
       ...form,
@@ -448,12 +484,48 @@ const GiftBoxManagement = () => {
         ? boxes.find((box) => box.id === editingId)?.salesToday || 0
         : 0,
     };
-    setBoxes((previous) =>
-      editingId
-        ? previous.map((box) => (box.id === editingId ? nextBox : box))
-        : [nextBox, ...previous],
-    );
-    setIsPanelOpen(false);
+    const payload = {
+      gift_box_id: nextBox.id,
+      name: nextBox.name,
+      category: nextBox.category,
+      sub_category: nextBox.subCategory,
+      description: nextBox.description,
+      material: nextBox.material,
+      box_size: nextBox.size,
+      color: nextBox.color,
+      theme: nextBox.theme,
+      box_type: nextBox.boxType,
+      mrp: nextBox.mrp,
+      discount_percentage: nextBox.discount,
+      current_stock: nextBox.currentStock,
+      image: nextBox.image,
+      images: nextBox.images,
+      customization: {
+        customerName: nextBox.customerName,
+        photoUpload: nextBox.photoUpload,
+        customMessage: nextBox.customMessage,
+        greetingCard: nextBox.greetingCard,
+      },
+      gift_items: nextBox.items,
+    };
+
+    try {
+      const response = editingId
+        ? await api.put(`/gift-boxes/${editingId}`, payload)
+        : await api.post("/gift-boxes", payload);
+      const savedBox = response.data?.data;
+      if (savedBox) {
+        const normalized = normalizeGiftBox(savedBox);
+        setBoxes((previous) =>
+          editingId
+            ? previous.map((box) => (box.id === editingId ? normalized : box))
+            : [normalized, ...previous],
+        );
+      }
+      setIsPanelOpen(false);
+    } catch (error) {
+      console.error("Could not save gift box:", error);
+    }
   };
 
   const handleItemPricingChange = (field, value) => {
@@ -490,6 +562,41 @@ const GiftBoxManagement = () => {
     });
   };
 
+  const updateGiftItem = (index, field, value) => {
+    setForm((previous) => ({
+      ...previous,
+      items: previous.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const next = { ...item, [field]: value };
+        if (field === "mrp" || field === "offerPrice") {
+          const mrp = Number(next.mrp || next.purchasePrice || 0);
+          const offerPrice = Number(next.offerPrice || 0);
+          next.sellingPrice = mrp >= offerPrice ? mrp - offerPrice : 0;
+        }
+        return next;
+      }),
+    }));
+  };
+
+  const replaceGiftItemImage = async (event, index) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingImages(true);
+    try {
+      const data = new FormData();
+      data.append("folder", "gifts");
+      data.append("file", file);
+      const response = await api.post("/upload", data);
+      const uploadedImage = response.data?.url || response.data?.urls?.[0] || "";
+      if (uploadedImage) updateGiftItem(index, "image", uploadedImage);
+    } catch (error) {
+      console.error("Gift item image replacement failed:", error);
+    } finally {
+      setUploadingImages(false);
+      event.target.value = "";
+    }
+  };
+
   const handleItemImageUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -518,9 +625,14 @@ const GiftBoxManagement = () => {
       form.items.filter((_, itemIndex) => itemIndex !== index),
     );
 
-  const deleteBox = (id) => {
-    if (window.confirm("Delete this gift box?"))
+  const deleteBox = async (id) => {
+    if (!window.confirm("Delete this gift box?")) return;
+    try {
+      await api.delete(`/gift-boxes/${id}`);
       setBoxes((previous) => previous.filter((box) => box.id !== id));
+    } catch (error) {
+      console.error("Could not delete gift box:", error);
+    }
   };
 
   const statCards = [
@@ -693,7 +805,13 @@ const GiftBoxManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf0eb]">
-                {pageBoxes.length ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan="13" className="px-5 py-16 text-center text-sm text-[#8a958e]">
+                      Loading gift boxes...
+                    </td>
+                  </tr>
+                ) : pageBoxes.length ? (
                   pageBoxes.map((box) => (
                     <tr
                       key={box.id}
@@ -1100,41 +1218,21 @@ const GiftBoxManagement = () => {
                     {form.items.length} added
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {form.items.map((item, index) => (
-                    <div
-                      key={`${item.name}-${index}`}
-                      className="flex items-center gap-2 rounded-lg bg-[#f7f9f6] p-2"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <ImageIcon className="h-4 w-4 text-[#9ba69f]" />
-                        )}
+                    <div key={`${item.name}-${index}`} className="rounded-lg border border-[#e5ebe4] bg-[#f7f9f6] p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">Gift Item {index + 1}</span>
+                        <button type="button" onClick={() => removeItem(index)} title="Remove gift item" className="rounded-md p-2 text-[#b87070] hover:bg-[#fceedf]"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-[#385247]">
-                          {item.name}
-                        </p>
-                        <p className="text-[11px] text-[#849189]">
-                          Qty {item.quantity} - MRP{" "}
-                          {money(item.mrp || item.purchasePrice)} - Offer{" "}
-                          {money(item.offerPrice)} - Selling{" "}
-                          {money(item.sellingPrice)}
-                        </p>
+                      <div className="grid gap-2 sm:grid-cols-4">
+                        <label className="space-y-1 sm:col-span-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">Product Name</span><input className={inputClass} value={item.name} onChange={(event) => updateGiftItem(index, "name", event.target.value)} /></label>
+                        <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">Quantity</span><input type="number" min="1" className={inputClass} value={item.quantity} onChange={(event) => updateGiftItem(index, "quantity", event.target.value)} /></label>
+                        <div className="flex items-end gap-2"><div className="flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-md bg-white">{item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-4 w-4 text-[#9ba69f]" />}</div><label htmlFor={`gift-item-replace-${index}`} className="flex h-[42px] flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#c9ddd0] text-xs font-bold text-[#27614e] hover:bg-[#edf6ef]"><ImagePlus className="h-3.5 w-3.5" /> Image</label><input id={`gift-item-replace-${index}`} type="file" accept="image/*" onChange={(event) => replaceGiftItemImage(event, index)} className="sr-only" /></div>
+                        <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">MRP</span><input type="number" min="0" className={inputClass} value={item.mrp ?? item.purchasePrice ?? ""} onChange={(event) => updateGiftItem(index, "mrp", event.target.value)} /></label>
+                        <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">Offer Price</span><input type="number" min="0" className={inputClass} value={item.offerPrice} onChange={(event) => updateGiftItem(index, "offerPrice", event.target.value)} /></label>
+                        <label className="space-y-1"><span className="text-[10px] font-bold uppercase tracking-wide text-[#7c8881]">Selling Price</span><input readOnly className={`${inputClass} cursor-not-allowed bg-[#f3f6f2] text-[#597267]`} value={item.sellingPrice} /></label>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="rounded-md p-2 text-[#b87070] hover:bg-[#fceedf]"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   ))}
                 </div>

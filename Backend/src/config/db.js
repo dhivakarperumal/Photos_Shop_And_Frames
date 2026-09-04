@@ -156,6 +156,40 @@ async function ensureDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
+    const createGiftBoxesTableQuery = `
+      CREATE TABLE IF NOT EXISTS gift_boxes (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        gift_box_id VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        sub_category VARCHAR(255),
+        description TEXT,
+        brand VARCHAR(255),
+        material VARCHAR(255),
+        box_size VARCHAR(100),
+        color VARCHAR(100),
+        theme VARCHAR(255),
+        box_type VARCHAR(100),
+        mrp DECIMAL(10,2) DEFAULT 0,
+        discount_percentage DECIMAL(5,2) DEFAULT 0,
+        selling_price DECIMAL(10,2) DEFAULT 0,
+        current_stock INT DEFAULT 0,
+        stock_status VARCHAR(50) DEFAULT 'Available',
+        image VARCHAR(500),
+        images JSON,
+        customization JSON,
+        gift_items JSON,
+        orders INT DEFAULT 0,
+        sales_today DECIMAL(10,2) DEFAULT 0,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_gift_category (category),
+        KEY idx_gift_status (stock_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     const createCustomizedPhotosTableQuery = `
       CREATE TABLE IF NOT EXISTS customized_photos (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -275,6 +309,7 @@ async function ensureDatabaseSchema() {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
     }
     await connection.query(createAlbumsTableQuery);
+    await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
     try {
