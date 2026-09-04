@@ -379,21 +379,6 @@ const GiftBoxManagement = () => {
   const categoryOptions = giftCategories.length
     ? giftCategories.map((category) => category.category_name).filter(Boolean)
     : categories;
-  const selectedCategory = giftCategories.find(
-    (category) => category.category_name === form.category,
-  );
-  const subCategoryOptions = Array.isArray(selectedCategory?.sub_categories)
-    ? selectedCategory.sub_categories
-    : [];
-
-  const handleCategoryChange = (value) => {
-    const category = giftCategories.find(
-      (item) => item.category_name === value,
-    );
-    updateForm("category", value);
-    updateForm("subCategory", category?.sub_categories?.[0] || "");
-  };
-
   const openAdd = () => {
     setEditingId(null);
     setForm({
@@ -817,16 +802,13 @@ const GiftBoxManagement = () => {
             <table className="w-full min-w-[1260px] text-left text-sm">
               <thead className="bg-[#f7f9f6] text-[10px] uppercase tracking-[0.1em] text-[#7c8881]">
                 <tr>
-                  <th className="px-5 py-3 font-bold">Image</th>
-                  <th className="px-3 py-3 font-bold">Gift Box ID</th>
+                  <th className="px-5 py-3 font-bold">S.No</th>
                   <th className="px-3 py-3 font-bold">Gift Box Name</th>
+                  <th className="px-5 py-3 font-bold">Image</th>
                   <th className="px-3 py-3 font-bold">Category</th>
-                  <th className="px-3 py-3 font-bold">Sub Category</th>
                   <th className="px-3 py-3 font-bold">Included Items</th>
-                  <th className="px-3 py-3 font-bold">Purchase Price</th>
                   <th className="px-3 py-3 font-bold">MRP</th>
                   <th className="px-3 py-3 font-bold">Selling Price</th>
-                  <th className="px-3 py-3 font-bold">Offer Price</th>
                   <th className="px-3 py-3 font-bold">Stock</th>
                   <th className="px-3 py-3 font-bold">Status</th>
                   <th className="px-5 py-3 text-right font-bold">Actions</th>
@@ -835,16 +817,28 @@ const GiftBoxManagement = () => {
               <tbody className="divide-y divide-[#edf0eb]">
                 {loading ? (
                   <tr>
-                    <td colSpan="13" className="px-5 py-16 text-center text-sm text-[#8a958e]">
+                    <td colSpan="11" className="px-5 py-16 text-center text-sm text-[#8a958e]">
                       Loading gift boxes...
                     </td>
                   </tr>
                 ) : pageBoxes.length ? (
-                  pageBoxes.map((box) => (
+                  pageBoxes.map((box, index) => (
                     <tr
                       key={box.id}
                       className="group transition hover:bg-[#fbfdfb]"
                     >
+                      <td className="px-5 py-3 text-xs font-bold text-[#87928c]">
+                        {(page - 1) * pageSize + index + 1}
+                      </td>
+                      
+                     
+                      <td className="px-3 py-3">
+                        <p className="font-bold text-[#263a34]">{box.name}</p>
+                        <p className="mt-0.5 max-w-[210px] truncate text-xs text-[#919c95]">
+                          {box.id}
+                        </p>
+                      </td>
+
                       <td className="px-5 py-3">
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-[#e5e8e2] bg-[#f1f5f0]">
                           {box.image ? (
@@ -858,38 +852,20 @@ const GiftBoxManagement = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-3 font-mono text-xs font-bold text-[#588070]">
-                        {box.id}
-                      </td>
-                      <td className="px-3 py-3">
-                        <p className="font-bold text-[#263a34]">{box.name}</p>
-                        <p className="mt-0.5 max-w-[210px] truncate text-xs text-[#919c95]">
-                          {box.description}
-                        </p>
-                      </td>
                       <td className="px-3 py-3">
                         <span className="rounded-md bg-[#f1f5ef] px-2 py-1 text-[11px] font-semibold text-[#547164]">
                           {box.category}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-xs font-semibold text-[#68776f]">
-                        {box.subCategory || "-"}
-                      </td>
                       <td className="px-3 py-3 font-semibold text-[#5f7068]">
                         {box.items.length} item
                         {box.items.length === 1 ? "" : "s"}
-                      </td>
-                      <td className="px-3 py-3 text-[#68776f]">
-                        {money(box.purchasePrice)}
                       </td>
                       <td className="px-3 py-3 text-[#87928c] line-through">
                         {money(box.mrp)}
                       </td>
                       <td className="px-3 py-3 font-semibold text-[#4e6259]">
                         {money(box.sellingPrice)}
-                      </td>
-                      <td className="px-3 py-3 font-bold text-[#bd713a]">
-                        {money(box.offerPrice)}
                       </td>
                       <td className="px-3 py-3 font-bold text-[#344c42]">
                         {box.currentStock}
@@ -934,7 +910,7 @@ const GiftBoxManagement = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan="13"
+                      colSpan="11"
                       className="px-5 py-16 text-center text-sm text-[#8a958e]"
                     >
                       No gift boxes match your filters.
@@ -1045,35 +1021,12 @@ const GiftBoxManagement = () => {
                     className={inputClass}
                     value={form.category}
                     onChange={(event) =>
-                      handleCategoryChange(event.target.value)
+                      updateForm("category", event.target.value)
                     }
                   >
                     {categoryOptions.map((category) => (
                       <option key={category}>{category}</option>
                     ))}
-                  </select>
-                </Field>
-                <Field label="Sub Category">
-                  <select
-                    className={inputClass}
-                    value={form.subCategory}
-                    onChange={(event) =>
-                      updateForm("subCategory", event.target.value)
-                    }
-                  >
-                    {subCategoryOptions.length ? (
-                      subCategoryOptions.map((subCategory) => (
-                        <option key={subCategory}>{subCategory}</option>
-                      ))
-                    ) : (
-                      <option value="">No sub-category available</option>
-                    )}
-                    {form.subCategory &&
-                      !subCategoryOptions.includes(form.subCategory) && (
-                        <option value={form.subCategory}>
-                          {form.subCategory}
-                        </option>
-                      )}
                   </select>
                 </Field>
                 <Field label="Description" wide>

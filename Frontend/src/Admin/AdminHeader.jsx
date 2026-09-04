@@ -130,7 +130,6 @@ const Header = ({ onMenuClick }) => {
   useEffect(() => {
     const fetchAlerts = async () => {
       let leaveAlerts = [];
-      let taskAlerts  = [];
       let orderAlerts = [];
       let lowStockAlerts = [];
 
@@ -145,28 +144,6 @@ const Header = ({ onMenuClick }) => {
         }));
       } catch (e) {
         console.error('[Header] Leave fetch error:', e?.response?.status, e.message);
-      }
-
-      // ── 2. Active Task Updates from employee_task_assignments ──
-      try {
-        const { data } = await api.get('/tasks', { params: { page: 1, limit: 100 } });
-        const active = (data?.data || []).filter(t => {
-          const s = (t.status || '').toLowerCase().trim();
-          // Show Pending, In Progress, On Hold — i.e. not yet done
-          if (s === 'completed' || s === 'cancelled' || s === 'done') return false;
-          // Only show tasks updated today
-          if (!t.updated_at) return false;
-          return dayjs(t.updated_at).isSame(dayjs(), 'day');
-        });
-        taskAlerts = active.map(t => ({
-          title:    t.task_name || t.module_name || t.name || 'Untitled Task',
-          project:  t.project_name || '',
-          assigned: t.assigned_to_name || '',
-          assignedId: t.assigned_to_code || t.employee_code || t.assigned_to || '',
-          status:   t.status || 'Pending',
-        }));
-      } catch (e) {
-        console.error('[Header] Tasks fetch error:', e?.response?.status, e.message);
       }
 
       try {
@@ -193,7 +170,7 @@ const Header = ({ onMenuClick }) => {
         console.error('[Header] Low stock notification error:', e?.response?.status, e.message);
       }
 
-      setAlerts({ tasks: taskAlerts, leaves: leaveAlerts, orders: orderAlerts, lowStock: lowStockAlerts });
+      setAlerts({ tasks: [], leaves: leaveAlerts, orders: orderAlerts, lowStock: lowStockAlerts });
     };
 
     fetchAlerts();
@@ -213,8 +190,6 @@ const Header = ({ onMenuClick }) => {
   }, [activeDropdown, showSearch]);
 
   const toggle = (name) => setActiveDropdown(p => p === name ? null : name);
-  const totalAlerts = alerts.leaves.length + alerts.tasks.length;
-
   const handleSearch = (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
