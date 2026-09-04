@@ -568,10 +568,8 @@ const Hero = () => {
     <section
       className="
         bg-[#f7f4ee]
-        px-3
-        py-3
-        sm:px-4
-        md:py-5
+        px-0
+        py-0
       "
     >
       <PageContainer>
@@ -640,6 +638,7 @@ const Hero = () => {
               items-center
               gap-8
               lg:grid-cols-12
+              lg:items-stretch
               lg:gap-10
               xl:gap-12
             "
