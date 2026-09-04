@@ -134,8 +134,16 @@ const Hero = () => {
     }
   }, []);
 
+  // Refetch banners when window regains focus (e.g. after updating in admin tab)
   useEffect(() => {
     fetchBanners();
+
+    const handleFocus = () => {
+      fetchBanners();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [fetchBanners]);
 
   const heroBanners = useMemo(() => {
@@ -165,40 +173,59 @@ const Hero = () => {
     setCurrentIndex((prev) => (prev + 1) % heroBanners.length);
   };
 
-  // Helper to render headline with cursive accent line
+  // Helper to render headline matching screenshot: "Turn Your Memories" + "Into " in dark bold, "Something Beautiful" in cursive
   const renderHeading = (title, subtitle) => {
-    const rawTitle = title || DEFAULT_BANNER.title;
-    const rawSubtitle = subtitle !== undefined && subtitle !== null ? subtitle : DEFAULT_BANNER.subtitle;
+    const rawTitle = (title || DEFAULT_BANNER.title).trim();
+    const rawSubtitle = (subtitle !== undefined && subtitle !== null ? subtitle : DEFAULT_BANNER.subtitle).trim();
 
-    if (rawSubtitle && rawSubtitle.trim()) {
+    if (rawSubtitle) {
+      const lowerSub = rawSubtitle.toLowerCase();
+      if (lowerSub.startsWith("into ")) {
+        const cursivePart = rawSubtitle.slice(5).trim();
+        return (
+          <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[3.9rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+            {rawTitle}
+            <span className="mt-1 sm:mt-2 block">
+              <span className="text-[#171717] font-black">Into </span>
+              <span className="font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] tracking-normal leading-[1.05]">
+                {cursivePart}
+              </span>
+            </span>
+          </h1>
+        );
+      }
+
       return (
-        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[3.9rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
           {rawTitle}
-          <span className="mt-1 sm:mt-2 block font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.3rem] xl:text-[3.8rem] tracking-normal leading-[1.1]">
+          <span className="mt-1 sm:mt-2 block font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] tracking-normal leading-[1.05]">
             {rawSubtitle}
           </span>
         </h1>
       );
     }
 
-    // If subtitle is empty, see if title has "Into " to highlight
+    // If subtitle is empty, check if title contains "Into "
     const lower = rawTitle.toLowerCase();
     const intoIndex = lower.indexOf("into ");
     if (intoIndex !== -1) {
       const part1 = rawTitle.substring(0, intoIndex).trim();
-      const part2 = rawTitle.substring(intoIndex).trim();
+      const cursivePart = rawTitle.substring(intoIndex + 5).trim();
       return (
-        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+        <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[3.9rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
           {part1}
-          <span className="mt-1 sm:mt-2 block font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.3rem] xl:text-[3.8rem] tracking-normal leading-[1.1]">
-            {part2}
+          <span className="mt-1 sm:mt-2 block">
+            <span className="text-[#171717] font-black">Into </span>
+            <span className="font-['Dancing_Script',cursive] text-[#c18d38] font-semibold italic text-[2.3rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] tracking-normal leading-[1.05]">
+              {cursivePart}
+            </span>
           </span>
         </h1>
       );
     }
 
     return (
-      <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[4rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
+      <h1 className="max-w-[650px] text-[2.2rem] sm:text-4xl md:text-5xl lg:text-[3.5rem] xl:text-[3.9rem] font-black leading-[1.04] tracking-[-0.04em] text-[#171717]">
         {rawTitle}
       </h1>
     );
