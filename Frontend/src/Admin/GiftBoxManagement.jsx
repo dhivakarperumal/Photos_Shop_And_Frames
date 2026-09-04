@@ -10,6 +10,7 @@ import {
   Edit3,
   Gift,
   Image as ImageIcon,
+  ImagePlus,
   Package,
   Plus,
   Search,
@@ -65,6 +66,7 @@ const blankForm = {
   greetingCard: false,
   items: [],
   image: "",
+  images: [],
 };
 
 const initialBoxes = [
@@ -208,6 +210,7 @@ const GiftBoxManagement = () => {
   const [editingId, setEditingId] = useState(null);
   const [viewingBox, setViewingBox] = useState(null);
   const [form, setForm] = useState(blankForm);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [giftCategories, setGiftCategories] = useState([]);
   const [itemDraft, setItemDraft] = useState({ name: "", quantity: 1, purchasePrice: "", sellingPrice: "", image: "/images/1.png" });
   const pageSize = 6;
@@ -284,8 +287,45 @@ const GiftBoxManagement = () => {
 
   const openEdit = (box) => {
     setEditingId(box.id);
-    setForm({ ...blankForm, ...box, code: box.id });
+    setForm({ ...blankForm, ...box, images: Array.isArray(box.images) ? box.images : box.image ? [box.image] : [], code: box.id });
     setIsPanelOpen(true);
+  };
+
+  const handleGiftImagesUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    setUploadingImages(true);
+    try {
+      const data = new FormData();
+      data.append("folder", "gifts");
+      files.forEach((file) => data.append("files", file));
+      const response = await api.post("/upload", data);
+      const uploadedImages = Array.isArray(response.data?.urls)
+        ? response.data.urls
+        : response.data?.url
+          ? [response.data.url]
+          : [];
+      if (uploadedImages.length) {
+        setForm((previous) => ({
+          ...previous,
+          images: [...(previous.images || []), ...uploadedImages],
+          image: previous.image || uploadedImages[0],
+        }));
+      }
+    } catch (error) {
+      console.error("Gift image upload failed:", error);
+    } finally {
+      setUploadingImages(false);
+      event.target.value = "";
+    }
+  };
+
+  const removeGiftImage = (index) => {
+    setForm((previous) => {
+      const images = (previous.images || []).filter((_, imageIndex) => imageIndex !== index);
+      return { ...previous, images, image: images[0] || "" };
+    });
   };
 
   const saveBox = (event) => {
@@ -293,6 +333,8 @@ const GiftBoxManagement = () => {
     const nextBox = {
       ...form,
       id: editingId || form.code || `GBX${String(boxes.length + 1).padStart(3, "0")}`,
+      image: form.images?.[0] || form.image || "",
+      images: form.images || (form.image ? [form.image] : []),
       purchasePrice: Number(form.purchasePrice || 0),
       mrp: Number(form.mrp || 0),
       sellingPrice: Number(form.sellingPrice || 0),
@@ -368,9 +410,9 @@ const GiftBoxManagement = () => {
       </div>
 
       {isPanelOpen && <div className="fixed inset-0 z-50 bg-[#17251f]/40 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsPanelOpen(false); }}><aside className="ml-auto flex h-full w-full max-w-2xl flex-col bg-[#f8faf7] shadow-2xl"><div className="flex items-center justify-between border-b border-[#e0e6df] bg-white px-5 py-4 sm:px-7"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#bd713a]">{editingId ? "Update catalog item" : "New catalog item"}</p><h2 className="mt-1 text-xl font-bold text-[#20362e]">{editingId ? "Edit Gift Box" : "Add New Gift Box"}</h2></div><button type="button" onClick={() => setIsPanelOpen(false)} className="rounded-lg p-2 text-[#718079] hover:bg-[#f0f4ef]"><X className="h-5 w-5" /></button></div><form id="gift-box-form" onSubmit={saveBox} className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-7">
-        <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2"><div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><Sparkles className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Basic Information</h3></div><Field label="Gift Box Name"><input required className={inputClass} value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="e.g. The Memory Keeper" /></Field><Field label="Gift Box Code"><input required className={inputClass} value={form.code} onChange={(event) => updateForm("code", event.target.value.toUpperCase())} placeholder="GBX001" /></Field><Field label="Category"><select className={inputClass} value={form.category} onChange={(event) => handleCategoryChange(event.target.value)}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</select></Field><Field label="Sub Category"><select className={inputClass} value={form.subCategory} onChange={(event) => updateForm("subCategory", event.target.value)}>{subCategoryOptions.length ? subCategoryOptions.map((subCategory) => <option key={subCategory}>{subCategory}</option>) : <option value="">No sub-category available</option>}{form.subCategory && !subCategoryOptions.includes(form.subCategory) && <option value={form.subCategory}>{form.subCategory}</option>}</select></Field><Field label="Description" wide><textarea rows="3" className={inputClass} value={form.description} onChange={(event) => updateForm("description", event.target.value)} placeholder="Describe what makes this gift box special" /></Field><Field label="Brand"><input className={inputClass} value={form.brand} onChange={(event) => updateForm("brand", event.target.value)} /></Field><Field label="Product Image URL"><input className={inputClass} value={form.image} onChange={(event) => updateForm("image", event.target.value)} placeholder="/images/gift-box.png" /></Field></div>
+        <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2"><div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><Sparkles className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Basic Information</h3></div><Field label="Gift Box Name"><input required className={inputClass} value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="e.g. The Memory Keeper" /></Field><Field label="Gift Box Code"><input required className={inputClass} value={form.code} onChange={(event) => updateForm("code", event.target.value.toUpperCase())} placeholder="GBX001" /></Field><Field label="Category"><select className={inputClass} value={form.category} onChange={(event) => handleCategoryChange(event.target.value)}>{categoryOptions.map((category) => <option key={category}>{category}</option>)}</select></Field><Field label="Sub Category"><select className={inputClass} value={form.subCategory} onChange={(event) => updateForm("subCategory", event.target.value)}>{subCategoryOptions.length ? subCategoryOptions.map((subCategory) => <option key={subCategory}>{subCategory}</option>) : <option value="">No sub-category available</option>}{form.subCategory && !subCategoryOptions.includes(form.subCategory) && <option value={form.subCategory}>{form.subCategory}</option>}</select></Field><Field label="Description" wide><textarea rows="3" className={inputClass} value={form.description} onChange={(event) => updateForm("description", event.target.value)} placeholder="Describe what makes this gift box special" /></Field><Field label="Brand"><input className={inputClass} value={form.brand} onChange={(event) => updateForm("brand", event.target.value)} /></Field><Field label="Product Image URL" wide><div className="flex gap-2"><input className={inputClass} value={form.image} onChange={(event) => updateForm("image", event.target.value)} placeholder="/images/gift-box.png" /><label htmlFor="gift-image-upload" className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg bg-[#1f5d4d] px-3 py-2 text-xs font-bold text-white hover:bg-[#174b3e]"><ImagePlus className="h-4 w-4" /> Upload</label><input id="gift-image-upload" type="file" accept="image/*" multiple onChange={handleGiftImagesUpload} className="sr-only" /></div><p className="mt-1 text-[11px] text-[#89948d]">Multiple images are uploaded to the gifts folder.</p>{uploadingImages && <p className="mt-1 text-xs font-semibold text-[#1f5d4d]">Uploading images...</p>}<div className="mt-3 flex flex-wrap gap-2">{(form.images || []).map((image, index) => <div key={`${image}-${index}`} className="relative h-16 w-16"><img src={image} alt="" className="h-full w-full rounded-lg border border-[#dfe5dd] object-cover" /><button type="button" onClick={() => removeGiftImage(index)} title="Remove image" className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#b42318] text-white shadow-sm hover:bg-[#8e1c14]"><X className="h-3 w-3" /></button></div>)}</div></Field></div>
         <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2"><div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><Package className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Box Details</h3></div>{[["material", "Box Material"], ["size", "Box Size"], ["color", "Box Color"], ["theme", "Theme"], ["boxType", "Box Type"]].map(([field, label]) => <Field key={field} label={label}><input className={inputClass} value={form[field]} onChange={(event) => updateForm(field, event.target.value)} /></Field>)}</div>
-        <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2"><div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><ShoppingBag className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Pricing Details</h3></div>{[["mrp", "MRP"], ["discount", "Discount Percentage"], ["sellingPrice", "Selling Price"]].map(([field, label]) => <Field key={field} label={label}><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#8d9991]">{field === "discount" ? "%" : "₹"}</span><input type="number" min="0" readOnly={field === "sellingPrice"} className={`${inputClass} pl-7 ${field === "sellingPrice" ? "cursor-not-allowed bg-[#f3f6f2] text-[#597267]" : ""}`} value={form[field]} onChange={(event) => handlePricingChange(field, event.target.value)} /></div></Field>)}</div>
+        <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-3"><div className="sm:col-span-3 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><ShoppingBag className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Pricing Details</h3></div>{[["mrp", "MRP"], ["discount", "Discount Percentage"], ["sellingPrice", "Selling Price"]].map(([field, label]) => <Field key={field} label={label}><div className="relative"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#8d9991]">{field === "discount" ? "%" : "₹"}</span><input type="number" min="0" readOnly={field === "sellingPrice"} className={`${inputClass} pl-7 ${field === "sellingPrice" ? "cursor-not-allowed bg-[#f3f6f2] text-[#597267]" : ""}`} value={form[field]} onChange={(event) => handlePricingChange(field, event.target.value)} /></div></Field>)}</div>
         <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2"><div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><Archive className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Stock Management</h3></div><Field label="Current Stock"><input type="number" min="0" className={inputClass} value={form.currentStock} onChange={(event) => updateForm("currentStock", event.target.value)} /></Field><Field label="Stock Status"><div className="flex h-[42px] items-center gap-2 rounded-lg bg-[#f4f7f3] px-3 text-sm font-semibold text-[#587267]"><span className={`h-2 w-2 rounded-full ${statusForStock(form.currentStock, form.minimumStock) === "Available" ? "bg-[#3c9b68]" : statusForStock(form.currentStock, form.minimumStock) === "Low Stock" ? "bg-[#d6982d]" : "bg-[#cb5d59]"}`} />{statusForStock(form.currentStock, form.minimumStock)}</div></Field></div>
         <div className="rounded-xl border border-[#e0e6df] bg-white p-4"><div className="mb-4 flex items-center gap-3 border-b border-[#edf0eb] pb-3"><UserRound className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Customization Options</h3></div><div className="grid gap-2 sm:grid-cols-2">{[["customerName", "Customer Name"], ["photoUpload", "Photo Upload"], ["customMessage", "Custom Message"], ["greetingCard", "Greeting Card"]].map(([field, label]) => <label key={field} className="flex cursor-pointer items-center gap-3 rounded-lg border border-[#edf0eb] p-3 text-sm font-semibold text-[#52675e] hover:bg-[#f7faf6]"><input type="checkbox" checked={form[field]} onChange={(event) => updateForm(field, event.target.checked)} className="h-4 w-4 accent-[#1f5d4d]" />{label}</label>)}</div></div>
         <div className="rounded-xl border border-[#e0e6df] bg-white p-4"><div className="mb-4 flex items-center justify-between border-b border-[#edf0eb] pb-3"><div className="flex items-center gap-3"><Gift className="h-4 w-4 text-[#c1843b]" /><h3 className="font-bold text-[#294339]">Gift Items</h3></div><span className="rounded-full bg-[#edf5ee] px-2.5 py-1 text-[10px] font-bold text-[#39735d]">{form.items.length} added</span></div><div className="space-y-2">{form.items.map((item, index) => <div key={`${item.name}-${index}`} className="flex items-center gap-2 rounded-lg bg-[#f7f9f6] p-2"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">{item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="h-4 w-4 text-[#9ba69f]" />}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-[#385247]">{item.name}</p><p className="text-[11px] text-[#849189]">Qty {item.quantity} · {money(item.sellingPrice)}</p></div><button type="button" onClick={() => removeItem(index)} className="rounded-md p-2 text-[#b87070] hover:bg-[#fceedf]"><Trash2 className="h-4 w-4" /></button></div>)}</div><div className="mt-3 grid gap-2 border-t border-[#edf0eb] pt-3 sm:grid-cols-[1.5fr_0.5fr_0.8fr_0.8fr_auto]"><input className={inputClass} placeholder="Product name" value={itemDraft.name} onChange={(event) => setItemDraft({ ...itemDraft, name: event.target.value })} /><input type="number" min="1" className={inputClass} placeholder="Qty" value={itemDraft.quantity} onChange={(event) => setItemDraft({ ...itemDraft, quantity: event.target.value })} /><input type="number" min="0" className={inputClass} placeholder="Purchase" value={itemDraft.purchasePrice} onChange={(event) => setItemDraft({ ...itemDraft, purchasePrice: event.target.value })} /><input type="number" min="0" className={inputClass} placeholder="Selling" value={itemDraft.sellingPrice} onChange={(event) => setItemDraft({ ...itemDraft, sellingPrice: event.target.value })} /><button type="button" onClick={addItem} className="inline-flex items-center justify-center gap-1 rounded-lg border border-[#c9ddd0] px-3 py-2 text-xs font-bold text-[#27614e] hover:bg-[#edf6ef]"><Plus className="h-3.5 w-3.5" /> Add</button></div></div>
