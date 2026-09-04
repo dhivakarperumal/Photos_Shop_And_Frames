@@ -636,6 +636,7 @@ const Hero = () => {
               gap-8
               lg:grid-cols-12
               lg:items-stretch
+              lg:min-h-[460px]
               lg:gap-10
               xl:gap-12
             "
@@ -887,10 +888,12 @@ const Hero = () => {
                 z-10
                 flex
                 min-w-0
-                min-h-[300px]
+                h-[250px]
                 items-center
                 justify-center
+                sm:h-[360px]
                 lg:col-span-6
+                lg:h-[420px]
                 xl:col-span-6
               "
             >
@@ -908,9 +911,10 @@ const Hero = () => {
                     relative
                     h-full
                     overflow-hidden
+                    rounded-[24px]
                   "
                 >
-                  <picture>
+                    <picture className="block h-full">
                     {/* Mobile Banner */}
 
                     {mobileImage && (
@@ -953,7 +957,6 @@ const Hero = () => {
                           max-w-full
                           w-full
                           h-full
-                          min-h-[300px]
                           object-cover
                           object-center
                           transition-all
