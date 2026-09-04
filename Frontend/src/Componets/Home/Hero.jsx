@@ -969,7 +969,7 @@ const Hero = () => {
                     DISCOUNT BADGE
                 ================================================= */}
 
-                <div
+                {/* <div
                   className="
                     pointer-events-none
                     absolute
@@ -1071,7 +1071,7 @@ const Hero = () => {
                       Use Code: FIRST10
                     </p>
                   </div>
-                </div>
+                </div> */}
 
                 {/* =================================================
                     CAROUSEL ARROWS
