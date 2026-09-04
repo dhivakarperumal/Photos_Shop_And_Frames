@@ -16,6 +16,8 @@ import api from "../../api";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
+import PageHeader from "../../CommonComponents/PageHeader";
+import PageContainer from "../../CommonComponents/PageContainer";
 
 const indianStates = [
   "Tamil Nadu",
@@ -201,62 +203,65 @@ const Checkout = () => {
   // ==========================================
   if (orderSuccess) {
     return (
-      <main className="min-h-screen bg-[#f8f5f0] px-4 py-12 md:px-8">
-        <div className="mx-auto max-w-2xl">
-          <div className="rounded-3xl border border-[#ebe3d7] bg-white p-6 text-center shadow-lg sm:p-10">
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f6ed] text-[#1b794b] shadow-inner">
-              <CheckCircle2 className="h-10 w-10" />
-            </div>
+      <main className="min-h-screen bg-[#f7f3ed]">
+        <PageHeader title="Order Confirmed" />
+        <PageContainer>
+          <div className="">
+            <div className="rounded-3xl border border-[#ebe3d7] bg-white p-6 text-center shadow-lg sm:p-10">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f6ed] text-[#1b794b] shadow-inner">
+                <CheckCircle2 className="h-10 w-10" />
+              </div>
 
-            <span className="inline-block rounded-full bg-[#f5efe6] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
-              Order Confirmed
-            </span>
+              <span className="inline-block rounded-full bg-[#f5efe6] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                Order Confirmed
+              </span>
 
-            <h1 className="mt-3 text-2xl font-black text-[#1d2925] sm:text-3xl">
-              Thank You for Your Order!
-            </h1>
-            <p className="mt-2 text-xs text-[#666] sm:text-sm">
-              Your personalized photo frame order has been successfully placed. Our crafting team is preparing your order with care.
-            </p>
+              <h1 className="mt-3 text-2xl font-black text-[#1d2925] sm:text-3xl">
+                Thank You for Your Order!
+              </h1>
+              <p className="mt-2 text-xs text-[#666] sm:text-sm">
+                Your personalized photo frame order has been successfully placed. Our crafting team is preparing your order with care.
+              </p>
 
-            {/* ORDER RECEIPT CARD */}
-            <div className="mx-auto my-8 max-w-md rounded-2xl border border-[#e8dfd2] bg-[#faf8f5] p-5 text-left text-xs">
-              <div className="flex justify-between border-b border-[#eee7dc] py-2">
-                <span className="text-[#777]">Order Reference</span>
-                <span className="font-mono font-bold text-[#1a3c36]">{orderSuccess.order_id}</span>
+              {/* ORDER RECEIPT CARD */}
+              <div className="mx-auto my-8 max-w-md rounded-2xl border border-[#e8dfd2] bg-[#faf8f5] p-5 text-left text-xs">
+                <div className="flex justify-between border-b border-[#eee7dc] py-2">
+                  <span className="text-[#777]">Order Reference</span>
+                  <span className="font-mono font-bold text-[#1a3c36]">{orderSuccess.order_id}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#eee7dc] py-2">
+                  <span className="text-[#777]">Customer Name</span>
+                  <span className="font-bold text-[#333]">{orderSuccess.customer_name}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#eee7dc] py-2">
+                  <span className="text-[#777]">Contact Phone</span>
+                  <span className="font-bold text-[#333]">{orderSuccess.customer_phone}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#eee7dc] py-2">
+                  <span className="text-[#777]">Delivery Location</span>
+                  <span className="font-bold text-[#333] text-right">{orderSuccess.city}, {orderSuccess.state} - {orderSuccess.pincode}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#eee7dc] py-2">
+                  <span className="text-[#777]">Payment Method</span>
+                  <span className="font-bold text-[#333]">{orderSuccess.payment_method}</span>
+                </div>
+                <div className="flex justify-between pt-2.5 text-sm font-bold text-[#1a3c36]">
+                  <span>Total Amount Paid / COD</span>
+                  <span className="text-base font-black">₹{orderSuccess.total_amount || totalAmount}</span>
+                </div>
               </div>
-              <div className="flex justify-between border-b border-[#eee7dc] py-2">
-                <span className="text-[#777]">Customer Name</span>
-                <span className="font-bold text-[#333]">{orderSuccess.customer_name}</span>
-              </div>
-              <div className="flex justify-between border-b border-[#eee7dc] py-2">
-                <span className="text-[#777]">Contact Phone</span>
-                <span className="font-bold text-[#333]">{orderSuccess.customer_phone}</span>
-              </div>
-              <div className="flex justify-between border-b border-[#eee7dc] py-2">
-                <span className="text-[#777]">Delivery Location</span>
-                <span className="font-bold text-[#333] text-right">{orderSuccess.city}, {orderSuccess.state} - {orderSuccess.pincode}</span>
-              </div>
-              <div className="flex justify-between border-b border-[#eee7dc] py-2">
-                <span className="text-[#777]">Payment Method</span>
-                <span className="font-bold text-[#333]">{orderSuccess.payment_method}</span>
-              </div>
-              <div className="flex justify-between pt-2.5 text-sm font-bold text-[#1a3c36]">
-                <span>Total Amount Paid / COD</span>
-                <span className="text-base font-black">₹{orderSuccess.total_amount || totalAmount}</span>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/shop"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
-              >
-                Continue Shopping
-              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  to="/shop"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
+                >
+                  Continue Shopping
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        </PageContainer>
       </main>
     );
   }
@@ -266,24 +271,27 @@ const Checkout = () => {
   // ==========================================
   if (checkoutItems.length === 0) {
     return (
-      <main className="min-h-screen bg-[#f8f5f0] px-4 py-16 text-center">
-        <div className="mx-auto max-w-md rounded-3xl border border-[#e8dfd2] bg-white p-10 shadow-xs">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f4eee5] text-[#b07838]">
-            <ShoppingBag className="h-8 w-8" />
+      <main className="min-h-screen bg-[#f7f3ed]">
+        <PageHeader title="Checkout" />
+        <PageContainer className="py-16 text-center">
+          <div className="mx-auto max-w-md rounded-3xl border border-[#e8dfd2] bg-white p-10 shadow-xs">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f4eee5] text-[#b07838]">
+              <ShoppingBag className="h-8 w-8" />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-[#1d2925]">
+              No Items to Checkout
+            </h2>
+            <p className="mt-2 text-xs text-[#777]">
+              Your shopping cart is currently empty. Explore our collection to customize photo frames.
+            </p>
+            <Link
+              to="/shop"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-6 py-2.5 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
+            >
+              <ArrowLeft className="h-4 w-4" /> Go to Shop
+            </Link>
           </div>
-          <h2 className="mt-4 text-xl font-bold text-[#1d2925]">
-            No Items to Checkout
-          </h2>
-          <p className="mt-2 text-xs text-[#777]">
-            Your shopping cart is currently empty. Explore our collection to customize photo frames.
-          </p>
-          <Link
-            to="/shop"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-6 py-2.5 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
-          >
-            <ArrowLeft className="h-4 w-4" /> Go to Shop
-          </Link>
-        </div>
+        </PageContainer>
       </main>
     );
   }
@@ -292,26 +300,19 @@ const Checkout = () => {
   // 3. MAIN CHECKOUT FORM & SUMMARY VIEW
   // ==========================================
   return (
-    <main className="min-h-screen bg-[#f8f5f0] px-4 py-8 md:px-8">
-      <div className="mx-auto max-w-6xl">
-        {/* BREADCRUMB */}
-        <div className="mb-6 flex items-center gap-2 text-xs text-[#777]">
-          <Link to="/" className="hover:text-[#b07838]">Home</Link>
-          <span>/</span>
-          <Link to="/shop" className="hover:text-[#b07838]">Shop</Link>
-          <span>/</span>
-          <span className="font-semibold text-[#1d2925]">Checkout</span>
-        </div>
-
-        {/* PAGE TITLE */}
-        <div className="mb-8 border-b border-[#e9dfd2] pb-4">
-          <h1 className="text-2xl font-black text-[#1d2925] sm:text-3xl">
-            Order Checkout
-          </h1>
-          <p className="mt-1 text-xs text-[#6b6b63]">
-            Complete your delivery details to confirm your frame order.
-          </p>
-        </div>
+    <main className="min-h-screen bg-[#f7f3ed]">
+      <PageHeader title="Checkout" />
+      <PageContainer className="py-10">
+        <div className="mx-auto max-w-6xl">
+          {/* PAGE TITLE */}
+          <div className="mb-8 border-b border-[#e9dfd2] pb-4">
+            <h1 className="text-2xl font-black text-[#1d2925] sm:text-3xl">
+              Order Checkout
+            </h1>
+            <p className="mt-1 text-xs text-[#6b6b63]">
+              Complete your delivery details to confirm your frame order.
+            </p>
+          </div>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* ================= LEFT COLUMN: DELIVERY & PAYMENT FORM (7 COLS) ================= */}
@@ -651,7 +652,8 @@ const Checkout = () => {
             </div>
           </div>
         </form>
-      </div>
+        </div>
+      </PageContainer>
     </main>
   );
 };
