@@ -456,6 +456,18 @@ const GiftBoxManagement = () => {
     setIsPanelOpen(false);
   };
 
+  const handleItemPricingChange = (field, value) => {
+    setItemDraft((previous) => {
+      const next = { ...previous, [field]: value };
+      if (field === "mrp" || field === "offerPrice") {
+        const mrp = Number(next.mrp || 0);
+        const offerPrice = Number(next.offerPrice || 0);
+        next.sellingPrice = mrp >= offerPrice ? mrp - offerPrice : 0;
+      }
+      return next;
+    });
+  };
+
   const addItem = () => {
     if (!itemDraft.name.trim()) return;
     updateForm("items", [
@@ -921,15 +933,6 @@ const GiftBoxManagement = () => {
                     placeholder="Describe what makes this gift box special"
                   />
                 </Field>
-                <Field label="Brand">
-                  <input
-                    className={inputClass}
-                    value={form.brand}
-                    onChange={(event) =>
-                      updateForm("brand", event.target.value)
-                    }
-                  />
-                </Field>
                 <Field label="Product Images" wide>
                   <div className="flex gap-2">
                     <label
@@ -1178,7 +1181,7 @@ const GiftBoxManagement = () => {
                       placeholder="MRP"
                       value={itemDraft.mrp}
                       onChange={(event) =>
-                        setItemDraft({ ...itemDraft, mrp: event.target.value })
+                        handleItemPricingChange("mrp", event.target.value)
                       }
                     />
                   </label>
@@ -1193,10 +1196,7 @@ const GiftBoxManagement = () => {
                       placeholder="Offer"
                       value={itemDraft.offerPrice}
                       onChange={(event) =>
-                        setItemDraft({
-                          ...itemDraft,
-                          offerPrice: event.target.value,
-                        })
+                        handleItemPricingChange("offerPrice", event.target.value)
                       }
                     />
                   </label>
@@ -1207,14 +1207,12 @@ const GiftBoxManagement = () => {
                     <input
                       type="number"
                       min="0"
-                      className={inputClass}
+                      readOnly
+                      className={`${inputClass} cursor-not-allowed bg-[#f3f6f2] text-[#597267]`}
                       placeholder="Selling"
                       value={itemDraft.sellingPrice}
                       onChange={(event) =>
-                        setItemDraft({
-                          ...itemDraft,
-                          sellingPrice: event.target.value,
-                        })
+                        handleItemPricingChange("sellingPrice", event.target.value)
                       }
                     />
                   </label>
