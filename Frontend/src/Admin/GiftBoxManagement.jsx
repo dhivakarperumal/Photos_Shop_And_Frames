@@ -845,7 +845,7 @@ const GiftBoxManagement = () => {
             <form
               id="gift-box-form"
               onSubmit={saveBox}
-              className="flex-1 space-y-5 overflow-y-auto p-5 sm:p-7"
+              className="scrollbar-hide flex-1 space-y-5 overflow-y-auto p-5 sm:p-7"
             >
               <div className="grid gap-4 rounded-xl border border-[#e0e6df] bg-white p-4 sm:grid-cols-2">
                 <div className="sm:col-span-2 flex items-center gap-3 border-b border-[#edf0eb] pb-3">
@@ -930,19 +930,11 @@ const GiftBoxManagement = () => {
                     }
                   />
                 </Field>
-                <Field label="Product Image URL" wide>
+                <Field label="Product Images" wide>
                   <div className="flex gap-2">
-                    <input
-                      className={inputClass}
-                      value={form.image}
-                      onChange={(event) =>
-                        updateForm("image", event.target.value)
-                      }
-                      placeholder="/images/gift-box.png"
-                    />
                     <label
                       htmlFor="gift-image-upload"
-                      className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-lg bg-[#1f5d4d] px-3 py-2 text-xs font-bold text-white hover:bg-[#174b3e]"
+                      className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-[#1f5d4d] px-3 py-2 text-xs font-bold text-white hover:bg-[#174b3e]"
                     >
                       <ImagePlus className="h-4 w-4" /> Upload
                     </label>
