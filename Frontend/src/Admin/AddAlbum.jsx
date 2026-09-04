@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ImagePlus, Trash2 } from 'lucide-react';
 import api from '../api';
 
 const albumProduct = {
@@ -244,6 +245,15 @@ const AddAlbum = () => {
         if (firstUrl) {
           setFormData((prev) => ({ ...prev, thumbnailImage: firstUrl }));
         }
+      } else if (typeof type === 'string' && type.startsWith('gallery-replace-')) {
+        const replaceIndex = Number(type.replace('gallery-replace-', ''));
+        const [firstUrl] = uploadedUrls;
+        if (firstUrl && Number.isInteger(replaceIndex)) {
+          setFormData((prev) => ({
+            ...prev,
+            productImages: prev.productImages.map((image, index) => index === replaceIndex ? firstUrl : image),
+          }));
+        }
       } else {
         setFormData((prev) => {
           const productImages = Array.isArray(prev.productImages) ? [...prev.productImages] : [];
@@ -268,6 +278,17 @@ const AddAlbum = () => {
       if (type === 'thumbnail') setUploadingThumb(false);
       else setUploadingGallery(false);
     }
+  };
+
+  const removeThumbnail = () => {
+    setFormData((prev) => ({ ...prev, thumbnailImage: '' }));
+  };
+
+  const removeGalleryImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      productImages: prev.productImages.filter((_, imageIndex) => imageIndex !== index),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -439,20 +460,28 @@ const AddAlbum = () => {
               <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
                 <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Product Images</h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2">
+                  <div className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Thumbnail Image</span>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'thumbnail')} className={fieldStyle} />
+                    <input id="album-thumbnail-upload" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'thumbnail')} className="sr-only" />
                     {uploadingThumb && <span className="text-xs text-[#1a3c36]">Uploading...</span>}
-                    {formData.thumbnailImage && <img src={formData.thumbnailImage} alt="thumb" className="mt-2 h-24 w-24 rounded-xl object-cover border" />}
-                  </label>
-                  <label className="space-y-2">
+                    <div className="relative mt-2 h-28 w-28">
+                      {formData.thumbnailImage ? (
+                        <img src={formData.thumbnailImage} alt="thumb" className="h-full w-full rounded-xl border border-[#dfe2e5] object-cover" />
+                      ) : (
+                        <label htmlFor="album-thumbnail-upload" className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#cbd4d0] bg-white text-[#6e8379] hover:border-[#1a3c36] hover:text-[#1a3c36]"><ImagePlus className="h-5 w-5" /><span className="text-[10px] font-semibold">Add image</span></label>
+                      )}
+                      {formData.thumbnailImage && <div className="absolute right-1 top-1 flex gap-1"><label htmlFor="album-thumbnail-upload" title="Replace thumbnail" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#1a3c36] text-white shadow-md hover:bg-[#28574e]"><ImagePlus className="h-3.5 w-3.5" /></label><button type="button" onClick={removeThumbnail} title="Delete thumbnail" className="flex h-7 w-7 items-center justify-center rounded-full bg-[#b42318] text-white shadow-md hover:bg-[#8e1c14]"><Trash2 className="h-3.5 w-3.5" /></button></div>}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Product Images</span>
-                    <input type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'gallery')} className={fieldStyle} />
+                    <input id="album-gallery-upload" type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'gallery')} className="sr-only" />
                     {uploadingGallery && <span className="text-xs text-[#1a3c36]">Uploading...</span>}
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {formData.productImages.map((img, idx) => (img ? <img key={idx} src={img} alt={`gallery-${idx}`} className="h-20 w-20 rounded-xl object-cover border" /> : <div key={idx} className="h-20 w-20 rounded-xl border border-dashed border-[#dfe2e5] bg-white" />))}
+                      {formData.productImages.map((img, idx) => (img ? <div key={`${img}-${idx}`} className="relative h-20 w-20"><input id={`album-gallery-replace-${idx}`} type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `gallery-replace-${idx}`)} className="sr-only" /><img src={img} alt={`gallery-${idx}`} className="h-full w-full rounded-xl border border-[#dfe2e5] object-cover" /><div className="absolute right-1 top-1 flex gap-1"><label htmlFor={`album-gallery-replace-${idx}`} title="Replace image" className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#1a3c36] text-white shadow-md hover:bg-[#28574e]"><ImagePlus className="h-3 w-3" /></label><button type="button" onClick={() => removeGalleryImage(idx)} title="Delete image" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#b42318] text-white shadow-md hover:bg-[#8e1c14]"><Trash2 className="h-3 w-3" /></button></div></div> : null))}
+                      <label htmlFor="album-gallery-upload" title="Add gallery images" className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#cbd4d0] bg-white text-[#6e8379] hover:border-[#1a3c36] hover:text-[#1a3c36]"><ImagePlus className="h-4 w-4" /><span className="text-[10px] font-semibold">Add</span></label>
                     </div>
-                  </label>
+                  </div>
                 </div>
               </div>
             </div>

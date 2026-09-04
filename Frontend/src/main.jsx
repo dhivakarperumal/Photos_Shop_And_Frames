@@ -10,6 +10,7 @@ import Cart from './Componets/Cart/Cart.jsx'
 import Checkout from './Componets/Checkout/Checkout.jsx'
 import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
+import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
 import Account from './Componets/Auth/Account.jsx'
@@ -41,6 +42,8 @@ import Billing from './Admin/Billings/Billing.jsx'
 import NewBilling from './Admin/Billings/NewBilling.jsx'
 import OrderDetails from './Admin/Billings/OrderDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
+import AdminProfile from './Admin/AdminProfile.jsx'
+import GiftBoxManagement from './Admin/GiftBoxManagement.jsx'
 
 
 import { AuthProvider } from './PrivateRouter/AuthContext.jsx'
@@ -101,6 +104,10 @@ const router = createHashRouter([
         path: 'contact',
         element: <Contact />,
       },
+      {
+        path: 'gallery',
+        element: <Gallery />,
+      },
 
       {
         path: 'admin',
@@ -117,6 +124,10 @@ const router = createHashRouter([
           {
             path: 'products',
             element: <AdminProducts />,
+          },
+          {
+            path: 'gifts',
+            element: <GiftBoxManagement />,
           },
           {
             path: 'products/add',
@@ -225,6 +236,10 @@ const router = createHashRouter([
           {
             path: 'reviews',
             element: <AdminReviews />,
+          },
+          {
+            path: 'settings/profile',
+            element: <AdminProfile />,
           },
           {
             path: 'orders',

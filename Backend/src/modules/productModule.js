@@ -1,5 +1,16 @@
 const { getDB } = require("../config/db");
 
+const parseJson = (value, fallback) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
 /**
  * Product Module
  * Handles products with size variants (size-wise MRP, Offer, Stock),
@@ -132,26 +143,10 @@ const getAllProducts = async (filters = {}) => {
 
   return rows.map((row) => ({
     ...row,
-    size_variants: row.size_variants
-      ? typeof row.size_variants === "string"
-        ? JSON.parse(row.size_variants)
-        : row.size_variants
-      : [],
-    frame_data: row.frame_data
-      ? typeof row.frame_data === "string"
-        ? JSON.parse(row.frame_data)
-        : row.frame_data
-      : null,
-    slot_photos: row.slot_photos
-      ? typeof row.slot_photos === "string"
-        ? JSON.parse(row.slot_photos)
-        : row.slot_photos
-      : {},
-    product_images: row.product_images
-      ? typeof row.product_images === "string"
-        ? JSON.parse(row.product_images)
-        : row.product_images
-      : [],
+    size_variants: parseJson(row.size_variants, []),
+    frame_data: parseJson(row.frame_data, null),
+    slot_photos: parseJson(row.slot_photos, {}),
+    product_images: parseJson(row.product_images, []),
   }));
 };
 
@@ -170,26 +165,10 @@ const getProductById = async (idOrUuid) => {
   const row = rows[0];
   return {
     ...row,
-    size_variants: row.size_variants
-      ? typeof row.size_variants === "string"
-        ? JSON.parse(row.size_variants)
-        : row.size_variants
-      : [],
-    frame_data: row.frame_data
-      ? typeof row.frame_data === "string"
-        ? JSON.parse(row.frame_data)
-        : row.frame_data
-      : null,
-    slot_photos: row.slot_photos
-      ? typeof row.slot_photos === "string"
-        ? JSON.parse(row.slot_photos)
-        : row.slot_photos
-      : {},
-    product_images: row.product_images
-      ? typeof row.product_images === "string"
-        ? JSON.parse(row.product_images)
-        : row.product_images
-      : [],
+    size_variants: parseJson(row.size_variants, []),
+    frame_data: parseJson(row.frame_data, null),
+    slot_photos: parseJson(row.slot_photos, {}),
+    product_images: parseJson(row.product_images, []),
   };
 };
 

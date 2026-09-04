@@ -21,7 +21,7 @@ const FramesList = () => {
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [previewFrame, setPreviewFrame] = useState(null);
-  const [viewMode, setViewMode] = useState("card");
+  const [viewMode, setViewMode] = useState("table");
 
   const fetchFrames = async () => {
     try {
@@ -224,7 +224,7 @@ const FramesList = () => {
           viewMode === "table" ? (
             <div className="overflow-x-auto rounded-[16px] border border-[#e8e4df] bg-white">
               <table className="w-full min-w-[700px] border-collapse text-left">
-                <thead className="bg-[#f7f4ef] text-xs font-semibold text-[#333]">
+                <thead className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
                   <tr>
                     <th className="px-4 py-4">S.No</th>
                     <th className="px-4 py-4">Frame</th>

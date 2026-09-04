@@ -63,6 +63,40 @@ async function ensureDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
+    const createEnquiriesTableQuery = `
+      CREATE TABLE IF NOT EXISTS enquiries (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        enquiry_id VARCHAR(100) NOT NULL UNIQUE,
+        customer_name VARCHAR(255) NOT NULL,
+        mobile_number VARCHAR(50) NOT NULL,
+        whatsapp_number VARCHAR(50),
+        email VARCHAR(255),
+        enquiry_type VARCHAR(100),
+        product_category VARCHAR(255),
+        product_name VARCHAR(255),
+        frame_image VARCHAR(500),
+        quantity INT DEFAULT 1,
+        budget DECIMAL(10,2) DEFAULT 0,
+        message TEXT,
+        size VARCHAR(100),
+        frame_type VARCHAR(255),
+        customization TEXT,
+        reference_image VARCHAR(500),
+        uploaded_images JSON NULL,
+        status VARCHAR(50) DEFAULT 'New',
+        priority VARCHAR(50) DEFAULT 'Medium',
+        source VARCHAR(100),
+        assigned_to VARCHAR(255),
+        follow_up_date DATE NULL,
+        follow_up_notes TEXT,
+        quotation_amount DECIMAL(10,2) DEFAULT 0,
+        created_at DATE NULL,
+        updated_at DATE NULL,
+        KEY idx_enquiry_status (status),
+        KEY idx_enquiry_follow_up (follow_up_date)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     const createAlbumsTableQuery = `
       CREATE TABLE IF NOT EXISTS albums (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -119,6 +153,40 @@ async function ensureDatabaseSchema() {
         KEY idx_product_id (product_id),
         KEY idx_category (category),
         KEY idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
+    const createGiftBoxesTableQuery = `
+      CREATE TABLE IF NOT EXISTS gift_boxes (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        gift_box_id VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        sub_category VARCHAR(255),
+        description TEXT,
+        brand VARCHAR(255),
+        material VARCHAR(255),
+        box_size VARCHAR(100),
+        color VARCHAR(100),
+        theme VARCHAR(255),
+        box_type VARCHAR(100),
+        mrp DECIMAL(10,2) DEFAULT 0,
+        discount_percentage DECIMAL(5,2) DEFAULT 0,
+        selling_price DECIMAL(10,2) DEFAULT 0,
+        current_stock INT DEFAULT 0,
+        stock_status VARCHAR(50) DEFAULT 'Available',
+        image VARCHAR(500),
+        images JSON,
+        customization JSON,
+        gift_items JSON,
+        orders INT DEFAULT 0,
+        sales_today DECIMAL(10,2) DEFAULT 0,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        KEY idx_gift_category (category),
+        KEY idx_gift_status (stock_status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
@@ -229,7 +297,19 @@ async function ensureDatabaseSchema() {
 
     await connection.query(createUsersTableQuery);
     await connection.query(createCategoriesTableQuery);
+    await connection.query(createEnquiriesTableQuery);
+    try {
+      await connection.query(`ALTER TABLE enquiries ADD COLUMN uploaded_images JSON NULL`);
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    try {
+      await connection.query(`ALTER TABLE enquiries ADD COLUMN frame_image VARCHAR(500) NULL AFTER product_name`);
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createAlbumsTableQuery);
+    await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
     try {

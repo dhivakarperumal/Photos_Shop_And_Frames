@@ -17,6 +17,7 @@ const { initDB } = require("./src/config/db");
 const { upload } = require("./src/config/multerConfig");
 const usersRouter = require("./src/routers/usersRouter");
 const categoryRouter = require("./src/routers/categoryRouter");
+const enquiryRouter = require("./src/routers/enquiryRouter");
 const frameRouter = require("./src/routers/frameRouter");
 const productRouter = require("./src/routers/productRouter");
 const bannerRouter = require("./src/routers/bannerRouter");
@@ -28,6 +29,7 @@ const couponRouter = require("./src/routers/couponRouter");
 const customizationRouter = require("./src/routers/customizationRouter");
 const cartRouter = require("./src/routers/cartRouter");
 const orderRouter = require("./src/routers/orderRouter");
+const giftBoxRouter = require("./src/routers/giftBoxRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -98,6 +100,7 @@ app.get("/api/health", (req, res) => res.json({ ok: true, env: process.env.NODE_
 
 app.use("/api/users", usersRouter);
 app.use("/api/categories", categoryRouter);
+app.use("/api/enquiries", enquiryRouter);
 app.use("/api/frames", frameRouter);
 app.use("/api/products", productRouter);
 app.use("/api/reviews", reviewRouter);
@@ -109,6 +112,7 @@ app.use("/api/coupons", couponRouter);
 app.use("/api/customizations", customizationRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
+app.use("/api/gift-boxes", giftBoxRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({
