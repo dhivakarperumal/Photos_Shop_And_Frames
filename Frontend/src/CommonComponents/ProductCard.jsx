@@ -1,4 +1,4 @@
-import { Eye, ImagePlus, Package } from "lucide-react";
+import { Eye, ImagePlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ProductCard = ({ product }) => {
