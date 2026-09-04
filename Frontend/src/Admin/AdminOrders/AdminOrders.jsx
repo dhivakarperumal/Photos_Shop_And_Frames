@@ -69,6 +69,33 @@ const normalizeStatus = (status) =>
 const statusName = (status) =>
   orderStatuses.find((option) => option.id === normalizeStatus(status))?.name || status;
 
+const enquiryDefaults = {
+  enquiryId: "ENQ001",
+  customerName: "Dhivakar",
+  mobileNumber: "9876543210",
+  whatsappNumber: "9876543210",
+  email: "",
+  enquiryType: "Photo Frame",
+  productCategory: "Frames",
+  productName: "Customized LED Photo Frame",
+  quantity: 2,
+  budget: 1500,
+  message: "Need customized birthday photo frame",
+  size: "12 x 18 Inches",
+  frameType: "Wooden Frame",
+  customization: "Photo + Name + Date",
+  referenceImage: "",
+  status: "New",
+  priority: "Medium",
+  source: "WhatsApp",
+  assignedTo: "Admin",
+  followUpDate: "2026-09-05",
+  followUpNotes: "",
+  quotationAmount: 1200,
+  createdAt: "2026-09-04",
+  updatedAt: "2026-09-04",
+};
+
 const getStatusOptions = (currentStatus) => {
   const normalizedStatus = normalizeStatus(currentStatus);
   const workflowIndex = orderStatuses.findIndex((option) => option.id === normalizedStatus);
@@ -104,6 +131,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     courier_name: "",
   });
   const [statusPopupOrderId, setStatusPopupOrderId] = useState(null);
+  const [showEnquiryPopup, setShowEnquiryPopup] = useState(false);
+  const [enquiry, setEnquiry] = useState(enquiryDefaults);
+  const [enquiryCategories, setEnquiryCategories] = useState([]);
+  const [loadingEnquiryCategories, setLoadingEnquiryCategories] = useState(false);
+  const enquiryTypes = [...new Set(enquiryCategories.map((category) => String(category.category_type || "").trim()).filter(Boolean))];
 
   const fetchOrders = async () => {
     try {
@@ -151,6 +183,26 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     fetchOrders();
   }, [activeStatus, allowedStatuses, todayOnly]);
 
+  useEffect(() => {
+    if (!showEnquiryPopup) return;
+
+    const fetchEnquiryCategories = async () => {
+      try {
+        setLoadingEnquiryCategories(true);
+        const response = await api.get("/categories");
+        const categories = Array.isArray(response.data?.data) ? response.data.data : [];
+        setEnquiryCategories(categories.filter((category) => category.status !== "Inactive"));
+      } catch (error) {
+        console.warn("Could not fetch enquiry categories:", error);
+        setEnquiryCategories([]);
+      } finally {
+        setLoadingEnquiryCategories(false);
+      }
+    };
+
+    fetchEnquiryCategories();
+  }, [showEnquiryPopup]);
+
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
   const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -158,6 +210,18 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const handleSearch = (e) => {
     e.preventDefault();
     fetchOrders();
+  };
+
+  const handleEnquiryChange = (event) => {
+    const { name, value } = event.target;
+    setEnquiry((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const handleEnquirySubmit = (event) => {
+    event.preventDefault();
+    setEnquiry((previous) => ({ ...previous, updatedAt: new Date().toISOString().slice(0, 10) }));
+    setShowEnquiryPopup(false);
+    toast.success("New enquiry saved successfully");
   };
 
   const handleViewOrder = async (orderId) => {
@@ -367,6 +431,15 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             <Search className="absolute left-3 top-3 h-4 w-4 text-[#999]" />
           </form>
           <div className="flex flex-wrap items-center justify-end gap-3 sm:ml-auto">
+            {showNewOrderButton && (
+              <button
+                type="button"
+                onClick={() => setShowEnquiryPopup(true)}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1a3c36] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
+              >
+                <Plus className="h-4 w-4" /> Add New Order
+              </button>
+            )}
             <div className="flex items-center gap-2">
                 
                 <select value={activeStatus} onChange={(event) => setActiveStatus(event.target.value)} className="h-10 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#b07838]" aria-label="Filter orders by status">
@@ -923,6 +996,84 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showEnquiryPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-enquiry-title"
+          onMouseDown={(event) => event.target === event.currentTarget && setShowEnquiryPopup(false)}
+        >
+          <form onSubmit={handleEnquirySubmit} className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-[#e8dfd2] bg-white p-5 shadow-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-7">
+            <div className="flex items-start justify-between gap-4 border-b border-[#f0e8dc] pb-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#b07838]">Enquiry to order</p>
+                <h2 id="new-enquiry-title" className="mt-1 text-xl font-black text-[#1a3c36]">Add New Order</h2>
+                <p className="mt-1 text-xs text-[#66736e]">Capture the customer requirements and follow-up details.</p>
+              </div>
+              <button type="button" onClick={() => setShowEnquiryPopup(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f4eee6] text-[#555] hover:bg-[#e7dfd4]" aria-label="Close new order popup">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-5 text-xs">
+              <section>
+                <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Customer Details</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[["enquiryId", "Enquiry ID"], ["customerName", "Customer Name"], ["mobileNumber", "Mobile Number"], ["whatsappNumber", "WhatsApp Number"], ["email", "Email"]].map(([name, label]) => (
+                    <label key={name} className={name === "customerName" ? "lg:col-span-2" : ""}>
+                      <span className="mb-1.5 block font-semibold text-[#66736e]">{label}</span>
+                      <input name={name} value={enquiry[name]} onChange={handleEnquiryChange} type={name === "email" ? "email" : "text"} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" />
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Enquiry Details</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Enquiry Type</span><select name="enquiryType" value={enquiry.enquiryType} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading types..." : "Select enquiry type"}</option>{!enquiryTypes.includes(enquiry.enquiryType) && enquiry.enquiryType && <option value={enquiry.enquiryType}>{enquiry.enquiryType}</option>}{enquiryTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Category</span><select name="productCategory" value={enquiry.productCategory} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading categories..." : "Select category"}</option>{!enquiryCategories.some((category) => category.category_name === enquiry.productCategory) && enquiry.productCategory && <option value={enquiry.productCategory}>{enquiry.productCategory}</option>}{enquiryCategories.map((category) => <option key={category.category_id || category.id || category.category_name} value={category.category_name}>{category.category_name}</option>)}</select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Name</span><input name="productName" value={enquiry.productName} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Quantity</span><input name="quantity" value={enquiry.quantity} onChange={handleEnquiryChange} type="number" min="1" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Budget (₹)</span><input name="budget" value={enquiry.budget} onChange={handleEnquiryChange} type="number" min="0" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label className="sm:col-span-2 lg:col-span-3"><span className="mb-1.5 block font-semibold text-[#66736e]">Message</span><textarea name="message" value={enquiry.message} onChange={handleEnquiryChange} rows="2" className="w-full resize-none rounded-lg border border-[#d8cfc3] px-3 py-2 outline-none focus:border-[#1a3c36]" /></label>
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Product Requirements</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[['size', 'Size'], ['frameType', 'Frame Type'], ['customization', 'Customization'], ['referenceImage', 'Reference Image URL']].map(([name, label]) => (
+                    <label key={name} className={name === 'customization' || name === 'referenceImage' ? 'lg:col-span-2' : ''}><span className="mb-1.5 block font-semibold text-[#66736e]">{label}</span><input name={name} value={enquiry[name]} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Status &amp; Follow-up</h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Status</span><select name="status" value={enquiry.status} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 font-semibold outline-none focus:border-[#1a3c36]"><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Confirmed</option><option>Converted</option><option>Closed</option></select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Priority</span><select name="priority" value={enquiry.priority} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 font-semibold outline-none focus:border-[#1a3c36]"><option>Low</option><option>Medium</option><option>High</option></select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Source</span><select name="source" value={enquiry.source} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 font-semibold outline-none focus:border-[#1a3c36]"><option>Walk-in</option><option>WhatsApp</option><option>Instagram</option><option>Website</option><option>Phone Call</option></select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Assigned To</span><input name="assignedTo" value={enquiry.assignedTo} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label className="sm:col-span-2"><span className="mb-1.5 block font-semibold text-[#66736e]">Follow-up Notes</span><textarea name="followUpNotes" value={enquiry.followUpNotes} onChange={handleEnquiryChange} rows="2" className="w-full resize-none rounded-lg border border-[#d8cfc3] px-3 py-2 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Next Follow-up Date</span><input name="followUpDate" value={enquiry.followUpDate} onChange={handleEnquiryChange} type="date" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Quotation Amount (₹)</span><input name="quotationAmount" value={enquiry.quotationAmount} onChange={handleEnquiryChange} type="number" min="0" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Created Date</span><input name="createdAt" value={enquiry.createdAt} onChange={handleEnquiryChange} type="date" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Updated Date</span><input name="updatedAt" value={enquiry.updatedAt} onChange={handleEnquiryChange} type="date" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                </div>
+              </section>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-[#f0e8dc] pt-4">
+              <button type="button" onClick={() => setShowEnquiryPopup(false)} className="rounded-xl border border-[#d8cfc3] px-4 py-2.5 text-xs font-bold text-[#66736e] hover:bg-[#faf8f4]">Cancel</button>
+              <button type="submit" className="rounded-xl bg-[#1a3c36] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-[#235048]">Save Enquiry</button>
+            </div>
+          </form>
         </div>
       )}
     </div>
