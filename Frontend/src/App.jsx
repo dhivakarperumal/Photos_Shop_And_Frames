@@ -30,7 +30,6 @@ function App() {
 
   return (
     <section>
-      {/* {showPublicChrome && <Header />} */}
       {showPublicChrome && (
         <div className="print:hidden">
           <Navbar />
@@ -53,7 +52,6 @@ function App() {
         }}
       />
       {showPublicChrome && <Footer />}
-      {/* {showPublicChrome && <Footer />} */}
     </section>
   );
 }
