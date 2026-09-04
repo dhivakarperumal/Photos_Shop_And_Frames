@@ -808,7 +808,7 @@ const GiftBoxManagement = () => {
           <div className={viewMode === "grid" ? "hidden" : "overflow-x-auto"}>
             <table className="w-full min-w-[1260px] text-left text-sm">
               <thead>
-                <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
+                <tr className="rounded-md bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
                   <th className="px-5 py-3 font-bold">S.No</th>
                   <th className="px-3 py-3 font-bold">Gift Box Name</th>
                   <th className="px-5 py-3 font-bold">Image</th>
