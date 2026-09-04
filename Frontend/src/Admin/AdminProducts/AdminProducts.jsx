@@ -39,7 +39,7 @@ const AdminProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [sortBy, setSortBy] = useState('latest');
-  const [viewMode, setViewMode] = useState('card');
+  const [viewMode, setViewMode] = useState('table');
   const [selectedProductView, setSelectedProductView] = useState(null);
 
   const fetchProducts = async () => {
@@ -400,7 +400,8 @@ const AdminProducts = () => {
                   ))}
                 </div>
               ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-hidden rounded-md border border-[#e8e4df]">
+                <div className="overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-0">
                   <thead>
                     <tr className="bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
@@ -508,6 +509,7 @@ const AdminProducts = () => {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
               )}
 
