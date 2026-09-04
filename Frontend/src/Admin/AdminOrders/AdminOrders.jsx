@@ -25,9 +25,10 @@ import {
   User,
   X,
   XCircle,
-  Sparkles
+  Sparkles,
+  Upload
 } from "lucide-react";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 import toast from "react-hot-toast";
 
 const orderStatuses = [
@@ -69,6 +70,34 @@ const normalizeStatus = (status) =>
 const statusName = (status) =>
   orderStatuses.find((option) => option.id === normalizeStatus(status))?.name || status;
 
+const imageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  if (/^(data:|blob:|https?:\/\/)/i.test(value)) return value;
+  const baseUrl = API_URL.replace(/\/api\/?$/, "");
+  return `${baseUrl}${value.startsWith("/") ? value : `/${value}`}`;
+};
+
+const productPhotos = (value) => {
+  if (!value) return [];
+  const photos = typeof value === "string" ? (() => {
+    try { return JSON.parse(value); } catch { return []; }
+  })() : value;
+  if (Array.isArray(photos)) return photos.map(imageUrl).filter(Boolean);
+  if (typeof photos === "object") return Object.values(photos).map((photo) => imageUrl(typeof photo === "string" ? photo : photo?.url || photo?.preview)).filter(Boolean);
+  return [];
+};
+
+const productPhotoEntries = (value) => {
+  if (!value) return [];
+  const photos = typeof value === "string" ? (() => {
+    try { return JSON.parse(value); } catch { return {}; }
+  })() : value;
+  if (!photos || typeof photos !== "object" || Array.isArray(photos)) return [];
+  return Object.entries(photos)
+    .map(([slotId, photo]) => [slotId, imageUrl(typeof photo === "string" ? photo : photo?.url || photo?.preview)])
+    .filter(([, photo]) => photo);
+};
+
 const enquiryDefaults = {
   enquiryId: "ENQ001",
   customerName: "Dhivakar",
@@ -76,7 +105,7 @@ const enquiryDefaults = {
   whatsappNumber: "9876543210",
   email: "",
   enquiryType: "Frame",
-  productCategory: "Frames",
+  productCategory: "Photo Frames",
   productName: "Customized LED Photo Frame",
   quantity: 2,
   budget: 1500,
@@ -134,11 +163,18 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [showEnquiryPopup, setShowEnquiryPopup] = useState(false);
   const [enquiry, setEnquiry] = useState(enquiryDefaults);
   const [enquiryCategories, setEnquiryCategories] = useState([]);
+  const [enquiryProducts, setEnquiryProducts] = useState([]);
   const [loadingEnquiryCategories, setLoadingEnquiryCategories] = useState(false);
+  const [enquiryUploadedPhotos, setEnquiryUploadedPhotos] = useState([]);
+  const [enquiryReplacedPhotos, setEnquiryReplacedPhotos] = useState({});
   const enquiryTypes = [...new Set(enquiryCategories.map((category) => String(category.category_type || "").trim()).filter(Boolean))];
   const enquiryProductCategories = enquiryCategories.filter((category) =>
     String(category.category_type || "").trim().toLowerCase() === String(enquiry.enquiryType || "").trim().toLowerCase()
   );
+  const enquiryCategoryProducts = enquiryProducts.filter((product) =>
+    String(product.category || "").trim().toLowerCase() === String(enquiry.productCategory || "").trim().toLowerCase()
+  );
+  const selectedEnquiryProduct = enquiryProducts.find((product) => product.product_name === enquiry.productName);
 
   const fetchOrders = async () => {
     try {
@@ -192,12 +228,18 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     const fetchEnquiryCategories = async () => {
       try {
         setLoadingEnquiryCategories(true);
-        const response = await api.get("/categories");
-        const categories = Array.isArray(response.data?.data) ? response.data.data : [];
+        const [categoryResponse, productResponse] = await Promise.all([
+          api.get("/categories"),
+          api.get("/products"),
+        ]);
+        const categories = Array.isArray(categoryResponse.data?.data) ? categoryResponse.data.data : [];
+        const products = Array.isArray(productResponse.data?.data) ? productResponse.data.data : [];
         setEnquiryCategories(categories);
+        setEnquiryProducts(products);
       } catch (error) {
         console.warn("Could not fetch enquiry categories:", error);
         setEnquiryCategories([]);
+        setEnquiryProducts([]);
       } finally {
         setLoadingEnquiryCategories(false);
       }
@@ -217,11 +259,66 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const handleEnquiryChange = (event) => {
     const { name, value } = event.target;
+    const selectedProduct = name === "productName"
+      ? enquiryProducts.find((product) => product.product_name === value)
+      : null;
     setEnquiry((previous) => ({
       ...previous,
       [name]: value,
-      ...(name === "enquiryType" ? { productCategory: "" } : {}),
+      ...(name === "enquiryType" ? { productCategory: "", productName: "" } : {}),
+      ...(name === "productCategory" ? { productName: "" } : {}),
+      ...(selectedProduct ? {
+        size: selectedProduct.size_variants?.[0]?.size || "",
+        frameType: selectedProduct.frame_data?.frame_name || "",
+      } : {}),
     }));
+    if (name === "enquiryType" || name === "productCategory" || name === "productName") {
+      setEnquiryUploadedPhotos([]);
+      setEnquiryReplacedPhotos({});
+    }
+  };
+
+  const handleEnquiryPhotoUpload = async (event) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    if (!files.length) return;
+
+    const formData = new FormData();
+    formData.append("folder", "products");
+    files.forEach((file) => formData.append("files", file));
+
+    try {
+      const response = await api.post("/upload", formData);
+      const uploadedUrls = response.data?.urls || (response.data?.url ? [response.data.url] : []);
+      setEnquiryUploadedPhotos((previous) => [...previous, ...uploadedUrls.map(imageUrl)]);
+      toast.success(`${uploadedUrls.length} photo${uploadedUrls.length === 1 ? "" : "s"} uploaded`);
+    } catch (error) {
+      console.error("Enquiry photo upload error:", error);
+      toast.error("Photo upload failed");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleReplaceEnquiryPhoto = async (event, photoIndex) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+
+    const formData = new FormData();
+    formData.append("folder", "products");
+    formData.append("file", file);
+
+    try {
+      const response = await api.post("/upload", formData);
+      const uploadedUrl = response.data?.url || response.data?.urls?.[0] || "";
+      if (!uploadedUrl) return;
+      setEnquiryReplacedPhotos((previous) => ({ ...previous, [photoIndex]: imageUrl(uploadedUrl) }));
+      toast.success("Photo replaced successfully");
+    } catch (error) {
+      console.error("Replace enquiry photo error:", error);
+      toast.error("Photo replacement failed");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const handleEnquirySubmit = (event) => {
@@ -1044,18 +1141,33 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Enquiry Type</span><select name="enquiryType" value={enquiry.enquiryType} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading types..." : "Select enquiry type"}</option>{!enquiryTypes.includes(enquiry.enquiryType) && enquiry.enquiryType && <option value={enquiry.enquiryType}>{enquiry.enquiryType}</option>}{enquiryTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Category</span><select name="productCategory" value={enquiry.productCategory} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading categories..." : "Select category"}</option>{!enquiryProductCategories.some((category) => category.category_name === enquiry.productCategory) && enquiry.productCategory && <option value={enquiry.productCategory}>{enquiry.productCategory}</option>}{enquiryProductCategories.map((category) => <option key={category.category_id || category.id || category.category_name} value={category.category_name}>{category.category_name}</option>)}</select></label>
-                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Name</span><input name="productName" value={enquiry.productName} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Name</span><select name="productName" value={enquiry.productName} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories || !enquiry.productCategory} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading products..." : "Select product"}</option>{!enquiryCategoryProducts.some((product) => product.product_name === enquiry.productName) && enquiry.productName && <option value={enquiry.productName}>{enquiry.productName}</option>}{enquiryCategoryProducts.map((product) => <option key={product.id || product.uuid || product.product_name} value={product.product_name}>{product.product_name}</option>)}</select></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Quantity</span><input name="quantity" value={enquiry.quantity} onChange={handleEnquiryChange} type="number" min="1" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Budget (₹)</span><input name="budget" value={enquiry.budget} onChange={handleEnquiryChange} type="number" min="0" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
                   <label className="sm:col-span-2 lg:col-span-3"><span className="mb-1.5 block font-semibold text-[#66736e]">Message</span><textarea name="message" value={enquiry.message} onChange={handleEnquiryChange} rows="2" className="w-full resize-none rounded-lg border border-[#d8cfc3] px-3 py-2 outline-none focus:border-[#1a3c36]" /></label>
                 </div>
+                {selectedEnquiryProduct && (
+                  <div className="mt-4 grid gap-4 rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-4 md:grid-cols-[180px_1fr]">
+                    <div className="relative flex min-h-36 items-center justify-center overflow-hidden rounded-lg border border-[#e8dfd2] bg-white">
+                      {imageUrl(selectedEnquiryProduct.frame_data?.frame_image || selectedEnquiryProduct.product_images?.[0]) ? <div className="relative aspect-[3/4] h-44 w-full max-w-36 overflow-hidden"><img src={imageUrl(selectedEnquiryProduct.frame_data?.frame_image || selectedEnquiryProduct.product_images?.[0])} alt={selectedEnquiryProduct.product_name} className="absolute inset-0 h-full w-full object-contain" />{(selectedEnquiryProduct.frame_data?.photo_slots || []).map((slot) => { const photoIndex = productPhotoEntries(selectedEnquiryProduct.slot_photos).findIndex(([slotId]) => slotId === slot.id); const photo = productPhotoEntries(selectedEnquiryProduct.slot_photos).find(([slotId]) => slotId === slot.id)?.[1]; return photo ? <img key={slot.id} src={enquiryReplacedPhotos[photoIndex] || photo} alt={slot.name || "Uploaded frame photo"} className="absolute object-cover" style={{ top: slot.top, left: slot.left, width: slot.width, height: slot.height, borderRadius: slot.shape === "circle" ? "9999px" : undefined }} /> : null; })}</div> : <Package className="h-8 w-8 text-[#b7beb9]" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-[#1a3c36]">{selectedEnquiryProduct.product_name}</p>
+                      <p className="mt-1 text-xs text-[#66736e]">{selectedEnquiryProduct.description || "No product description available."}</p>
+                      <div className="mt-3 flex items-center justify-between gap-2"><p className="text-xs font-semibold text-[#66736e]">Frame upload photos</p><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#1a3c36] px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-[#235048]"><Upload className="h-3.5 w-3.5" /> Upload Photos<input type="file" accept="image/*" multiple onChange={handleEnquiryPhotoUpload} className="hidden" /></label></div>
+                      {[...productPhotos(selectedEnquiryProduct.slot_photos), ...enquiryUploadedPhotos].length > 0 ? <div className="mt-2 flex flex-wrap gap-2">{[...productPhotos(selectedEnquiryProduct.slot_photos), ...enquiryUploadedPhotos].map((photo, index) => <div key={`${photo}-${index}`} className="group relative"><img src={enquiryReplacedPhotos[index] || photo} alt={`Frame upload ${index + 1}`} className="h-14 w-14 rounded-md border border-[#d8cfc3] object-cover" />{index < productPhotos(selectedEnquiryProduct.slot_photos).length && <label className="absolute inset-x-0 bottom-0 cursor-pointer bg-black/65 py-1 text-center text-[9px] font-bold text-white opacity-0 transition group-hover:opacity-100">Replace<input type="file" accept="image/*" onChange={(event) => handleReplaceEnquiryPhoto(event, index)} className="hidden" /></label>}</div>)}</div> : <p className="mt-1 text-xs text-[#8a918d]">No uploaded frame photos.</p>}
+                    </div>
+                  </div>
+                )}
               </section>
 
               <section>
                 <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Product Requirements</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {[['size', 'Size'], ['frameType', 'Frame Type'], ['customization', 'Customization'], ['referenceImage', 'Reference Image URL']].map(([name, label]) => (
-                    <label key={name} className={name === 'customization' || name === 'referenceImage' ? 'lg:col-span-2' : ''}><span className="mb-1.5 block font-semibold text-[#66736e]">{label}</span><input name={name} value={enquiry[name]} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Size</span><select name="size" value={enquiry.size} onChange={handleEnquiryChange} disabled={!selectedEnquiryProduct} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{selectedEnquiryProduct ? "Select size" : "Select product first"}</option>{!selectedEnquiryProduct?.size_variants?.some((variant) => variant.size === enquiry.size) && enquiry.size && <option value={enquiry.size}>{enquiry.size}</option>}{(selectedEnquiryProduct?.size_variants || []).map((variant) => <option key={variant.size} value={variant.size}>{variant.size}{variant.offer_price ? ` - ₹${variant.offer_price}` : ""}</option>)}</select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Frame Type</span><select name="frameType" value={enquiry.frameType} onChange={handleEnquiryChange} disabled={!selectedEnquiryProduct} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{selectedEnquiryProduct ? "Select frame type" : "Select product first"}</option>{selectedEnquiryProduct?.frame_data?.frame_name && <option value={selectedEnquiryProduct.frame_data.frame_name}>{selectedEnquiryProduct.frame_data.frame_name}</option>}{!selectedEnquiryProduct?.frame_data?.frame_name && enquiry.frameType && <option value={enquiry.frameType}>{enquiry.frameType}</option>}</select></label>
+                  {[['customization', 'Customization'], ['referenceImage', 'Reference Image URL']].map(([name, label]) => (
+                    <label key={name} className="lg:col-span-2"><span className="mb-1.5 block font-semibold text-[#66736e]">{label}</span><input name={name} value={enquiry[name]} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
                   ))}
                 </div>
               </section>
