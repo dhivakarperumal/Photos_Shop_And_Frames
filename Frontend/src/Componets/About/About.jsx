@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Camera, Heart, Layers3, Sparkles } from "lucide-react";
 import PageContainer from "../../CommonComponents/PageContainer";
+import PageHeader from "../../CommonComponents/PageHeader";
 
 const values = [
   {
@@ -22,6 +23,7 @@ const values = [
 
 const About = () => (
   <main className="min-h-screen overflow-hidden bg-[#f7f3ed] text-[#1d2925]">
+    <PageHeader title="About Us" />
     <section className="relative border-b border-[#e5d8c9] bg-[#1a3c36] text-[#f9f4ec]">
       <PageContainer className="relative py-14 sm:py-20 lg:py-24">
         <div className="grid items-end gap-12 lg:grid-cols-[1fr_0.9fr]">

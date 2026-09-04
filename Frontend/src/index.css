@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;600;700&family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
 /* @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&display=swap'); */
 /* @import url('https://fonts.googleapis.com/css2?family=Vollkorn:ital,wght@0,400..900;1,400..900&display=swap'); */
 @import "tailwindcss";
@@ -108,6 +108,22 @@ body {
   width: 0;
   height: 0;
   display: none;
+}
+
+@keyframes heroBannerFade {
+  from {
+    opacity: 0.35;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hero-banner-transition {
+  animation: heroBannerFade 700ms ease both;
 }
 
 

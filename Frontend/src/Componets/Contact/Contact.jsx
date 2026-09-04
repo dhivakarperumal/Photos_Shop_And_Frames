@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Clock3, Mail, MapPin, Phone, Send } from "lucide-react";
 import PageContainer from "../../CommonComponents/PageContainer";
+import PageHeader from "../../CommonComponents/PageHeader";
 
 const Contact = () => {
   const [sent, setSent] = useState(false);
@@ -14,6 +15,7 @@ const Contact = () => {
 
   return (
     <main className="min-h-screen bg-[#f7f3ed] text-[#1d2925]">
+      <PageHeader title="Contact Us" />
       <PageContainer className="py-12 sm:py-16 lg:py-20">
         <header className="grid gap-8 border-b border-[#e5d8c9] pb-12 lg:grid-cols-[1fr_0.8fr] lg:items-end lg:pb-16">
           <div><p className="text-xs font-bold uppercase tracking-[0.28em] text-[#b07838]">Let’s make room for it</p><h1 className="mt-4 max-w-2xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl">Tell us what you’re imagining.</h1></div>
