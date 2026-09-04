@@ -75,7 +75,7 @@ const enquiryDefaults = {
   mobileNumber: "9876543210",
   whatsappNumber: "9876543210",
   email: "",
-  enquiryType: "Photo Frame",
+  enquiryType: "Frame",
   productCategory: "Frames",
   productName: "Customized LED Photo Frame",
   quantity: 2,
@@ -136,6 +136,9 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [enquiryCategories, setEnquiryCategories] = useState([]);
   const [loadingEnquiryCategories, setLoadingEnquiryCategories] = useState(false);
   const enquiryTypes = [...new Set(enquiryCategories.map((category) => String(category.category_type || "").trim()).filter(Boolean))];
+  const enquiryProductCategories = enquiryCategories.filter((category) =>
+    String(category.category_type || "").trim().toLowerCase() === String(enquiry.enquiryType || "").trim().toLowerCase()
+  );
 
   const fetchOrders = async () => {
     try {
@@ -191,7 +194,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
         setLoadingEnquiryCategories(true);
         const response = await api.get("/categories");
         const categories = Array.isArray(response.data?.data) ? response.data.data : [];
-        setEnquiryCategories(categories.filter((category) => category.status !== "Inactive"));
+        setEnquiryCategories(categories);
       } catch (error) {
         console.warn("Could not fetch enquiry categories:", error);
         setEnquiryCategories([]);
@@ -214,7 +217,11 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const handleEnquiryChange = (event) => {
     const { name, value } = event.target;
-    setEnquiry((previous) => ({ ...previous, [name]: value }));
+    setEnquiry((previous) => ({
+      ...previous,
+      [name]: value,
+      ...(name === "enquiryType" ? { productCategory: "" } : {}),
+    }));
   };
 
   const handleEnquirySubmit = (event) => {
@@ -1036,7 +1043,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 <h3 className="mb-3 font-bold uppercase tracking-wider text-[#b07838]">Enquiry Details</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Enquiry Type</span><select name="enquiryType" value={enquiry.enquiryType} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading types..." : "Select enquiry type"}</option>{!enquiryTypes.includes(enquiry.enquiryType) && enquiry.enquiryType && <option value={enquiry.enquiryType}>{enquiry.enquiryType}</option>}{enquiryTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Category</span><select name="productCategory" value={enquiry.productCategory} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading categories..." : "Select category"}</option>{!enquiryCategories.some((category) => category.category_name === enquiry.productCategory) && enquiry.productCategory && <option value={enquiry.productCategory}>{enquiry.productCategory}</option>}{enquiryCategories.map((category) => <option key={category.category_id || category.id || category.category_name} value={category.category_name}>{category.category_name}</option>)}</select></label>
+                  <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Category</span><select name="productCategory" value={enquiry.productCategory} onChange={handleEnquiryChange} disabled={loadingEnquiryCategories} className="h-10 w-full rounded-lg border border-[#d8cfc3] bg-white px-3 outline-none focus:border-[#1a3c36] disabled:opacity-60"><option value="">{loadingEnquiryCategories ? "Loading categories..." : "Select category"}</option>{!enquiryProductCategories.some((category) => category.category_name === enquiry.productCategory) && enquiry.productCategory && <option value={enquiry.productCategory}>{enquiry.productCategory}</option>}{enquiryProductCategories.map((category) => <option key={category.category_id || category.id || category.category_name} value={category.category_name}>{category.category_name}</option>)}</select></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Product Name</span><input name="productName" value={enquiry.productName} onChange={handleEnquiryChange} className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Quantity</span><input name="quantity" value={enquiry.quantity} onChange={handleEnquiryChange} type="number" min="1" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
                   <label><span className="mb-1.5 block font-semibold text-[#66736e]">Budget (₹)</span><input name="budget" value={enquiry.budget} onChange={handleEnquiryChange} type="number" min="0" className="h-10 w-full rounded-lg border border-[#d8cfc3] px-3 outline-none focus:border-[#1a3c36]" /></label>
