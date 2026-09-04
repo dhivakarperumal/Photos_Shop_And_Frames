@@ -15,20 +15,20 @@ const FrameShowcase = ({ frames }) => {
       <PageContainer>
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[#d5a65a]"><Sparkles className="h-4 w-4" /> Frame collection</p>
+          <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.24em] text-[#d5a65a]"><Sparkles className="h-4 w-4" /> Frame collection</p>
           {/* <h2 className="mt-3 max-w-xl text-4xl font-black leading-none tracking-[-0.04em] sm:text-5xl">Give your memories a place to live.</h2>
           <p className="mt-4 max-w-lg text-sm leading-6 text-[#b9c1bc]">Handpicked frame styles made to turn everyday photographs into something worth looking at every day.</p> */}
         </div>
         <span className="self-start text-xs font-bold uppercase tracking-[0.18em] text-[#91a49b] md:self-auto">View our frame styles</span>
       </div>
 
-      <div className="mt-9 grid grid-cols-2 gap-2 rounded-xl bg-[#1d2b27] p-2 sm:grid-cols-4">
+      <div className="mt-9 flex w-fit max-w-full flex-wrap gap-2 rounded-xl bg-[#1d2b27] p-2">
         {["All", ...orientations].map((orientation) => (
           <button
             key={orientation}
             type="button"
             onClick={() => setSelectedOrientation(orientation)}
-            className={`rounded-lg px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] transition ${selectedOrientation === orientation ? "bg-[#d5a65a] text-[#14201d]" : "text-[#b9c1bc] hover:bg-[#293b35] hover:text-white"}`}
+            className={`rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] transition ${selectedOrientation === orientation ? "bg-[#d5a65a] text-[#14201d]" : "text-[#b9c1bc] hover:bg-[#293b35] hover:text-white"}`}
           >
             {orientation}
           </button>
