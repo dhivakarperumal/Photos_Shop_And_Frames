@@ -284,7 +284,7 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
-    const result = await userModule.updateUser(userId, {
+    const result = await userModule.updateUserByUserId(userId, {
       ...updateData,
       updated_by: req.user?.email || "system",
     });
@@ -300,6 +300,41 @@ const updateUserProfile = async (req, res) => {
       success: false,
       message: error.message || "Failed to update user profile",
     });
+  }
+};
+
+const getUserAddress = async (req, res) => {
+  try {
+    const address = await userModule.getLatestAddressByUserId(req.params.userId);
+    return res.status(200).json({ success: true, data: address });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to retrieve address" });
+  }
+};
+
+const updateUserAddress = async (req, res) => {
+  try {
+    const address = await userModule.saveAddressByUserId(req.params.userId, req.body);
+    return res.status(200).json({ success: true, message: "Address saved successfully", data: address });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to save address" });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword || newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "Current password and a new password of at least 8 characters are required" });
+    }
+    const passwordHash = await userModule.getPasswordHashByUserId(req.params.userId);
+    if (!passwordHash || !(await bcrypt.compare(currentPassword, passwordHash))) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+    await userModule.updatePasswordByUserId(req.params.userId, await bcrypt.hash(newPassword, 10));
+    return res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to change password" });
   }
 };
 
@@ -339,5 +374,8 @@ module.exports = {
   getAdminUser,
   updateAdminUser,
   updateUserProfile,
+  getUserAddress,
+  updateUserAddress,
+  changePassword,
   deleteUser,
 };
