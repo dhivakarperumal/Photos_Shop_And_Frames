@@ -40,6 +40,7 @@ import Billing from './Admin/Billings/Billing.jsx'
 import NewBilling from './Admin/Billings/NewBilling.jsx'
 import OrderDetails from './Admin/Billings/OrderDetails.jsx'
 import AdminLayout from './Admin/Adminpanel.jsx'
+import AdminProfile from './Admin/AdminProfile.jsx'
 
 
 import { AuthProvider } from './PrivateRouter/AuthContext.jsx'
@@ -220,6 +221,10 @@ const router = createHashRouter([
           {
             path: 'reviews',
             element: <AdminReviews />,
+          },
+          {
+            path: 'settings/profile',
+            element: <AdminProfile />,
           },
           {
             path: 'orders',

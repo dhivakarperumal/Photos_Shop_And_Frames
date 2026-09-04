@@ -21,7 +21,7 @@ const FramesList = () => {
   const [selectedOrientation, setSelectedOrientation] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [previewFrame, setPreviewFrame] = useState(null);
-  const [viewMode, setViewMode] = useState("card");
+  const [viewMode, setViewMode] = useState("table");
 
   const fetchFrames = async () => {
     try {
