@@ -41,12 +41,23 @@ const getWishlistByUser = async (userId) => {
     [userId],
   );
 
-  return rows.map((row) => ({
-    ...row,
-    product_images: parseJson(row.product_images, []),
-    frame_data: parseJson(row.frame_data, null),
-    size_variants: parseJson(row.size_variants, []),
-  }));
+  return rows.map((row) => {
+    const productImages = parseJson(row.product_images, []);
+    const frameData = parseJson(row.frame_data, null);
+    const sizeVariants = parseJson(row.size_variants, []);
+    const firstVariant = Array.isArray(sizeVariants) ? sizeVariants[0] || {} : {};
+    const price = Number(row.price || firstVariant.offer_price || firstVariant.mrp || 0);
+
+    return {
+      ...row,
+      image: row.image || productImages[0] || frameData?.frame_image || null,
+      price,
+      total_price: Number(row.total_price || price),
+      product_images: productImages,
+      frame_data: frameData,
+      size_variants: sizeVariants,
+    };
+  });
 };
 
 const addToWishlist = async (wishlistData) => {

@@ -309,9 +309,16 @@ export const StoreProvider = ({ children }) => {
                         productImages = [];
                     }
                 }
-                const variantImage = selectedVariant?.images?.[0] || productImages[0] || null;
-                
-                const price = parseFloat(selectedVariant?.sellingPrice || selectedVariant?.selling_price || product.offer_price || product.price || 0);
+                const variantImage = selectedVariant?.images?.[0] || productImages[0] || product.product_images?.[0] || null;
+                const price = parseFloat(
+                    selectedVariant?.offer_price ||
+                    selectedVariant?.sellingPrice ||
+                    selectedVariant?.selling_price ||
+                    selectedVariant?.mrp ||
+                    product.offer_price ||
+                    product.price ||
+                    0,
+                );
 
                 await api.post("/wishlist", {
                     user_id: user.user_id,
