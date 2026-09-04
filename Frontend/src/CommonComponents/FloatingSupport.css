@@ -40,12 +40,12 @@
 
 /* Colors - Primary Orange Theme */
 .support-item.chatbot {
-  background: linear-gradient(135deg, #F8740E, #e06509);
+  background: #f97316;
   box-shadow: 0 4px 18px rgba(248, 116, 14, 0.45);
 }
 
 .support-item.chatbot.chatbot-active {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #dc2626;
   box-shadow: 0 4px 18px rgba(239, 68, 68, 0.45);
 }
 
@@ -68,23 +68,23 @@
 }
 
 .support-item.whatsapp {
-  background: linear-gradient(135deg, #25d366, #128c7e);
+  background: #25d366;
   box-shadow: 0 4px 18px rgba(37, 211, 102, 0.45);
 }
 
 .support-item.call {
-  background: linear-gradient(135deg, #FF6A00, #e05e00);
+  background: #ff6a00;
   color: #ffffff;
   box-shadow: 0 4px 18px rgba(255, 106, 0, 0.45);
 }
 
 .support-item.scroll-top {
-  background: linear-gradient(135deg, #FF6A00, #e05e00);
+  background: #ff6a00;
   color: #ffffff;
   box-shadow: 0 4px 18px rgba(255, 106, 0, 0.45);
 }
 
-/* Tooltip - appears to the LEFT for right-side buttons */
+/* Tooltip appears to the left of the right-side buttons */
 .tooltip {
   position: absolute;
   right: 62px;

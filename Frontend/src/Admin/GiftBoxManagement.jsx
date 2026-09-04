@@ -689,27 +689,34 @@ const GiftBoxManagement = () => {
           </button>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {statCards.map(({ label, value, icon: Icon, accent, note }) => (
             <div
               key={label}
-              className="rounded-xl border border-[#e1e6df] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="relative flex min-h-[150px] flex-col overflow-hidden rounded-xl border border-[#e1e6df] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex flex-1 items-start gap-4">
                 <span
-                  className="flex h-9 w-9 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: `${accent}16`, color: accent }}
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ backgroundColor: accent }}
                 >
-                  <Icon className="h-4.5 w-4.5" />
+                  <Icon className="h-6 w-6" />
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-[#9aa39c]">
-                  {note}
-                </span>
+                <div className="min-w-0 pt-1">
+                  <p className="text-sm font-medium text-[#374151]">{label}</p>
+                  <p className="mt-2 truncate text-2xl font-bold leading-none text-[#111827]">
+                    {value}
+                  </p>
+                  <p className="mt-4 text-xs font-medium text-[#77837c]">{note}</p>
+                </div>
               </div>
-              <p className="mt-4 text-xl font-bold text-[#1e302b]">{value}</p>
-              <p className="mt-0.5 text-xs font-medium text-[#77837c]">
-                {label}
-              </p>
+              <div
+                className="pointer-events-none absolute bottom-0 left-0 h-6 w-full"
+                style={{
+                  backgroundColor: `${accent}55`,
+                  clipPath: "ellipse(65% 75% at 55% 100%)",
+                }}
+              />
             </div>
           ))}
         </section>
@@ -800,8 +807,8 @@ const GiftBoxManagement = () => {
 
           <div className={viewMode === "grid" ? "hidden" : "overflow-x-auto"}>
             <table className="w-full min-w-[1260px] text-left text-sm">
-              <thead className="bg-[#f7f9f6] text-[10px] uppercase tracking-[0.1em] text-[#7c8881]">
-                <tr>
+              <thead>
+                <tr className="rounded-md bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
                   <th className="px-5 py-3 font-bold">S.No</th>
                   <th className="px-3 py-3 font-bold">Gift Box Name</th>
                   <th className="px-5 py-3 font-bold">Image</th>

@@ -169,7 +169,7 @@ const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToCart, wishlist, openCart } = useContext(StoreContext);
+  const { addToCart, wishlist, toggleWishlist, openCart } = useContext(StoreContext);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +200,12 @@ const ProductDetails = () => {
   const [compositeServerUrl, setCompositeServerUrl] = useState(null);
 
   const fileInputRefs = useRef({});
+
+  const isFavorite = product
+    ? wishlist.some(
+        (item) => String(item.product_id || item.id || item._id) === String(product.id || product.product_id),
+      )
+    : false;
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -873,6 +879,15 @@ const ProductDetails = () => {
                 </span>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleWishlist?.(product, selectedVariant)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${isFavorite ? "border-[#d79d4a] bg-[#d79d4a] text-[#1d2925]" : "border-[#e5ded4] bg-[#faf8f5] text-[#777] hover:border-[#d79d4a] hover:text-[#b07838]"}`}
+                    aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Heart className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} />
+                  </button>
                   <span className="rounded-full border border-[#e5ded4] bg-[#faf8f5] px-2.5 py-0.5 text-[11px] font-semibold text-[#666]">
                     {product.orientation || "Portrait"}
                   </span>

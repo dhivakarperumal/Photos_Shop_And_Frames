@@ -25,6 +25,9 @@ export const StoreProvider = ({ children }) => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const openCart = useCallback(() => setIsCartOpen(true), []);
     const closeCart = useCallback(() => setIsCartOpen(false), []);
+    const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+    const openFavorites = useCallback(() => setIsFavoritesOpen(true), []);
+    const closeFavorites = useCallback(() => setIsFavoritesOpen(false), []);
 
     useEffect(() => {
         if (user) {
@@ -187,7 +190,7 @@ export const StoreProvider = ({ children }) => {
             return;
         }
 
-        const targetItem = wishlist.find((item) => item.id === wishlistItemId || item._id === wishlistItemId || item.product_id === wishlistItemId);
+        const targetItem = wishlist.find((item) => String(item.id || item._id || item.product_id) === String(wishlistItemId));
         const productId = targetItem?.product_id || wishlistItemId;
 
         try {
@@ -285,7 +288,7 @@ export const StoreProvider = ({ children }) => {
         }
 
         const productId = product.id || product.product_id;
-        const isAlready = wishlist.some(w => w.product_id === productId || w.id === productId);
+        const isAlready = wishlist.some((item) => String(item.product_id || item.id || item._id) === String(productId));
 
         try {
             if (isAlready) {
@@ -298,10 +301,24 @@ export const StoreProvider = ({ children }) => {
                 const variantColor = selectedVariant?.colorName || selectedVariant?.color || "";
                 
                 // Correctly parse images if they are stored as JSON strings
-                const productImages = typeof product.images === 'string' ? JSON.parse(product.images) : (product.images || []);
-                const variantImage = selectedVariant?.images?.[0] || productImages[0] || null;
-                
-                const price = parseFloat(selectedVariant?.sellingPrice || selectedVariant?.selling_price || product.offer_price || product.price || 0);
+                let productImages = product.images || [];
+                if (typeof productImages === "string") {
+                    try {
+                        productImages = JSON.parse(productImages);
+                    } catch {
+                        productImages = [];
+                    }
+                }
+                const variantImage = selectedVariant?.images?.[0] || productImages[0] || product.product_images?.[0] || null;
+                const price = parseFloat(
+                    selectedVariant?.offer_price ||
+                    selectedVariant?.sellingPrice ||
+                    selectedVariant?.selling_price ||
+                    selectedVariant?.mrp ||
+                    product.offer_price ||
+                    product.price ||
+                    0,
+                );
 
                 await api.post("/wishlist", {
                     user_id: user.user_id,
@@ -331,6 +348,7 @@ export const StoreProvider = ({ children }) => {
             loadingCart, loadingWishlist,
             fetchCart, fetchWishlist,
             isCartOpen, setIsCartOpen, openCart, closeCart,
+            isFavoritesOpen, openFavorites, closeFavorites,
             productsCache, setProductsCache,
             videosCache, setVideosCache,
             bannersCache, setBannersCache,
