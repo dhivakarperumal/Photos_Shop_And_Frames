@@ -54,9 +54,9 @@ const Shop = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#f7f3ed] py-10 ">
+    <main className="min-h-screen bg-[#f7f3ed]">
       <PageHeader title="Shop" />
-      <PageContainer>
+      <PageContainer className="py-10">
         <div className="">
           {/* HEADER */}
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">

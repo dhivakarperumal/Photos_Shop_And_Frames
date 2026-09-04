@@ -606,17 +606,9 @@ const ProductDetails = () => {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f8f5f0] px-4 py-8 md:px-8">
+    <main className="min-h-screen bg-[#f8f5f0]">
       <PageHeader title={product.product_name} />
-      <div className="mx-auto max-w-7xl">
-        {/* BREADCRUMB */}
-        <div className="mb-6 flex items-center gap-2 text-xs text-[#777]">
-          <Link to="/" className="hover:text-[#b07838]">Home</Link>
-          <span>/</span>
-          <Link to="/shop" className="hover:text-[#b07838]">Shop</Link>
-          <span>/</span>
-          <span className="font-semibold text-[#1d2925] truncate">{product.product_name}</span>
-        </div>
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
 
         {/* TWO-COLUMN PRODUCT WORKSPACE */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
