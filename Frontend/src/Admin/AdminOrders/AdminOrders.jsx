@@ -321,11 +321,19 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     }
   };
 
-  const handleEnquirySubmit = (event) => {
+  const handleEnquirySubmit = async (event) => {
     event.preventDefault();
-    setEnquiry((previous) => ({ ...previous, updatedAt: new Date().toISOString().slice(0, 10) }));
-    setShowEnquiryPopup(false);
-    toast.success("New enquiry saved successfully");
+    try {
+      const updatedAt = new Date().toISOString().slice(0, 10);
+      const response = await api.post("/enquiries", { ...enquiry, updatedAt });
+      if (!response.data?.success) throw new Error(response.data?.message || "Failed to save enquiry");
+      setEnquiry((previous) => ({ ...previous, updatedAt }));
+      setShowEnquiryPopup(false);
+      toast.success("New enquiry saved successfully");
+    } catch (error) {
+      console.error("Save enquiry error:", error);
+      toast.error(error.response?.data?.message || "Failed to save enquiry");
+    }
   };
 
   const handleViewOrder = async (orderId) => {

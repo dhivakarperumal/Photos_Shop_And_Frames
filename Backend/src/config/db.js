@@ -63,6 +63,38 @@ async function ensureDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `;
 
+    const createEnquiriesTableQuery = `
+      CREATE TABLE IF NOT EXISTS enquiries (
+        id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        enquiry_id VARCHAR(100) NOT NULL UNIQUE,
+        customer_name VARCHAR(255) NOT NULL,
+        mobile_number VARCHAR(50) NOT NULL,
+        whatsapp_number VARCHAR(50),
+        email VARCHAR(255),
+        enquiry_type VARCHAR(100),
+        product_category VARCHAR(255),
+        product_name VARCHAR(255),
+        quantity INT DEFAULT 1,
+        budget DECIMAL(10,2) DEFAULT 0,
+        message TEXT,
+        size VARCHAR(100),
+        frame_type VARCHAR(255),
+        customization TEXT,
+        reference_image VARCHAR(500),
+        status VARCHAR(50) DEFAULT 'New',
+        priority VARCHAR(50) DEFAULT 'Medium',
+        source VARCHAR(100),
+        assigned_to VARCHAR(255),
+        follow_up_date DATE NULL,
+        follow_up_notes TEXT,
+        quotation_amount DECIMAL(10,2) DEFAULT 0,
+        created_at DATE NULL,
+        updated_at DATE NULL,
+        KEY idx_enquiry_status (status),
+        KEY idx_enquiry_follow_up (follow_up_date)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+
     const createAlbumsTableQuery = `
       CREATE TABLE IF NOT EXISTS albums (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -229,6 +261,7 @@ async function ensureDatabaseSchema() {
 
     await connection.query(createUsersTableQuery);
     await connection.query(createCategoriesTableQuery);
+    await connection.query(createEnquiriesTableQuery);
     await connection.query(createAlbumsTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);
