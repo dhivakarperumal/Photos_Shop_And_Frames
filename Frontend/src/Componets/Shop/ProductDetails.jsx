@@ -32,6 +32,8 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
 import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
+import PageHeader from "../../CommonComponents/PageHeader";
+import PageContainer from "../../CommonComponents/PageContainer";
 
 /**
  * Generates an HTML5 canvas composite merging the frame template
@@ -551,7 +553,7 @@ const ProductDetails = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-[#f8f5f0]">
+      <div className="flex min-h-[70vh] items-center justify-center bg-[#f7f3ed]">
         <div className="text-center">
           <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-[#b07838] border-t-transparent" />
           <p className="mt-3 text-sm font-semibold text-[#666]">Loading product details...</p>
@@ -562,7 +564,7 @@ const ProductDetails = () => {
 
   if (!product) {
     return (
-      <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#f8f5f0] p-6 text-center">
+      <div className="flex min-h-[70vh] flex-col items-center justify-center bg-[#f7f3ed] p-6 text-center">
         <Package className="h-16 w-16 text-[#b9aa98]" />
         <h2 className="mt-4 text-2xl font-bold text-[#1d2925]">Product Not Found</h2>
         <p className="mt-1 text-sm text-[#777]">The product you are looking for does not exist or has been removed.</p>
@@ -605,16 +607,9 @@ const ProductDetails = () => {
   ];
 
   return (
-    <main className="min-h-screen bg-[#f8f5f0] px-4 py-8 md:px-8">
-      <div className="mx-auto max-w-7xl">
-        {/* BREADCRUMB */}
-        <div className="mb-6 flex items-center gap-2 text-xs text-[#777]">
-          <Link to="/" className="hover:text-[#b07838]">Home</Link>
-          <span>/</span>
-          <Link to="/shop" className="hover:text-[#b07838]">Shop</Link>
-          <span>/</span>
-          <span className="font-semibold text-[#1d2925] truncate">{product.product_name}</span>
-        </div>
+    <main className="min-h-screen bg-[#f7f3ed]">
+      <PageHeader title={product.product_name} />
+      <PageContainer className="py-10">
 
         {/* TWO-COLUMN PRODUCT WORKSPACE */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
@@ -1213,7 +1208,7 @@ const ProductDetails = () => {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
 
       {/* ================= CUSTOMIZATION CONFIRMATION MODAL ================= */}
       {isConfirmModalOpen && (

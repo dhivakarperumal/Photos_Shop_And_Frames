@@ -146,6 +146,73 @@ const updateUser = async (userId, updateData) => {
   }
 };
 
+const updateUserByUserId = async (userId, updateData) => {
+  const {
+    username,
+    mobile_number,
+    profile_image,
+    updated_by,
+  } = updateData;
+  const query = `
+    UPDATE users
+    SET username = ?, mobile_number = ?, profile_image = ?, updated_by = ?, updated_at = NOW()
+    WHERE user_id = ?
+  `;
+  const pool = getDB();
+  const [result] = await pool.query(query, [username, mobile_number || null, profile_image || null, updated_by || null, userId]);
+  return { success: true, message: "User updated successfully", affectedRows: result.affectedRows };
+};
+
+const getLatestAddressByUserId = async (userId) => {
+  const pool = getDB();
+  const [rows] = await pool.query(
+    `SELECT * FROM addresses WHERE user_id = ? OR customer_id = ? ORDER BY is_default DESC, updated_at DESC, id DESC LIMIT 1`,
+    [userId, userId],
+  );
+  return rows[0] || null;
+};
+
+const saveAddressByUserId = async (userId, address) => {
+  const pool = getDB();
+  const existing = await getLatestAddressByUserId(userId);
+  const values = [
+    address.customer_name || "",
+    address.mobile_number || "",
+    address.address_line1 || "",
+    address.address_line2 || "",
+    address.city || "",
+    address.district || "",
+    address.state || "",
+    address.country || "",
+    address.pincode || "",
+    address.landmark || "",
+    userId,
+  ];
+  if (existing) {
+    await pool.query(
+      `UPDATE addresses SET customer_name = ?, mobile_number = ?, address_line1 = ?, address_line2 = ?, city = ?, district = ?, state = ?, country = ?, pincode = ?, landmark = ?, updated_at = NOW() WHERE id = ?`,
+      [...values.slice(0, -1), existing.id],
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO addresses (address_id, user_id, customer_id, address_type, customer_name, mobile_number, address_line1, address_line2, city, district, state, country, pincode, landmark, is_default, status, created_by, updated_by) VALUES (UUID(), ?, ?, 'Shipping', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, 'Active', ?, ?)`,
+      [userId, userId, ...values.slice(0, -1), userId, userId],
+    );
+  }
+  return getLatestAddressByUserId(userId);
+};
+
+const getPasswordHashByUserId = async (userId) => {
+  const pool = getDB();
+  const [rows] = await pool.query("SELECT password FROM users WHERE user_id = ? LIMIT 1", [userId]);
+  return rows[0]?.password || null;
+};
+
+const updatePasswordByUserId = async (userId, password) => {
+  const pool = getDB();
+  await pool.query("UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?", [password, userId]);
+};
+
 // Delete user
 const deleteUser = async (userId) => {
   const query = "DELETE FROM users WHERE id = ?";
@@ -182,6 +249,11 @@ module.exports = {
   getUserByDatabaseId,
   getAllUsers,
   updateUser,
+  updateUserByUserId,
+  getLatestAddressByUserId,
+  saveAddressByUserId,
+  getPasswordHashByUserId,
+  updatePasswordByUserId,
   deleteUser,
   isEmailExists,
 };

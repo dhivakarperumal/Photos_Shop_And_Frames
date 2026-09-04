@@ -13,6 +13,7 @@ import Contact from './Componets/Contact/Contact.jsx'
 import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
+import Account from './Componets/Auth/Account.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
 import AdminOrders from './Admin/AdminOrders/AdminOrders.jsx'
 import NewOrderDetails from './Admin/AdminOrders/NewOrderDetails.jsx'
@@ -70,6 +71,10 @@ const router = createHashRouter([
       {
         path: 'register',
         element: <Register />,
+      },
+      {
+        path: 'account',
+        element: <PrivateRoute><Account /></PrivateRoute>,
       },
       {
         path: 'shop',
