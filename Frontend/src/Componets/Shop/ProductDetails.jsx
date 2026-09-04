@@ -32,6 +32,7 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
 import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
+import PageHeader from "../../CommonComponents/PageHeader";
 
 /**
  * Generates an HTML5 canvas composite merging the frame template
@@ -606,6 +607,7 @@ const ProductDetails = () => {
 
   return (
     <main className="min-h-screen bg-[#f8f5f0] px-4 py-8 md:px-8">
+      <PageHeader title={product.product_name} />
       <div className="mx-auto max-w-7xl">
         {/* BREADCRUMB */}
         <div className="mb-6 flex items-center gap-2 text-xs text-[#777]">

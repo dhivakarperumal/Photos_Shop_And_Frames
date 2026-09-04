@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import api from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 import ProductCard from "../../CommonComponents/ProductCard";
+import PageHeader from "../../CommonComponents/PageHeader";
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
@@ -54,6 +55,7 @@ const Shop = () => {
 
   return (
     <main className="min-h-screen bg-[#f7f3ed] py-10 ">
+      <PageHeader title="Shop" />
       <PageContainer>
         <div className="">
           {/* HEADER */}

@@ -1,44 +1,38 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import defaultBg from "/images/hi.jpg";
 
-const PageHeader = ({ title, background }) => {
-
-  const bgImage = background || defaultBg;
+const PageHeader = ({ title, background = "/images/pageheader.jpg" }) => {
 
   return (
     <div
-      className="relative w-full h-[160px] sm:h-[170px] md:h-[180px] lg:h-[200px] flex items-center justify-center text-white"
+      className="relative flex h-[170px] w-full items-center justify-center overflow-hidden text-white sm:h-[190px] md:h-[210px]"
       style={{
-        backgroundImage: `url(${bgImage})`,
+        backgroundImage: `url(${background})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        // backgroundRepeat: "no-repeat"
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/25"></div>
+      <div className="absolute inset-0 bg-[#17342f]/65"></div>
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-[#d5a65a]"></div>
 
-      {/* Content */}
-      <div className="relative text-center px-4">
+      <div className="relative px-4 text-center">
 
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-3">
+        <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-[#edc783]">Q Frame Studio</p>
+        <h1 className="text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
           {title}
         </h1>
 
-        {/* Breadcrumb */}
-        <div className="text-xs sm:text-sm md:text-base flex justify-center items-center gap-2">
+        <div className="mt-3 flex items-center justify-center gap-2 text-xs text-white/80 sm:text-sm">
 
           <Link
             to="/"
-            className=" hover:text-white/80 transition"
+            className="transition hover:text-[#edc783]"
           >
             Home
           </Link>
 
           <span>/</span>
 
-          <span className="text-gray-200">{title}</span>
+          <span className="text-white">{title}</span>
 
         </div>
 
