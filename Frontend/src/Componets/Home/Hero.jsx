@@ -594,7 +594,7 @@ const Hero = () => {
               gap-8
               lg:grid-cols-12
               lg:items-stretch
-                  lg:min-h-[560px]
+                  lg:min-h-[450px]
               lg:gap-10
               xl:gap-12
             "
@@ -851,7 +851,7 @@ const Hero = () => {
                 justify-center
                 sm:h-[360px]
                 lg:col-span-6
-                lg:h-[560px]
+                lg:h-[450px]
                 xl:col-span-6
               "
             >
