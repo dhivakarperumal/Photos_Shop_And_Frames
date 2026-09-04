@@ -10,6 +10,7 @@ import Cart from './Componets/Cart/Cart.jsx'
 import Checkout from './Componets/Checkout/Checkout.jsx'
 import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
+import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
 import PrivateRoute from './PrivateRouter/PrivateRouter.jsx'
@@ -96,6 +97,10 @@ const router = createHashRouter([
       {
         path: 'contact',
         element: <Contact />,
+      },
+      {
+        path: 'gallery',
+        element: <Gallery />,
       },
 
       {
