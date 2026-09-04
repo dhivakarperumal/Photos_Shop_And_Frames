@@ -51,10 +51,21 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, userProfile, role } = useAuth();
-  const { cart = [], wishlist = [], openCart, openFavorites } = useContext(StoreContext) || {};
+  const {
+    cart = [],
+    wishlist = [],
+    openCart,
+    openFavorites,
+  } = useContext(StoreContext) || {};
 
   const isLoggedIn = Boolean(user || userProfile);
-  const userDisplayName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || user?.username || "User";
+  const userDisplayName =
+    userProfile?.displayName ||
+    userProfile?.name ||
+    user?.displayName ||
+    user?.name ||
+    user?.username ||
+    "User";
   const userInitial = userDisplayName.charAt(0).toUpperCase();
 
   const handleConfirmLogout = () => {
@@ -125,19 +136,26 @@ const Navbar = () => {
   };
 
   const isServicesActive =
-    location.pathname === "/services" || location.pathname.startsWith("/services/");
+    location.pathname === "/services" ||
+    location.pathname.startsWith("/services/");
 
   const isWhoWeAreActive =
     whoWeAreLinks.some(
-      (link) => location.pathname === link.path || location.pathname.startsWith(link.path + "/")
+      (link) =>
+        location.pathname === link.path ||
+        location.pathname.startsWith(link.path + "/"),
     ) || location.pathname === "/achievements";
 
   const desktopLinkClass = ({ isActive }) =>
-    `text-base font-semibold  transition-colors ${isActive ? "text-primary" : "text-white hover:text-primary"
+    `text-base font-semibold  transition-colors ${
+      isActive ? "text-primary" : "text-white hover:text-primary"
     }`;
 
   const mobileLinkClass = ({ isActive }) =>
-    `flex items-center justify-between rounded-xl px-3 py-3 text-base font-medium transition ${isActive ? "bg-primary/10 text-primary" : "text-white/80 hover:bg-white/5 hover:text-white"
+    `flex items-center justify-between rounded-xl px-3 py-3 text-base font-medium transition ${
+      isActive
+        ? "bg-primary/10 text-primary"
+        : "text-white/80 hover:bg-white/5 hover:text-white"
     }`;
 
   return (
@@ -163,10 +181,18 @@ const Navbar = () => {
                   +91 98765 43210
                 </span>
                 <div className="flex items-center gap-2">
-                  <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-[13px] text-white transition hover:bg-white/10" aria-label="Facebook">
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-[13px] text-white transition hover:bg-white/10"
+                    aria-label="Facebook"
+                  >
                     <FiFacebook />
                   </button>
-                  <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-[13px] text-white transition hover:bg-white/10" aria-label="Instagram">
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-[13px] text-white transition hover:bg-white/10"
+                    aria-label="Instagram"
+                  >
                     <FiInstagram />
                   </button>
                 </div>
@@ -187,30 +213,60 @@ const Navbar = () => {
                   />
                 </div>
                 <div className="leading-none">
-                  <div className="text-[26px] font-black tracking-[-0.06em] text-[#1c1c1c]">Frame</div>
-                  <div className="mt-1 text-[9px] font-semibold tracking-[0.28em] text-[#6a5a49]">PHOTO STUDIO &amp; FRAME SHOP</div>
+                  <div className="text-[26px] font-black tracking-[-0.06em] text-[#1c1c1c]">
+                    Frame
+                  </div>
+                  <div className="mt-1 text-[9px] font-semibold tracking-[0.28em] text-[#6a5a49]">
+                    PHOTO STUDIO &amp; FRAME SHOP
+                  </div>
                 </div>
               </Link>
 
               <nav className="hidden items-center gap-7 xl:flex">
-                <NavLink to="/" className={({ isActive }) => `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}>
+                <NavLink
+                  to="/"
+                  className={({ isActive }) =>
+                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
+                  }
+                >
                   Home
                 </NavLink>
                 <div className="flex items-center gap-1 text-sm font-semibold text-[#1d1d1d]">
-                  <NavLink to="/shop" className="hover:text-[#d79d4a]">Shop</NavLink>
-               
+                  <NavLink to="/shop" className="hover:text-[#d79d4a]">
+                    Shop
+                  </NavLink>
                 </div>
-               
+
                 <div className="flex items-center gap-1 text-sm font-semibold text-[#1d1d1d]">
-                  <NavLink to="/frames" className="hover:text-[#d79d4a]">Frames</NavLink>
-                 
+                  <NavLink to="/frames" className="hover:text-[#d79d4a]">
+                    Frames
+                  </NavLink>
                 </div>
-                <NavLink to="/custom-frame" className={({ isActive }) => `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}>
+                <NavLink
+                  to="/custom-frame"
+                  className={({ isActive }) =>
+                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
+                  }
+                >
                   Custom Frame
                 </NavLink>
-               
-                <NavLink to="/gifts" className={({ isActive }) => `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}>
+
+                <NavLink
+                  to="/gifts"
+                  className={({ isActive }) =>
+                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
+                  }
+                >
                   Gifts
+                </NavLink>
+
+                <NavLink
+                  to="/shop?categoryType=album"
+                  className={({ isActive }) =>
+                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
+                  }
+                >
+                  Albums
                 </NavLink>
                 <div ref={dropdownRef} className="relative">
                   <button
@@ -218,20 +274,37 @@ const Navbar = () => {
                     onClick={() => toggleMenu("pages")}
                     aria-expanded={openMenu === "pages"}
                     aria-haspopup="menu"
-                    className={`flex items-center gap-1 text-sm font-semibold transition ${openMenu === "pages" || ["/gallery", "/about", "/contact"].includes(location.pathname) ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
+                    className={`flex items-center gap-1 text-sm font-semibold transition ${openMenu === "pages" || ["/gallery", "/about", "/contact"].includes(location.pathname) || (location.pathname === "/shop" && new URLSearchParams(location.search).get("categoryType") === "album") ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
                   >
                     Pages
-                    <FiChevronDown className={`transition-transform ${openMenu === "pages" ? "rotate-180" : ""}`} />
+                    <FiChevronDown
+                      className={`transition-transform ${openMenu === "pages" ? "rotate-180" : ""}`}
+                    />
                   </button>
                   {openMenu === "pages" && (
-                    <div className="absolute left-1/2 top-[calc(100%+32px)] z-50 w-48 -translate-x-1/2 rounded-xl border border-[#ede5da] bg-white p-2 shadow-[0_16px_35px_rgba(15,23,42,0.14)]">
-                      <NavLink to="/gallery" className={({ isActive }) => `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`}>
+                    <div className="absolute left-1/2 top-[calc(100%+20px)] z-50 w-48 -translate-x-1/2 rounded-xl border border-[#ede5da] bg-white p-2 shadow-[0_16px_35px_rgba(15,23,42,0.14)]">
+                      <NavLink
+                        to="/gallery"
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`
+                        }
+                      >
                         Gallery
                       </NavLink>
-                      <NavLink to="/about" className={({ isActive }) => `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`}>
+                      <NavLink
+                        to="/about"
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`
+                        }
+                      >
                         About Us
                       </NavLink>
-                      <NavLink to="/contact" className={({ isActive }) => `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`}>
+                      <NavLink
+                        to="/contact"
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`
+                        }
+                      >
                         Contact Us
                       </NavLink>
                     </div>
@@ -240,13 +313,28 @@ const Navbar = () => {
               </nav>
 
               <div className="flex items-center gap-3">
-                <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Search">
+                <button
+                  type="button"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  aria-label="Search"
+                >
                   <FiSearch className="text-lg" />
                 </button>
 
-                <button type="button" onClick={() => (openFavorites ? openFavorites() : navigate("/account"))} className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]" aria-label="Open favorites">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openFavorites ? openFavorites() : navigate("/account")
+                  }
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  aria-label="Open favorites"
+                >
                   <FiHeart className="text-lg" />
-                  {wishlist.length > 0 && <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">{wishlist.length}</span>}
+                  {wishlist.length > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                      {wishlist.length}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -277,14 +365,20 @@ const Navbar = () => {
                     {profileDropdown && (
                       <div className="absolute right-0 top-[calc(100%+12px)] w-64 overflow-hidden rounded-2xl border border-[#ede5da] bg-white shadow-[0_20px_40px_rgba(15,23,42,0.12)]">
                         <div className="border-b border-[#f0e8df] bg-[#faf6f2] px-4 py-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b8b8b]">Profile</div>
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b8b8b]">
+                            Profile
+                          </div>
                           <div className="mt-2 flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1b1a18] text-sm font-bold text-white">
                               {userInitial}
                             </div>
                             <div>
-                              <div className="text-sm font-semibold text-[#1d1d1d]">{userDisplayName}</div>
-                              <div className="text-[11px] text-[#777]">{user?.email || "premium customer"}</div>
+                              <div className="text-sm font-semibold text-[#1d1d1d]">
+                                {userDisplayName}
+                              </div>
+                              <div className="text-[11px] text-[#777]">
+                                {user?.email || "premium customer"}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -320,7 +414,10 @@ const Navbar = () => {
                           <button
                             type="button"
                             className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => { setProfileDropdown(false); navigate("/account"); }}
+                            onClick={() => {
+                              setProfileDropdown(false);
+                              navigate("/account");
+                            }}
                           >
                             <span>My Account</span>
                             <FiUser className="text-base text-[#7a7a7a]" />
@@ -339,7 +436,10 @@ const Navbar = () => {
                     )}
                   </div>
                 ) : (
-                  <Link to="/login" className="rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]">
+                  <Link
+                    to="/login"
+                    className="rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]"
+                  >
                     Login
                   </Link>
                 )}
