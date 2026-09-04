@@ -22,8 +22,6 @@ import {
   FiUser,
   FiBook,
   FiMaximize,
-  FiChevronLeft,
-  FiChevronRight,
 } from "react-icons/fi";
 
 /* =========================================================
@@ -183,7 +181,6 @@ const Hero = () => {
   const [banners, setBanners] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
 
   /* =======================================================
      FETCH BANNERS FROM BACKEND
@@ -314,8 +311,7 @@ const Hero = () => {
 
   useEffect(() => {
     if (
-      heroBanners.length <= 1 ||
-      isHovered
+      heroBanners.length <= 1
     ) {
       return;
     }
@@ -334,7 +330,6 @@ const Hero = () => {
     };
   }, [
     heroBanners.length,
-    isHovered,
   ]);
 
   /* =======================================================
@@ -364,37 +359,6 @@ const Hero = () => {
   if (!currentBanner) {
     return null;
   }
-
-  /* =======================================================
-     PREVIOUS
-  ======================================================= */
-
-  const handlePrev = (event) => {
-    event.stopPropagation();
-
-    setCurrentIndex((previousIndex) => {
-      if (previousIndex === 0) {
-        return heroBanners.length - 1;
-      }
-
-      return previousIndex - 1;
-    });
-  };
-
-  /* =======================================================
-     NEXT
-  ======================================================= */
-
-  const handleNext = (event) => {
-    event.stopPropagation();
-
-    setCurrentIndex((previousIndex) => {
-      return (
-        (previousIndex + 1) %
-        heroBanners.length
-      );
-    });
-  };
 
   /* =======================================================
      HEADING
@@ -575,12 +539,6 @@ const Hero = () => {
     >
 
       <div
-        onMouseEnter={() =>
-          setIsHovered(true)
-        }
-        onMouseLeave={() =>
-          setIsHovered(false)
-        }
         className="
             relative
             min-w-0
@@ -636,7 +594,7 @@ const Hero = () => {
               gap-8
               lg:grid-cols-12
               lg:items-stretch
-              lg:min-h-[460px]
+                  lg:min-h-[560px]
               lg:gap-10
               xl:gap-12
             "
@@ -720,7 +678,7 @@ const Hero = () => {
                   className="
                     group
                     inline-flex
-                    h-12
+                      lg:h-[560px]
                     items-center
                     justify-center
                     gap-3
@@ -959,9 +917,7 @@ const Hero = () => {
                           h-full
                           object-cover
                           object-center
-                          transition-all
-                          duration-700
-                          hover:scale-[1.01]
+                          hero-banner-transition
                         "
                       />
                     )}
@@ -1076,121 +1032,9 @@ const Hero = () => {
                   </div>
                 </div> */}
 
-                {/* =================================================
-                    CAROUSEL ARROWS
-                ================================================= */}
-
-                {heroBanners.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handlePrev}
-                      className="
-                        absolute
-                        left-2
-                        top-1/2
-                        z-20
-                        flex
-                        h-9
-                        w-9
-                        -translate-y-1/2
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-black/60
-                        text-white
-                        shadow-md
-                        backdrop-blur-xs
-                        transition
-                        hover:bg-black
-                      "
-                      aria-label="Previous Banner"
-                    >
-                      <FiChevronLeft
-                        size={20}
-                      />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      className="
-                        absolute
-                        right-2
-                        top-1/2
-                        z-20
-                        flex
-                        h-9
-                        w-9
-                        -translate-y-1/2
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-black/60
-                        text-white
-                        shadow-md
-                        backdrop-blur-xs
-                        transition
-                        hover:bg-black
-                      "
-                      aria-label="Next Banner"
-                    >
-                      <FiChevronRight
-                        size={20}
-                      />
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           </div>
-
-          {/* =================================================
-              CAROUSEL DOTS
-          ================================================= */}
-
-          {heroBanners.length > 1 && (
-            <div
-              className="
-                mt-4
-                flex
-                items-center
-                justify-center
-                gap-2
-              "
-            >
-              {heroBanners.map(
-                (banner, index) => (
-                  <button
-                    key={
-                      banner.id ||
-                      index
-                    }
-                    type="button"
-                    onClick={() =>
-                      setCurrentIndex(
-                        index
-                      )
-                    }
-                    className={`
-                      h-2
-                      rounded-full
-                      transition-all
-                      duration-300
-
-                      ${index ===
-                        currentIndex
-                        ? "w-7 bg-[#c18d38]"
-                        : "w-2 bg-[#171717]/25 hover:bg-[#171717]/50"
-                      }
-                    `}
-                    aria-label={`Go to banner ${index + 1
-                      }`}
-                  />
-                )
-              )}
-            </div>
-          )}
 
           {/* =================================================
               SERVICES BAR

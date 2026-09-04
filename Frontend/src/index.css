@@ -110,5 +110,21 @@ body {
   display: none;
 }
 
+@keyframes heroBannerFade {
+  from {
+    opacity: 0.35;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hero-banner-transition {
+  animation: heroBannerFade 700ms ease both;
+}
+
 
 
