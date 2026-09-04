@@ -146,6 +146,20 @@ const Navbar = () => {
         location.pathname.startsWith(link.path + "/"),
     ) || location.pathname === "/achievements";
 
+  const isAlbumPage =
+    location.pathname === "/shop" &&
+    new URLSearchParams(location.search).get("categoryType") === "album";
+
+  const isShopPage =
+    !isAlbumPage &&
+    (location.pathname === "/shop" ||
+      location.pathname.startsWith("/products/") ||
+      location.pathname.startsWith("/product/"));
+
+  const isPagesRoute = ["/gallery", "/about", "/contact"].includes(
+    location.pathname,
+  );
+
   const desktopLinkClass = ({ isActive }) =>
     `text-base font-semibold  transition-colors ${
       isActive ? "text-primary" : "text-white hover:text-primary"
@@ -225,6 +239,7 @@ const Navbar = () => {
               <nav className="hidden items-center gap-7 xl:flex">
                 <NavLink
                   to="/"
+                  end
                   className={({ isActive }) =>
                     `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
                   }
@@ -232,13 +247,19 @@ const Navbar = () => {
                   Home
                 </NavLink>
                 <div className="flex items-center gap-1 text-sm font-semibold text-[#1d1d1d]">
-                  <NavLink to="/shop" className="hover:text-[#d79d4a]">
+                  <NavLink
+                    to="/shop"
+                    className={() => `text-sm font-semibold transition ${isShopPage ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
+                  >
                     Shop
                   </NavLink>
                 </div>
 
                 <div className="flex items-center gap-1 text-sm font-semibold text-[#1d1d1d]">
-                  <NavLink to="/frames" className="hover:text-[#d79d4a]">
+                  <NavLink
+                    to="/frames"
+                    className={({ isActive }) => `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
+                  >
                     Frames
                   </NavLink>
                 </div>
@@ -262,9 +283,7 @@ const Navbar = () => {
 
                 <NavLink
                   to="/shop?categoryType=album"
-                  className={({ isActive }) =>
-                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
-                  }
+                  className={() => `text-sm font-semibold transition ${isAlbumPage ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
                 >
                   Albums
                 </NavLink>
@@ -274,7 +293,7 @@ const Navbar = () => {
                     onClick={() => toggleMenu("pages")}
                     aria-expanded={openMenu === "pages"}
                     aria-haspopup="menu"
-                    className={`flex items-center gap-1 text-sm font-semibold transition ${openMenu === "pages" || ["/gallery", "/about", "/contact"].includes(location.pathname) || (location.pathname === "/shop" && new URLSearchParams(location.search).get("categoryType") === "album") ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
+                    className={`flex items-center gap-1 text-sm font-semibold transition ${openMenu === "pages" || isPagesRoute ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
                   >
                     Pages
                     <FiChevronDown
