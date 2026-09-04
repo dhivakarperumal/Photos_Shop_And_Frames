@@ -30,6 +30,7 @@ const customizationRouter = require("./src/routers/customizationRouter");
 const cartRouter = require("./src/routers/cartRouter");
 const orderRouter = require("./src/routers/orderRouter");
 const giftBoxRouter = require("./src/routers/giftBoxRouter");
+const wishlistRouter = require("./src/routers/wishlistRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -113,6 +114,7 @@ app.use("/api/customizations", customizationRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/gift-boxes", giftBoxRouter);
+app.use("/api/wishlist", wishlistRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

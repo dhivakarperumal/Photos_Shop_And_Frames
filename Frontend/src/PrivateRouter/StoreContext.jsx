@@ -190,7 +190,7 @@ export const StoreProvider = ({ children }) => {
             return;
         }
 
-        const targetItem = wishlist.find((item) => item.id === wishlistItemId || item._id === wishlistItemId || item.product_id === wishlistItemId);
+        const targetItem = wishlist.find((item) => String(item.id || item._id || item.product_id) === String(wishlistItemId));
         const productId = targetItem?.product_id || wishlistItemId;
 
         try {
@@ -288,7 +288,7 @@ export const StoreProvider = ({ children }) => {
         }
 
         const productId = product.id || product.product_id;
-        const isAlready = wishlist.some(w => w.product_id === productId || w.id === productId);
+        const isAlready = wishlist.some((item) => String(item.product_id || item.id || item._id) === String(productId));
 
         try {
             if (isAlready) {
@@ -301,7 +301,14 @@ export const StoreProvider = ({ children }) => {
                 const variantColor = selectedVariant?.colorName || selectedVariant?.color || "";
                 
                 // Correctly parse images if they are stored as JSON strings
-                const productImages = typeof product.images === 'string' ? JSON.parse(product.images) : (product.images || []);
+                let productImages = product.images || [];
+                if (typeof productImages === "string") {
+                    try {
+                        productImages = JSON.parse(productImages);
+                    } catch {
+                        productImages = [];
+                    }
+                }
                 const variantImage = selectedVariant?.images?.[0] || productImages[0] || null;
                 
                 const price = parseFloat(selectedVariant?.sellingPrice || selectedVariant?.selling_price || product.offer_price || product.price || 0);

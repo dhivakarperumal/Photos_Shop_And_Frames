@@ -1,11 +1,18 @@
-import { Eye, ImagePlus } from "lucide-react";
+import { Eye, Heart, ImagePlus } from "lucide-react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
+import { StoreContext } from "../PrivateRouter/StoreContext";
 
 const ProductCard = ({ product }) => {
+  const { wishlist = [], toggleWishlist } = useContext(StoreContext) || {};
   const variant = product.size_variants?.[0] || {};
   const image = product.product_images?.[0] || product.frame_data?.frame_image;
   const slotCount = product.frame_data?.photo_slots?.length || 0;
   const productPath = `/products/${product.id}`;
+  const productId = product.id || product.product_id;
+  const isFavorite = wishlist.some(
+    (item) => String(item.product_id || item.id || item._id) === String(productId),
+  );
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl">
@@ -29,7 +36,21 @@ const ProductCard = ({ product }) => {
           </span>
         )}
 
-        <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#666] shadow-xs">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleWishlist?.(product, variant);
+          }}
+          className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"}`}
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
+        </button>
+
+        <span className="absolute right-16 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#666] shadow-xs">
           {product.orientation || "Portrait"}
         </span>
       </Link>
