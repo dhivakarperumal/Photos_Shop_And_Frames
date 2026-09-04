@@ -147,8 +147,10 @@ const Navbar = () => {
     ) || location.pathname === "/achievements";
 
   const isAlbumPage =
-    location.pathname === "/shop" &&
-    new URLSearchParams(location.search).get("categoryType") === "album";
+    location.pathname === "/albums" ||
+    location.pathname.startsWith("/albums/") ||
+    (location.pathname === "/shop" &&
+      new URLSearchParams(location.search).get("categoryType") === "album");
 
   const isShopPage =
     !isAlbumPage &&
@@ -282,8 +284,12 @@ const Navbar = () => {
                 </NavLink>
 
                 <NavLink
-                  to="/shop?categoryType=album"
-                  className={() => `text-sm font-semibold transition ${isAlbumPage ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`}
+                  to="/albums"
+                  className={({ isActive }) =>
+                    `text-sm font-semibold transition ${
+                      isActive || isAlbumPage ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"
+                    }`
+                  }
                 >
                   Albums
                 </NavLink>

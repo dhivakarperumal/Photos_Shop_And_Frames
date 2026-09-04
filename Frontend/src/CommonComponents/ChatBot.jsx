@@ -84,7 +84,7 @@ function getBotResponse(intent, text) {
         cards: [
           { icon: "🛒", title: "Shop All", desc: "Browse frames, prints, and more", link: "/shop", color: "#f97316" },
           { icon: "🖼️", title: "Photo Frames", desc: "Find a frame for every memory", link: "/frames", color: "#3b82f6" },
-          { icon: "📚", title: "Photo Albums", desc: "Explore albums for your special moments", link: "/shop?categoryType=album", color: "#8b5cf6" },
+          { icon: "📚", title: "Photo Albums", desc: "Explore albums for your special moments", link: "/albums", color: "#8b5cf6" },
           { icon: "🎁", title: "Gift Boxes", desc: "Choose a thoughtful ready-to-give set", link: "/gifts", color: "#10b981" },
         ],
       };
@@ -102,7 +102,7 @@ function getBotResponse(intent, text) {
         type: "info_cards",
         text: "📚 Browse our **Photo Albums**:",
         cards: [
-          { icon: "📚", title: "View Albums", desc: "Shop albums for photos and memories", link: "/shop?categoryType=album", color: "#8b5cf6" },
+          { icon: "📚", title: "View Albums", desc: "Shop albums for photos and memories", link: "/albums", color: "#8b5cf6" },
           { icon: "🖼️", title: "Customer Gallery", desc: "See memories framed by our customers", link: "/gallery", color: "#3b82f6" },
         ],
       };

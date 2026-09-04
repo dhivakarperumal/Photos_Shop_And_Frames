@@ -32,17 +32,20 @@ const getCartByUser = async (userId) => {
       c.preview_image,
       c.created_at,
       c.updated_at,
-      COALESCE(p.product_name, g.name, 'Item') AS product_name,
-      COALESCE(p.category, g.category, 'Gifts') AS category,
+      COALESCE(p.product_name, g.name, a.product_name, 'Item') AS product_name,
+      COALESCE(p.category, g.category, a.category, 'Albums') AS category,
       p.product_images,
       p.frame_data,
       p.orientation,
       p.size_variants,
       g.image AS gift_image,
-      g.images AS gift_images
+      g.images AS gift_images,
+      a.thumbnail_image AS album_thumbnail,
+      a.product_images AS album_images
     FROM carts c
     LEFT JOIN products p ON c.product_id = p.id
     LEFT JOIN gift_boxes g ON (c.product_id = g.id OR c.product_id = g.gift_box_id)
+    LEFT JOIN albums a ON (c.product_id = a.id OR c.product_id = a.product_id)
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
   `;
@@ -51,8 +54,11 @@ const getCartByUser = async (userId) => {
 
   return rows.map((row) => ({
     ...row,
-    preview_image: row.preview_image || row.gift_image || null,
-    product_images: parseJson(row.product_images, parseJson(row.gift_images, row.gift_image ? [row.gift_image] : [])),
+    preview_image: row.preview_image || row.gift_image || row.album_thumbnail || null,
+    product_images: parseJson(
+      row.product_images,
+      parseJson(row.gift_images, parseJson(row.album_images, row.gift_image ? [row.gift_image] : row.album_thumbnail ? [row.album_thumbnail] : []))
+    ),
     slot_photos: parseJson(row.slot_photos, {}),
     frame_data: parseJson(row.frame_data, null),
     size_variants: parseJson(row.size_variants, []),

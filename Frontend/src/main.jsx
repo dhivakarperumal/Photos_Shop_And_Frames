@@ -12,6 +12,7 @@ import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
 import Gifts from './Componets/Gifts/Gifts.jsx'
 import Frames from './Componets/Frames/Frames.jsx'
+import Albums from './Componets/Albums/Albums.jsx'
 import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
@@ -117,6 +118,10 @@ const router = createHashRouter([
       {
         path: 'frames',
         element: <Frames />,
+      },
+      {
+        path: 'albums',
+        element: <Albums />,
       },
 
       {
