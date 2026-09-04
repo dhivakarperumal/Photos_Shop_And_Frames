@@ -27,8 +27,8 @@ const FloatingSupport = () => {
   // 1. WhatsApp, Call, and ScrollNavigator are visible on all User UI pages (including Home, About, Services, Contact, Login, etc.)
   const showUserUIWidgets = isUserUIPage;
 
-  // 2. AI ChatBot is ONLY visible in /admin panel
-  const showChatBot = isAdmin;
+  // 2. AI ChatBot is available on customer and admin pages, but not employee panels
+  const showChatBot = isUserUIPage || isAdmin;
 
   // Scroll detection for Scroll-to-Top button
   const checkScroll = useCallback(() => {
@@ -83,7 +83,7 @@ const FloatingSupport = () => {
 
   return (
     <>
-      {/* Chatbot panel – only appears for admin panel */}
+      {/* Chatbot panel */}
       {showChatBot && <ChatBot isOpen={chatOpen} onClose={() => setChatOpen(false)} />}
 
       {/* Floating button container – always fixed to bottom-right */}
@@ -125,7 +125,7 @@ const FloatingSupport = () => {
           </div>
         )}
 
-        {/* Chat toggle button - ONLY visible in /admin panels */}
+        {/* Chat toggle button - visible on customer and admin pages */}
         {showChatBot && (
           <div
             className={`support-item chatbot ${chatOpen ? "chatbot-active" : ""}`}
