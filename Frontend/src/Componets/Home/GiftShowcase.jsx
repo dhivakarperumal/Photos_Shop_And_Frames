@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Gift,
-  Package,
-  Sparkles,
   Heart,
 } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
+import { StoreContext } from "../../PrivateRouter/StoreContext";
 
 // Fallback curated gift boxes
 const FALLBACK_GIFTS = [
@@ -68,6 +71,20 @@ const FALLBACK_GIFTS = [
     image:
       "https://images.unsplash.com/photo-1543257580-7269da773bf5?w=800&auto=format&fit=crop&q=80",
   },
+  {
+    id: "fb-gift-5",
+    name: "Personalized Celebration Memory Box",
+    category: "Special Moments",
+    box_size: "Large",
+    material: "Premium Rigid Box",
+    box_type: "Magnetic Closure",
+    mrp: 2400,
+    selling_price: 1899,
+    discount_percentage: 21,
+    gift_items: [{ name: "Photo Frame" }, { name: "Message Card" }],
+    image:
+      "https://images.unsplash.com/photo-1513883049090-d0b7439799bf?w=800&auto=format&fit=crop&q=80",
+  },
 ];
 
 const DEFAULT_GIFT_FALLBACK =
@@ -85,6 +102,7 @@ const GiftShowcase = () => {
   const [gifts, setGifts] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [loading, setLoading] = useState(true);
+  const { wishlist = [], toggleWishlist } = useContext(StoreContext) || {};
 
   useEffect(() => {
     let isMounted = true;
@@ -122,13 +140,13 @@ const GiftShowcase = () => {
     return ["All", ...Array.from(set)];
   }, [giftList]);
 
-  // Filtered gifts (up to 4 items)
+  // Filtered gifts (up to 5 items)
   const displayedGifts = useMemo(() => {
-    if (activeFilter === "All") return giftList.slice(0, 4);
+    if (activeFilter === "All") return giftList.slice(0, 5);
     const filtered = giftList.filter((gift) => {
       return (gift.category || "").toLowerCase() === activeFilter.toLowerCase();
     });
-    return filtered.length > 0 ? filtered.slice(0, 4) : giftList.slice(0, 4);
+    return filtered.length > 0 ? filtered.slice(0, 5) : giftList.slice(0, 5);
   }, [giftList, activeFilter]);
 
   return (
@@ -188,8 +206,8 @@ const GiftShowcase = () => {
         {/* Gifts Grid */}
         <div className="mt-7">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
                   className="aspect-[4/5] animate-pulse rounded-2xl bg-[#ede5da]"
@@ -197,7 +215,19 @@ const GiftShowcase = () => {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <Swiper
+              modules={[Navigation]}
+              navigation
+              spaceBetween={20}
+              slidesPerView={1.15}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                768: { slidesPerView: 3 },
+                1024: { slidesPerView: 4 },
+                1280: { slidesPerView: 5 },
+              }}
+              className="home-showcase-swiper !overflow-visible"
+            >
               {displayedGifts.map((gift) => {
                 const image =
                   resolveImageUrl(gift.image) ||
@@ -213,83 +243,54 @@ const GiftShowcase = () => {
                 const itemCount = Array.isArray(gift.gift_items)
                   ? gift.gift_items.length
                   : 0;
+                const giftId = gift.id || gift.gift_box_id;
+                const isOutOfStock =
+                  gift.stock_status === "Out of Stock" || Number(gift.current_stock) <= 0;
+                const isFavorite = wishlist.some(
+                  (item) => String(item.product_id || item.id || item._id) === String(giftId),
+                );
 
                 return (
-                  <article
-                    key={gift.id || gift.gift_box_id}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-[#e5dbce] bg-white shadow-xs transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-[#b07838]/40"
-                  >
+                  <SwiperSlide key={giftId} className="!h-auto">
+                    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl">
                     {/* Image Area */}
-                    <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#eee7df] p-4">
-                      <img
-                        src={image}
-                        alt={gift.name}
-                        loading="lazy"
-                        onError={(e) => {
-                          e.currentTarget.src = DEFAULT_GIFT_FALLBACK;
-                        }}
-                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                      />
+                    <div className="relative flex h-64 cursor-pointer items-center justify-center overflow-hidden bg-[#f4eee6] p-5">
+                      <Link to={`/gifts?giftId=${giftId}`} className="h-full w-full">
+                        <img src={image} alt={gift.name} loading="lazy" onError={(e) => { e.currentTarget.src = DEFAULT_GIFT_FALLBACK; }} className="h-full w-full object-contain transition duration-300 group-hover:scale-105" />
+                      </Link>
 
                       {/* Badges */}
                       {itemCount > 0 && (
-                        <span className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                          <Package className="h-3 w-3 text-[#e0b987]" />
-                          {itemCount} Items Included
+                        <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
+                          <Gift className="h-3 w-3 text-[#d4a553]" />
+                          {itemCount} Item{itemCount !== 1 ? "s" : ""} Inside
                         </span>
                       )}
 
-                      {discount > 0 && (
-                        <span className="absolute top-2.5 right-2.5 rounded-full bg-[#b07838] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
-                          {discount}% OFF
-                        </span>
-                      )}
+                      <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleWishlist?.({ ...gift, __wishlistType: "gift" }); }} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"}`} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
+                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
+                      </button>
+                      <span className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${isOutOfStock ? "border border-red-200 bg-red-50 text-red-600" : "bg-white/95 text-[#1a3c36]"}`}>
+                        {isOutOfStock ? "Out of Stock" : gift.box_size || "Gift Box"}
+                      </span>
+                      {discount > 0 && <span className="absolute left-3 top-3 rounded-full bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">{discount}% OFF</span>}
                     </div>
 
                     {/* Content */}
-                    <div className="flex flex-1 flex-col justify-between p-4">
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-[#8a8176]">
-                          <span className="truncate">{gift.category || "Gift Box"}</span>
-                          <span>{gift.box_size || "Standard"}</span>
-                        </div>
-                        <h3 className="mt-1 line-clamp-1 text-sm font-bold text-[#14201d] group-hover:text-[#b07838] transition">
-                          {gift.name}
-                        </h3>
-                        {gift.box_type && (
-                          <p className="mt-0.5 text-[10px] text-[#7d8783] truncate">
-                            {gift.box_type} • {gift.material || "Rigid Box"}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#f0e8dd]">
-                        <div>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-base font-black text-[#14201d]">
-                              ₹{sellingPrice.toLocaleString()}
-                            </span>
-                            {mrp > sellingPrice && (
-                              <span className="text-xs text-[#9c958b] line-through">
-                                ₹{mrp.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <Link
-                          to="/gifts"
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#14201d] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b07838]"
-                        >
-                          <span>Explore</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </Link>
+                    <div className="flex flex-1 flex-col p-5">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{gift.category || "Gift Box"}</p>
+                      <Link to={`/gifts?giftId=${giftId}`} className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838]" title={gift.name}>{gift.name}</Link>
+                      <p className="mt-1 line-clamp-1 text-xs text-[#777]">{gift.description || `${gift.box_type || "Magnetic Closure"} • ${gift.material || "Rigid Box"}`}</p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div><span className="text-xl font-black text-[#1a3c36]">₹{sellingPrice || "--"}</span>{mrp > sellingPrice && <span className="ml-2 text-xs text-[#999] line-through">₹{mrp}</span>}</div>
+                        <Link to={`/gifts?giftId=${giftId}`} className="inline-flex items-center gap-1 rounded-lg bg-[#14201d] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b07838]"><span>Explore</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>
                       </div>
                     </div>
-                  </article>
+                    </article>
+                  </SwiperSlide>
                 );
               })}
-            </div>
+            </Swiper>
           )}
         </div>
       </PageContainer>
