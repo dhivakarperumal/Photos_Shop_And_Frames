@@ -120,22 +120,39 @@ const Checkout = () => {
           if (!response.ok) throw new Error("Location lookup failed");
 
           const address = (await response.json()).address || {};
-          const street = [address.house_number, address.road || address.pedestrian]
-            .filter(Boolean)
-            .join(" ");
+          const doorNumber = address.house_number || address.building || "";
+          const street =
+            address.road ||
+            address.pedestrian ||
+            address.footway ||
+            address.path ||
+            address.cycleway ||
+            address.locality ||
+            address.suburb ||
+            address.neighbourhood ||
+            "";
           const city = address.city || address.town || address.village || address.municipality || "";
           const district = address.state_district || address.county || "";
           const nextState = indianStates.includes(address.state) ? address.state : "Other";
+          const landmark =
+            address.suburb ||
+            address.neighbourhood ||
+            address.quarter ||
+            address.residential ||
+            address.hamlet ||
+            address.locality ||
+            "";
 
           setFormData((prev) => ({
             ...prev,
+            door_number: doorNumber || prev.door_number,
             street_name: street || prev.street_name,
             city: city || prev.city,
             district: district || prev.district,
             state: address.state ? nextState : prev.state,
             country: address.country || prev.country,
             pincode: address.postcode || prev.pincode,
-            landmark: address.suburb || address.neighbourhood || prev.landmark,
+            landmark: landmark || prev.landmark,
           }));
           toast.success("Current delivery location added");
         } catch (error) {
