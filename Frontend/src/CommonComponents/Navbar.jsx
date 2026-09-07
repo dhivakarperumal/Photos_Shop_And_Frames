@@ -158,7 +158,7 @@ const Navbar = () => {
       location.pathname.startsWith("/products/") ||
       location.pathname.startsWith("/product/"));
 
-  const isPagesRoute = ["/gallery", "/about", "/contact"].includes(
+  const isPagesRoute = ["/gallery", "/about", "/contact", "/privacy-policy"].includes(
     location.pathname,
   );
 
@@ -331,6 +331,14 @@ const Navbar = () => {
                         }
                       >
                         Contact Us
+                      </NavLink>
+                      <NavLink
+                        to="/privacy-policy"
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`
+                        }
+                      >
+                        Privacy Policy
                       </NavLink>
                     </div>
                   )}

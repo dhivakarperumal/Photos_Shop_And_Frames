@@ -10,6 +10,7 @@ import Cart from './Componets/Cart/Cart.jsx'
 import Checkout from './Componets/Checkout/Checkout.jsx'
 import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
+import PrivacyPolicy from './Componets/Privacy/PrivacyPolicy.jsx'
 import Gifts from './Componets/Gifts/Gifts.jsx'
 import Frames from './Componets/Frames/Frames.jsx'
 import Albums from './Componets/Albums/Albums.jsx'
@@ -106,6 +107,10 @@ const router = createHashRouter([
       {
         path: 'contact',
         element: <Contact />,
+      },
+      {
+        path: 'privacy-policy',
+        element: <PrivacyPolicy />,
       },
       {
         path: 'gallery',
