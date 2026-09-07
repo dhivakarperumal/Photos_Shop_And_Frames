@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import api from "../api";
+import api, { API_URL } from "../api";
 import { StoreContext } from "../PrivateRouter/StoreContext";
 
 const getImages = (item, type) => {
@@ -22,6 +22,14 @@ const getImages = (item, type) => {
     ? [item.thumbnail_image, ...(Array.isArray(item.product_images) ? item.product_images : [])]
     : [item.image, ...(Array.isArray(item.images) ? item.images : [])];
   return [...new Set(images.filter(Boolean))];
+};
+
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  if (/^(data:|blob:|https?:\/\/)/i.test(value)) return value;
+  const path = `/${value.replace(/^\/+/, "")}`;
+  if (/^\/api\/?$/i.test(API_URL)) return path;
+  return `${API_URL.replace(/\/api\/?$/, "")}${path}`;
 };
 
 const ProductQuickView = ({ item, type, image, onClose }) => {
@@ -38,18 +46,12 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
   });
 
   useEffect(() => {
-    setImageIndex(0);
-    setQuantity(1);
-    setCustomFields({ title: "", note: "", photo: null });
-  }, [item, type]);
-
-  useEffect(() => {
     const handleKeyDown = (event) => event.key === "Escape" && onClose();
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const images = useMemo(() => getImages(item, type), [item, type]);
+  const images = useMemo(() => getImages(item, type).map(resolveImageUrl), [item, type]);
   const currentImage = images[imageIndex] || image;
   const id = item.id || item.product_id || item.gift_box_id;
   const title = isAlbum ? item.product_name : item.name;
@@ -70,7 +72,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
       const response = await api.post("/upload", formData);
       updateField("photo", response.data?.url || response.data?.fileUrl);
       toast.success("Photo uploaded successfully");
-    } catch (error) {
+    } catch {
       toast.error("Could not upload photo");
     } finally {
       setUploading(false);
