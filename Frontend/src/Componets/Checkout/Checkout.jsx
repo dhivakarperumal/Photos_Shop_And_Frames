@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   CreditCard,
   LocateFixed,
+  Search,
   Image as ImageIcon,
   MapPin,
   Package,
@@ -55,6 +56,9 @@ const Checkout = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressSearch, setAddressSearch] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -91,6 +95,17 @@ const Checkout = () => {
         pincode: prev.pincode || user?.pincode || user?.postal_code || "",
       }));
     }
+  }, [user]);
+
+  useEffect(() => {
+    const userId = user?.user_id || user?.id;
+    if (!userId) return;
+
+    setLoadingAddresses(true);
+    api.get(`/users/addresses/${userId}`)
+      .then((response) => setSavedAddresses(Array.isArray(response.data?.data) ? response.data.data : []))
+      .catch(() => setSavedAddresses([]))
+      .finally(() => setLoadingAddresses(false));
   }, [user]);
 
   const totalAmount = checkoutItems.reduce(
@@ -173,6 +188,32 @@ const Checkout = () => {
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
     );
   };
+
+  const applySavedAddress = (address) => {
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: address.customer_name || prev.customer_name,
+      customer_phone: address.mobile_number || prev.customer_phone,
+      door_number: address.address_line2 || prev.door_number,
+      street_name: address.address_line1 || prev.street_name,
+      landmark: address.landmark || prev.landmark,
+      city: address.city || prev.city,
+      district: address.district || prev.district,
+      state: address.state || prev.state,
+      country: address.country || prev.country,
+      pincode: address.pincode || prev.pincode,
+    }));
+    setAddressSearch("");
+    toast.success("Saved address selected");
+  };
+
+  const filteredAddresses = savedAddresses.filter((address) =>
+    [address.customer_name, address.address_line1, address.address_line2, address.landmark, address.city, address.district, address.state, address.pincode]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(addressSearch.trim().toLowerCase()),
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -420,6 +461,54 @@ const Checkout = () => {
                     <span className="hidden sm:inline">Use current location</span>
                     <span className="sm:hidden">Locate me</span>
                   </button>
+                </div>
+
+                <div className="mb-5 rounded-2xl border border-[#eadfce] bg-[#fdfaf5] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#9b6b2d]">
+                      Search saved address
+                    </label>
+                    {savedAddresses.length > 0 && (
+                      <span className="text-[10px] font-semibold text-[#8a8176]">
+                        {savedAddresses.length} saved
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#b07838]" />
+                    <input
+                      type="search"
+                      value={addressSearch}
+                      onChange={(event) => setAddressSearch(event.target.value)}
+                      placeholder="Search by city, street, landmark or PIN"
+                      className="h-11 w-full rounded-xl border border-[#d8cfc3] bg-white pl-9 pr-3 text-xs outline-none transition placeholder:text-[#aaa] focus:border-[#b07838] focus:ring-2 focus:ring-[#b07838]/10"
+                    />
+                  </div>
+                  {loadingAddresses && (
+                    <p className="mt-2 px-1 text-[11px] text-[#777]">Loading your saved addresses...</p>
+                  )}
+                  {!loadingAddresses && !savedAddresses.length && (
+                    <p className="mt-2 px-1 text-[11px] text-[#777]">No saved addresses found for this account.</p>
+                  )}
+                  {!loadingAddresses && savedAddresses.length > 0 && (addressSearch.trim() || filteredAddresses.length > 1) && (
+                    <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                      {filteredAddresses.length > 0 ? filteredAddresses.map((address) => (
+                        <button
+                          key={address.id || address.address_id}
+                          type="button"
+                          onClick={() => applySavedAddress(address)}
+                          className="w-full rounded-xl border border-[#eadfce] bg-white p-3 text-left text-xs transition hover:border-[#b07838] hover:bg-[#fffaf2]"
+                        >
+                          <span className="block font-bold text-[#1d2925]">{address.customer_name || "Saved address"}</span>
+                          <span className="mt-1 block truncate text-[#6b6b63]">
+                            {[address.address_line2, address.address_line1, address.landmark, address.city, address.pincode].filter(Boolean).join(", ")}
+                          </span>
+                        </button>
+                      )) : (
+                        <p className="px-1 py-2 text-xs text-[#777]">No saved address matches your search.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4 text-xs">

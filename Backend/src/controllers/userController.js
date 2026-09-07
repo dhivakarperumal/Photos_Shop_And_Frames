@@ -312,6 +312,15 @@ const getUserAddress = async (req, res) => {
   }
 };
 
+const getUserAddresses = async (req, res) => {
+  try {
+    const addresses = await userModule.getAddressesByUserId(req.params.userId);
+    return res.status(200).json({ success: true, data: addresses });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || "Failed to retrieve addresses" });
+  }
+};
+
 const updateUserAddress = async (req, res) => {
   try {
     const address = await userModule.saveAddressByUserId(req.params.userId, req.body);
@@ -375,6 +384,7 @@ module.exports = {
   updateAdminUser,
   updateUserProfile,
   getUserAddress,
+  getUserAddresses,
   updateUserAddress,
   changePassword,
   deleteUser,
