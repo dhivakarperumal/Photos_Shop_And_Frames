@@ -180,7 +180,28 @@ const getAddressesByUserId = async (userId) => {
      ORDER BY is_default DESC, updated_at DESC, id DESC`,
     [userId, userId],
   );
-  return rows;
+
+  const uniqueAddresses = new Map();
+  rows.forEach((address) => {
+    const addressKey = [
+      address.customer_name,
+      address.mobile_number,
+      address.address_line1,
+      address.address_line2,
+      address.city,
+      address.district,
+      address.state,
+      address.country,
+      address.pincode,
+      address.landmark,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .join("|");
+
+    if (!uniqueAddresses.has(addressKey)) uniqueAddresses.set(addressKey, address);
+  });
+
+  return Array.from(uniqueAddresses.values());
 };
 
 const saveAddressByUserId = async (userId, address) => {

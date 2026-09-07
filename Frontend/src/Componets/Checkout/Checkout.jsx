@@ -43,6 +43,29 @@ const indianStates = [
   "Other",
 ];
 
+const uniqueAddresses = (addresses) => {
+  const seen = new Set();
+  return addresses.filter((address) => {
+    const key = [
+      address.customer_name,
+      address.mobile_number,
+      address.address_line1,
+      address.address_line2,
+      address.city,
+      address.district,
+      address.state,
+      address.country,
+      address.pincode,
+      address.landmark,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -103,7 +126,7 @@ const Checkout = () => {
 
     setLoadingAddresses(true);
     api.get(`/users/addresses/${userId}`)
-      .then((response) => setSavedAddresses(Array.isArray(response.data?.data) ? response.data.data : []))
+      .then((response) => setSavedAddresses(uniqueAddresses(Array.isArray(response.data?.data) ? response.data.data : [])))
       .catch(() => setSavedAddresses([]))
       .finally(() => setLoadingAddresses(false));
   }, [user]);
