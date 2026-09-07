@@ -3,6 +3,7 @@ import Hero from './Hero';
 import CategoryTypes from "./CategoryTypes";
 import FrameShowcase from "./FrameShowcase";
 import AlbumShowcase from "./AlbumShowcase";
+import PromoBanner from "./PromoBanner";
 import GiftShowcase from "./GiftShowcase";
 import HomeGallery from "./HomeGallery";
 import ProductCollection from "./ProductCollection";
@@ -34,9 +35,9 @@ const Home = () => {
       <FrameShowcase frames={frames} />
       <ProductCollection products={products} />
       <AlbumShowcase />
+      <PromoBanner />
       <GiftShowcase />
       <HomeGallery />
-      
     </>
   );
 };
