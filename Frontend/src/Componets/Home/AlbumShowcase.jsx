@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   BookOpen,
-  Eye,
-  Layers,
-  Sparkles,
+  Heart,
 } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
+import { StoreContext } from "../../PrivateRouter/StoreContext";
 
 // Fallback albums in case DB has few or no albums
 const FALLBACK_ALBUMS = [
@@ -64,6 +67,19 @@ const FALLBACK_ALBUMS = [
     thumbnail_image:
       "https://images.unsplash.com/photo-1516541196182-6bdb0516ed27?w=800&auto=format&fit=crop&q=80",
   },
+  {
+    id: "fb-alb-5",
+    product_name: "Golden Hour Travel Journal",
+    sub_category: "Travel",
+    occasion: "Travel",
+    size: "10 x 10 Inches",
+    total_pages: 32,
+    cover_material: "Textured Hardcover",
+    selling_price: 1899,
+    discount_price: 1399,
+    thumbnail_image:
+      "https://images.unsplash.com/photo-1511108690759-009324a90311?w=800&auto=format&fit=crop&q=80",
+  },
 ];
 
 const DEFAULT_ALBUM_FALLBACK =
@@ -81,6 +97,7 @@ const AlbumShowcase = () => {
   const [albums, setAlbums] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [loading, setLoading] = useState(true);
+  const { wishlist = [], toggleWishlist } = useContext(StoreContext) || {};
 
   useEffect(() => {
     let isMounted = true;
@@ -124,12 +141,12 @@ const AlbumShowcase = () => {
 
   // Filtered albums
   const displayedAlbums = useMemo(() => {
-    if (activeFilter === "All") return albumList.slice(0, 4);
+    if (activeFilter === "All") return albumList.slice(0, 5);
     const filtered = albumList.filter((album) => {
       const cat = (album.sub_category || album.occasion || "").toLowerCase();
       return cat === activeFilter.toLowerCase();
     });
-    return filtered.length > 0 ? filtered.slice(0, 4) : albumList.slice(0, 4);
+    return filtered.length > 0 ? filtered.slice(0, 5) : albumList.slice(0, 5);
   }, [albumList, activeFilter]);
 
   return (
@@ -189,8 +206,8 @@ const AlbumShowcase = () => {
         {/* Albums Grid */}
         <div className="mt-7">
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+              {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
                   className="aspect-[4/5] animate-pulse rounded-2xl bg-[#ede5da]"
@@ -198,7 +215,19 @@ const AlbumShowcase = () => {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <Swiper
+              modules={[Navigation]}
+              navigation
+              spaceBetween={20}
+              slidesPerView={1.15}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                768: { slidesPerView: 3 },
+                1024: { slidesPerView: 4 },
+                1280: { slidesPerView: 5 },
+              }}
+              className="home-showcase-swiper !overflow-visible"
+            >
               {displayedAlbums.map((album) => {
                 const image =
                   resolveImageUrl(album.thumbnail_image) ||
@@ -215,76 +244,52 @@ const AlbumShowcase = () => {
                         ((sellingPrice - discountPrice) / sellingPrice) * 100
                       )
                     : 0);
+                const albumId = album.id || album.product_id;
+                const isOutOfStock =
+                  album.stock_status === "Out of Stock" || Number(album.stock_quantity) <= 0;
+                const isFavorite = wishlist.some(
+                  (item) => String(item.product_id || item.id || item._id) === String(albumId),
+                );
 
                 return (
-                  <article
-                    key={album.id || album.product_id}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-[#e8ded1] bg-white shadow-xs transition duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-[#b07838]/40"
-                  >
+                  <SwiperSlide key={albumId} className="!h-auto">
+                    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl">
                     {/* Image Area */}
-                    <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[#f5ede3] p-4">
-                      <img
-                        src={image}
-                        alt={album.product_name}
-                        loading="lazy"
-                        onError={(e) => {
-                          e.currentTarget.src = DEFAULT_ALBUM_FALLBACK;
-                        }}
-                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                      />
+                    <div className="relative flex h-64 cursor-pointer items-center justify-center overflow-hidden bg-[#f4eee6] p-5">
+                      <Link to={`/albums?albumId=${albumId}`} className="h-full w-full">
+                        <img src={image} alt={album.product_name} loading="lazy" onError={(e) => { e.currentTarget.src = DEFAULT_ALBUM_FALLBACK; }} className="h-full w-full object-contain transition duration-300 group-hover:scale-105" />
+                      </Link>
 
                       {/* Badges */}
-                      <span className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                        <BookOpen className="h-3 w-3 text-[#e0b987]" />
+                      <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
+                        <BookOpen className="h-3 w-3 text-[#d4a553]" />
                         {album.total_pages || 40} Pages • Lay Flat
                       </span>
 
-                      {discountPercentage > 0 && (
-                        <span className="absolute top-2.5 right-2.5 rounded-full bg-[#b07838] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
-                          {discountPercentage}% OFF
-                        </span>
-                      )}
+                      <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleWishlist?.({ ...album, __wishlistType: "album" }); }} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"}`} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
+                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
+                      </button>
+                      <span className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${isOutOfStock ? "border border-red-200 bg-red-50 text-red-600" : "bg-white/95 text-[#1a3c36]"}`}>
+                        {isOutOfStock ? "Out of Stock" : album.size || "Album"}
+                      </span>
+                      {discountPercentage > 0 && <span className="absolute left-3 top-3 rounded-full bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">{discountPercentage}% OFF</span>}
                     </div>
 
                     {/* Content */}
-                    <div className="flex flex-1 flex-col justify-between p-4">
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] font-semibold text-[#8a8176]">
-                          <span>{album.sub_category || album.occasion || "Photo Album"}</span>
-                          <span>{album.size || "12 x 18\""}</span>
-                        </div>
-                        <h3 className="mt-1 line-clamp-1 text-sm font-bold text-[#14201d] group-hover:text-[#b07838] transition">
-                          {album.product_name}
-                        </h3>
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between pt-3 border-t border-[#f0e8dd]">
-                        <div>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-base font-black text-[#14201d]">
-                              ₹{discountPrice.toLocaleString()}
-                            </span>
-                            {sellingPrice > discountPrice && (
-                              <span className="text-xs text-[#9c958b] line-through">
-                                ₹{sellingPrice.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <Link
-                          to="/albums"
-                          className="inline-flex items-center gap-1 rounded-lg bg-[#14201d] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b07838]"
-                        >
-                          <span>Explore</span>
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </Link>
+                    <div className="flex flex-1 flex-col p-5">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{album.sub_category || album.occasion || "Photo Album"}</p>
+                      <Link to={`/albums?albumId=${albumId}`} className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838]" title={album.product_name}>{album.product_name}</Link>
+                      <p className="mt-1 truncate text-xs text-[#777]">{album.cover_material || "Hard Cover"} • {album.page_thickness || "300 GSM"}</p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div><span className="text-xl font-black text-[#1a3c36]">₹{discountPrice || sellingPrice || "--"}</span>{sellingPrice > discountPrice && <span className="ml-2 text-xs text-[#999] line-through">₹{sellingPrice}</span>}</div>
+                        <Link to={`/albums?albumId=${albumId}`} className="inline-flex items-center gap-1 rounded-lg bg-[#14201d] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b07838]"><span>Explore</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>
                       </div>
                     </div>
-                  </article>
+                    </article>
+                  </SwiperSlide>
                 );
               })}
-            </div>
+            </Swiper>
           )}
         </div>
       </PageContainer>
