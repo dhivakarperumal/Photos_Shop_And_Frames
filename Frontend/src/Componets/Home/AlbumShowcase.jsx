@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   BookOpen,
-  X,
 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
@@ -12,6 +11,7 @@ import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
 import AlbumCard from "../../CommonComponents/AlbumCard";
 import PageContainer from "../../CommonComponents/PageContainer";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 
 // Fallback albums in case DB has few or no albums
 const FALLBACK_ALBUMS = [
@@ -272,21 +272,7 @@ const AlbumShowcase = () => {
           )}
         </div>
       </PageContainer>
-      {selectedAlbum && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
-          <div className="relative grid w-full max-w-2xl gap-6 rounded-3xl bg-white p-6 shadow-2xl md:grid-cols-2 md:p-8">
-            <button type="button" onClick={() => setSelectedAlbum(null)} className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-[#777] hover:bg-[#f4efe8]" aria-label="Close album details"><X className="h-5 w-5" /></button>
-            <div className="flex h-64 items-center justify-center rounded-2xl bg-[#f4eee6] p-5"><img src={resolveImageUrl(selectedAlbum.thumbnail_image) || resolveImageUrl(selectedAlbum.product_images?.[0]) || DEFAULT_ALBUM_FALLBACK} alt={selectedAlbum.product_name} className="h-full w-full object-contain" /></div>
-            <div className="flex flex-col justify-center">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{selectedAlbum.sub_category || selectedAlbum.occasion || "Photo Album"}</p>
-              <h3 className="mt-2 text-2xl font-black text-[#1d2925]">{selectedAlbum.product_name}</h3>
-              <p className="mt-2 text-sm text-[#777]">{selectedAlbum.cover_material || "Hard Cover"} • {selectedAlbum.page_thickness || "300 GSM"}</p>
-              <p className="mt-5 text-2xl font-black text-[#1a3c36]">₹{Number(selectedAlbum.discount_price || selectedAlbum.selling_price || 0).toLocaleString()}</p>
-              <p className="mt-2 text-sm text-[#555]">{selectedAlbum.total_pages || 40} pages • {selectedAlbum.size || "Album"}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {selectedAlbum && <ProductQuickView item={selectedAlbum} type="album" image={resolveImageUrl(selectedAlbum.thumbnail_image) || resolveImageUrl(selectedAlbum.product_images?.[0]) || DEFAULT_ALBUM_FALLBACK} onClose={() => setSelectedAlbum(null)} />}
     </section>
   );
 };

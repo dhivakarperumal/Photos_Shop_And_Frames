@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Gift,
-  X,
 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
@@ -12,6 +11,7 @@ import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
 import GiftCard from "../../CommonComponents/GiftCard";
 import PageContainer from "../../CommonComponents/PageContainer";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 
 // Fallback curated gift boxes
 const FALLBACK_GIFTS = [
@@ -271,21 +271,7 @@ const GiftShowcase = () => {
           )}
         </div>
       </PageContainer>
-      {selectedGift && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs" role="dialog" aria-modal="true">
-          <div className="relative grid w-full max-w-2xl gap-6 rounded-3xl bg-white p-6 shadow-2xl md:grid-cols-2 md:p-8">
-            <button type="button" onClick={() => setSelectedGift(null)} className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full text-[#777] hover:bg-[#f4efe8]" aria-label="Close gift details"><X className="h-5 w-5" /></button>
-            <div className="flex h-64 items-center justify-center rounded-2xl bg-[#f4eee6] p-5"><img src={resolveImageUrl(selectedGift.image) || resolveImageUrl(selectedGift.images?.[0]) || DEFAULT_GIFT_FALLBACK} alt={selectedGift.name} className="h-full w-full object-contain" /></div>
-            <div className="flex flex-col justify-center">
-              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{selectedGift.category || "Gift Box"}</p>
-              <h3 className="mt-2 text-2xl font-black text-[#1d2925]">{selectedGift.name}</h3>
-              <p className="mt-2 text-sm text-[#777]">{selectedGift.description || `${selectedGift.box_type || "Magnetic Closure"} • ${selectedGift.material || "Rigid Box"}`}</p>
-              <p className="mt-5 text-2xl font-black text-[#1a3c36]">₹{Number(selectedGift.selling_price || selectedGift.mrp || 0).toLocaleString()}</p>
-              <p className="mt-2 text-sm text-[#555]">{selectedGift.gift_items?.length || 0} included items • {selectedGift.box_size || "Gift Box"}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {selectedGift && <ProductQuickView item={selectedGift} type="gift" image={resolveImageUrl(selectedGift.image) || resolveImageUrl(selectedGift.images?.[0]) || DEFAULT_GIFT_FALLBACK} onClose={() => setSelectedGift(null)} />}
     </section>
   );
 };
