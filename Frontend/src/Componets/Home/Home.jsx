@@ -32,10 +32,11 @@ const Home = () => {
       <Hero />
       <CategoryTypes categories={categories} />
       <FrameShowcase frames={frames} />
+      <ProductCollection products={products} />
       <AlbumShowcase />
       <GiftShowcase />
       <HomeGallery />
-      <ProductCollection products={products} />
+      
     </>
   );
 };
