@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import PageContainer from "../../CommonComponents/PageContainer";
 
 const categoryDefinitions = [
-  { key: "frame", label: "Frames", icon: Image },
-  { key: "gift", label: "Gifts", icon: Gift },
-  { key: "album", label: "Albums", icon: BookImage },
+  { key: "frame", label: "Frames", icon: Image, path: "/frames" },
+  { key: "gift", label: "Gifts", icon: Gift, path: "/gifts" },
+  { key: "album", label: "Albums", icon: BookImage, path: "/albums" },
 ];
 
 const normalizeImageUrl = (value) => {
@@ -29,7 +29,7 @@ const CategoryTypes = ({ categories }) => {
         </div>
 
         <div className="mx-auto mt-6 grid max-w-[560px] grid-cols-3 justify-items-center gap-5 sm:mt-7 sm:gap-10">
-          {categoryDefinitions.map(({ key, label, icon: Icon }, index) => {
+          {categoryDefinitions.map(({ key, label, icon: Icon, path }, index) => {
             const category = categories.find((item) => {
               const type = String(item.category_type || "").trim().toLowerCase();
               return (type === key || (key === "album" && type === "albums"))
@@ -40,7 +40,7 @@ const CategoryTypes = ({ categories }) => {
             return (
               <Link
                 key={key}
-                to={`/shop?categoryType=${encodeURIComponent(label)}`}
+                to={path}
                 className="group flex w-24 flex-col items-center text-center sm:w-32"
               >
                 <div className={`flex aspect-square w-full items-center justify-center overflow-hidden rounded-full border-4 border-white shadow-[0_5px_16px_rgba(54,44,34,0.14)] transition duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_22px_rgba(54,44,34,0.2)] ${index % 2 === 0 ? "bg-[#f4e4d1] text-[#a05c2a]" : "bg-[#dfeaf8] text-[#3f7db8]"}`}>

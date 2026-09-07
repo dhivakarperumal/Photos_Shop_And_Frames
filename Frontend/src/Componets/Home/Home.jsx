@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import Hero from './Hero';
 import CategoryTypes from "./CategoryTypes";
 import FrameShowcase from "./FrameShowcase";
+import AlbumShowcase from "./AlbumShowcase";
+import GiftShowcase from "./GiftShowcase";
 import HomeGallery from "./HomeGallery";
 import ProductCollection from "./ProductCollection";
 import api from "../../api";
@@ -30,8 +32,10 @@ const Home = () => {
       <Hero />
       <CategoryTypes categories={categories} />
       <FrameShowcase frames={frames} />
-      <ProductCollection products={products} />
+      <AlbumShowcase />
+      <GiftShowcase />
       <HomeGallery />
+      <ProductCollection products={products} />
     </>
   );
 };
