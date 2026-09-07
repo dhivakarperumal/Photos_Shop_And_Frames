@@ -14,12 +14,14 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
 import AlbumCard from "../../CommonComponents/AlbumCard";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import toast from "react-hot-toast";
 
 const Albums = () => {
+  const legacyModalEnabled = () => false;
   const [albums, setAlbums] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -75,8 +77,6 @@ const Albums = () => {
     const album = albums.find((item) => String(item.id || item.product_id) === albumId);
     if (album) {
       setSelectedAlbum(album);
-      setModalQuantity(1);
-      setModalImageIndex(0);
     }
   }, [albums, searchParams]);
 
@@ -353,7 +353,8 @@ const Albums = () => {
       </PageContainer>
 
       {/* ================= ALBUM PREVIEW & ORDER MODAL ================= */}
-      {selectedAlbum && (
+      {selectedAlbum && <ProductQuickView item={selectedAlbum} type="album" image={selectedAlbum.thumbnail_image || selectedAlbum.product_images?.[0]} onClose={() => setSelectedAlbum(null)} />}
+      {legacyModalEnabled() && selectedAlbum && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"
           role="dialog"

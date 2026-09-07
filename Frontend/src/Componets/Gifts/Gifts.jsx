@@ -14,12 +14,14 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
 import GiftCard from "../../CommonComponents/GiftCard";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import toast from "react-hot-toast";
 
 const Gifts = () => {
+  const legacyModalEnabled = () => false;
   const [gifts, setGifts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -83,8 +85,6 @@ const Gifts = () => {
     const gift = gifts.find((item) => String(item.id || item.gift_box_id) === giftId);
     if (gift) {
       setSelectedGift(gift);
-      setModalQuantity(1);
-      setModalImageIndex(0);
     }
   }, [gifts, searchParams]);
 
@@ -341,7 +341,8 @@ const Gifts = () => {
       </PageContainer>
 
       {/* ================= GIFT DETAILS & CUSTOMIZATION MODAL ================= */}
-      {selectedGift && (
+      {selectedGift && <ProductQuickView item={selectedGift} type="gift" image={selectedGift.image || selectedGift.images?.[0]} onClose={() => setSelectedGift(null)} />}
+      {legacyModalEnabled() && selectedGift && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"
           role="dialog"
