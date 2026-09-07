@@ -237,6 +237,8 @@ async function ensureDatabaseSchema() {
         variant_size VARCHAR(100) NULL,
         image VARCHAR(500) NULL,
         email VARCHAR(255) NULL,
+        item_type VARCHAR(30) NOT NULL DEFAULT 'product',
+        item_name VARCHAR(255) NULL,
         price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         total_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

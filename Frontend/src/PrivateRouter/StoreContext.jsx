@@ -288,6 +288,7 @@ export const StoreProvider = ({ children }) => {
         }
 
         const productId = product.id || product.product_id;
+        const itemType = product.__wishlistType || (product.gift_box_id ? "gift" : product.product_name && (product.product_images || product.total_pages) ? "album" : "product");
         const isAlready = wishlist.some((item) => String(item.product_id || item.id || item._id) === String(productId));
 
         try {
@@ -329,6 +330,8 @@ export const StoreProvider = ({ children }) => {
                     email: user.email || "",
                     price: price,
                     total_price: price,
+                    item_type: itemType,
+                    item_name: product.name || product.product_name || "",
                 });
                 toast.success("Added to favorites!");
             }

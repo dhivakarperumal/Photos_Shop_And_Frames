@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Camera, Heart, Layers3, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, Clock3, Heart, Layers3, ShieldCheck, Sparkles } from "lucide-react";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 
@@ -36,10 +36,27 @@ const About = () => (
           <div className="relative mx-auto w-full max-w-md lg:mr-0">
             <div className="absolute -left-5 -top-5 h-24 w-24 border-l border-t border-[#edb66d]/70" />
             <div className="aspect-[4/5] overflow-hidden border-[12px] border-[#d79d4a] bg-[#f2e8d8] shadow-[18px_18px_0_#102c28]">
-              <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=85" alt="Camera and photographs in a creative studio" className="h-full w-full object-cover" />
+              <img src="/images/hero-banner.png" alt="A family photograph displayed in a Q Techx frame" className="h-full w-full object-cover object-left" />
             </div>
             <p className="absolute -bottom-7 -right-2 max-w-[180px] bg-[#f7f3ed] px-4 py-3 text-xs font-bold leading-5 text-[#1a3c36] shadow-lg">Small moments. Beautifully held.</p>
           </div>
+        </div>
+      </PageContainer>
+    </section>
+
+    <section className="border-b border-[#e5d8c9] bg-[#fbf8f3]">
+      <PageContainer className="grid divide-y divide-[#e5d8c9] py-2 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Made to last</p><p className="mt-0.5 text-xs text-[#69736e]">Materials chosen for everyday living.</p></div>
+        </div>
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <Clock3 className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Thoughtful turnaround</p><p className="mt-0.5 text-xs text-[#69736e]">From upload to doorstep, kept simple.</p></div>
+        </div>
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <Heart className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Personal by design</p><p className="mt-0.5 text-xs text-[#69736e]">Built around the moments that matter.</p></div>
         </div>
       </PageContainer>
     </section>

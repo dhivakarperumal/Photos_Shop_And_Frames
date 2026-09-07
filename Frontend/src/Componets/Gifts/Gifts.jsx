@@ -39,7 +39,7 @@ const Gifts = () => {
     customPhoto: null,
   });
 
-  const { addToCart, openCart } = useContext(StoreContext);
+  const { addToCart, openCart, wishlist = [], toggleWishlist } = useContext(StoreContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -80,6 +80,17 @@ const Gifts = () => {
 
     fetchGifts();
   }, []);
+
+  useEffect(() => {
+    const giftId = searchParams.get("giftId");
+    if (!giftId || !gifts.length) return;
+    const gift = gifts.find((item) => String(item.id || item.gift_box_id) === giftId);
+    if (gift) {
+      setSelectedGift(gift);
+      setModalQuantity(1);
+      setModalImageIndex(0);
+    }
+  }, [gifts, searchParams]);
 
   // Filter and sort gifts
   const filteredGifts = gifts
@@ -307,10 +318,14 @@ const Gifts = () => {
                 const isOutOfStock =
                   gift.stock_status === "Out of Stock" ||
                   Number(gift.current_stock) <= 0;
+                const giftId = gift.id || gift.gift_box_id;
+                const isFavorite = wishlist.some(
+                  (item) => String(item.product_id || item.id || item._id) === String(giftId),
+                );
 
                 return (
                   <article
-                    key={gift.id || gift.gift_box_id}
+                    key={giftId}
                     className="group flex flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl"
                   >
                     {/* PRODUCT IMAGE AREA (MATCHING SHOP CARD) */}
@@ -336,9 +351,25 @@ const Gifts = () => {
                         </span>
                       )}
 
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleWishlist?.({ ...gift, __wishlistType: "gift" });
+                        }}
+                        className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                          isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"
+                        }`}
+                        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
+                      </button>
+
                       {/* STATUS OR SIZE BADGE */}
                       <span
-                        className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${
+                        className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${
                           isOutOfStock
                             ? "border border-red-200 bg-red-50 text-red-600"
                             : "bg-white/95 text-[#1a3c36]"
@@ -663,7 +694,33 @@ const Gifts = () => {
                 {/* MODAL FOOTER: QUANTITY & ACTION BUTTONS */}
                 <div className="mt-6 border-t border-[#f0e8dc] pt-4">
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#555]">Quantity</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#555]">Quantity</span>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleWishlist?.({ ...selectedGift, __wishlistType: "gift" });
+                        }}
+                        className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                          wishlist.some((item) => String(item.product_id || item.id || item._id) === String(selectedGift.id || selectedGift.gift_box_id))
+                            ? "border-[#d79d4a] bg-[#d79d4a] text-[#1d2925]"
+                            : "border-[#e5ded4] bg-[#faf8f5] text-[#777] hover:border-[#d79d4a] hover:text-[#b07838]"
+                        }`}
+                        aria-label={
+                          wishlist.some((item) => String(item.product_id || item.id || item._id) === String(selectedGift.id || selectedGift.gift_box_id))
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                        }
+                        title={
+                          wishlist.some((item) => String(item.product_id || item.id || item._id) === String(selectedGift.id || selectedGift.gift_box_id))
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                        }
+                      >
+                        <Heart className="h-4 w-4" fill={wishlist.some((item) => String(item.product_id || item.id || item._id) === String(selectedGift.id || selectedGift.gift_box_id)) ? "currentColor" : "none"} />
+                      </button>
+                    </div>
                     <div className="inline-flex items-center rounded-xl border border-[#d8cfc3] bg-white p-1">
                       <button
                         type="button"

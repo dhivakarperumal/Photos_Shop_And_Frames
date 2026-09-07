@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   CreditCard,
+  LocateFixed,
   Image as ImageIcon,
   MapPin,
   Package,
@@ -53,6 +54,7 @@ const Checkout = () => {
   const checkoutItems = isDirectBuy ? directItems : cart;
 
   const [submitting, setSubmitting] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -99,6 +101,60 @@ const Checkout = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported by this browser");
+      return;
+    }
+
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`,
+            { headers: { Accept: "application/json" } },
+          );
+          if (!response.ok) throw new Error("Location lookup failed");
+
+          const address = (await response.json()).address || {};
+          const street = [address.house_number, address.road || address.pedestrian]
+            .filter(Boolean)
+            .join(" ");
+          const city = address.city || address.town || address.village || address.municipality || "";
+          const district = address.state_district || address.county || "";
+          const nextState = indianStates.includes(address.state) ? address.state : "Other";
+
+          setFormData((prev) => ({
+            ...prev,
+            street_name: street || prev.street_name,
+            city: city || prev.city,
+            district: district || prev.district,
+            state: address.state ? nextState : prev.state,
+            country: address.country || prev.country,
+            pincode: address.postcode || prev.pincode,
+            landmark: address.suburb || address.neighbourhood || prev.landmark,
+          }));
+          toast.success("Current delivery location added");
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          toast.error("Could not read this location. Please enter the address manually.");
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (error) => {
+        setFetchingLocation(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error("Please allow location access to use this feature");
+        } else {
+          toast.error("Could not fetch your current location");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -321,18 +377,32 @@ const Checkout = () => {
             <div className="space-y-6 lg:col-span-7">
               {/* CONTACT & SHIPPING DETAILS */}
               <div className="rounded-3xl border border-[#ebe3d7] bg-white p-6 shadow-sm sm:p-7">
-                <div className="mb-5 flex items-center gap-2.5 border-b border-[#f0e8dc] pb-3.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f4eee5] text-[#b07838]">
-                    <MapPin className="h-4 w-4" />
+                <div className="mb-5 flex items-center justify-between gap-3 border-b border-[#f0e8dc] pb-3.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f4eee5] text-[#b07838]">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-base font-bold text-[#1d2925]">
+                        Shipping &amp; Delivery Address
+                      </h2>
+                      <p className="text-[11px] text-[#777]">
+                        Where should we deliver your handcrafted frame?
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-[#1d2925]">
-                      Shipping &amp; Delivery Address
-                    </h2>
-                    <p className="text-[11px] text-[#777]">
-                      Where should we deliver your handcrafted frame?
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={fetchingLocation}
+                    className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-[#d8c7ae] bg-[#fffaf2] px-3 text-[11px] font-bold text-[#9b6b2d] transition hover:border-[#b07838] hover:bg-[#f8f0e4] disabled:cursor-wait disabled:opacity-60"
+                    title="Use your current location"
+                    aria-label="Use your current location"
+                  >
+                    <LocateFixed className={`h-4 w-4 ${fetchingLocation ? "animate-pulse" : ""}`} />
+                    <span className="hidden sm:inline">Use current location</span>
+                    <span className="sm:hidden">Locate me</span>
+                  </button>
                 </div>
 
                 <div className="space-y-4 text-xs">
