@@ -1,17 +1,16 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   Gift,
-  Heart,
 } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
+import CollectionCard from "../../CommonComponents/CollectionCard";
 import PageContainer from "../../CommonComponents/PageContainer";
-import { StoreContext } from "../../PrivateRouter/StoreContext";
 
 // Fallback curated gift boxes
 const FALLBACK_GIFTS = [
@@ -102,7 +101,6 @@ const GiftShowcase = () => {
   const [gifts, setGifts] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [loading, setLoading] = useState(true);
-  const { wishlist = [], toggleWishlist } = useContext(StoreContext) || {};
 
   useEffect(() => {
     let isMounted = true;
@@ -246,47 +244,25 @@ const GiftShowcase = () => {
                 const giftId = gift.id || gift.gift_box_id;
                 const isOutOfStock =
                   gift.stock_status === "Out of Stock" || Number(gift.current_stock) <= 0;
-                const isFavorite = wishlist.some(
-                  (item) => String(item.product_id || item.id || item._id) === String(giftId),
-                );
 
                 return (
                   <SwiperSlide key={giftId} className="!h-auto">
-                    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl">
-                    {/* Image Area */}
-                    <div className="relative flex h-64 cursor-pointer items-center justify-center overflow-hidden bg-[#f4eee6] p-5">
-                      <Link to={`/gifts?giftId=${giftId}`} className="h-full w-full">
-                        <img src={image} alt={gift.name} loading="lazy" onError={(e) => { e.currentTarget.src = DEFAULT_GIFT_FALLBACK; }} className="h-full w-full object-contain transition duration-300 group-hover:scale-105" />
-                      </Link>
-
-                      {/* Badges */}
-                      {itemCount > 0 && (
-                        <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                          <Gift className="h-3 w-3 text-[#d4a553]" />
-                          {itemCount} Item{itemCount !== 1 ? "s" : ""} Inside
-                        </span>
-                      )}
-
-                      <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggleWishlist?.({ ...gift, __wishlistType: "gift" }); }} className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"}`} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
-                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
-                      </button>
-                      <span className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${isOutOfStock ? "border border-red-200 bg-red-50 text-red-600" : "bg-white/95 text-[#1a3c36]"}`}>
-                        {isOutOfStock ? "Out of Stock" : gift.box_size || "Gift Box"}
-                      </span>
-                      {discount > 0 && <span className="absolute left-3 top-3 rounded-full bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">{discount}% OFF</span>}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex flex-1 flex-col p-5">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{gift.category || "Gift Box"}</p>
-                      <Link to={`/gifts?giftId=${giftId}`} className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838]" title={gift.name}>{gift.name}</Link>
-                      <p className="mt-1 line-clamp-1 text-xs text-[#777]">{gift.description || `${gift.box_type || "Magnetic Closure"} • ${gift.material || "Rigid Box"}`}</p>
-                      <div className="mt-4 flex items-center justify-between">
-                        <div><span className="text-xl font-black text-[#1a3c36]">₹{sellingPrice || "--"}</span>{mrp > sellingPrice && <span className="ml-2 text-xs text-[#999] line-through">₹{mrp}</span>}</div>
-                        <Link to={`/gifts?giftId=${giftId}`} className="inline-flex items-center gap-1 rounded-lg bg-[#14201d] px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-[#b07838]"><span>Explore</span><ArrowUpRight className="h-3.5 w-3.5" /></Link>
-                      </div>
-                    </div>
-                    </article>
+                    <CollectionCard
+                      product={gift}
+                      type="gift"
+                      image={image}
+                      fallbackImage={DEFAULT_GIFT_FALLBACK}
+                      title={gift.name}
+                      category={gift.category || "Gift Box"}
+                      badgeText={itemCount > 0 ? `${itemCount} Item${itemCount !== 1 ? "s" : ""} Inside` : ""}
+                      sizeText={gift.box_size || "Gift Box"}
+                      isOutOfStock={isOutOfStock}
+                      discount={discount}
+                      price={sellingPrice}
+                      originalPrice={mrp}
+                      metadata={gift.description || `${gift.box_type || "Magnetic Closure"} • ${gift.material || "Rigid Box"}`}
+                      href={`/gifts?giftId=${giftId}`}
+                    />
                   </SwiperSlide>
                 );
               })}

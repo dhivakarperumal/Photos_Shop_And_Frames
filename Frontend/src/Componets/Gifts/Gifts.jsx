@@ -1,23 +1,19 @@
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   Check,
-  Eye,
   Gift,
   Heart,
-  Image as ImageIcon,
   Package,
-  Plus,
   Search,
-  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
-  Truck,
   UploadCloud,
   X,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
+import CollectionCard from "../../CommonComponents/CollectionCard";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
@@ -39,9 +35,9 @@ const Gifts = () => {
     customPhoto: null,
   });
 
-  const { addToCart, openCart, wishlist = [], toggleWishlist } = useContext(StoreContext);
+  const { addToCart, wishlist = [], toggleWishlist } = useContext(StoreContext);
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   // Load gifts from backend API
   useEffect(() => {
@@ -319,126 +315,25 @@ const Gifts = () => {
                   gift.stock_status === "Out of Stock" ||
                   Number(gift.current_stock) <= 0;
                 const giftId = gift.id || gift.gift_box_id;
-                const isFavorite = wishlist.some(
-                  (item) => String(item.product_id || item.id || item._id) === String(giftId),
-                );
 
                 return (
-                  <article
+                  <CollectionCard
                     key={giftId}
-                    className="group flex flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl"
-                  >
-                    {/* PRODUCT IMAGE AREA (MATCHING SHOP CARD) */}
-                    <div
-                      onClick={() => openGiftModal(gift)}
-                      className="relative flex h-64 items-center justify-center overflow-hidden bg-[#f4eee6] p-5 cursor-pointer"
-                    >
-                      {image ? (
-                        <img
-                          src={image}
-                          alt={gift.name}
-                          className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <Gift className="h-12 w-12 text-[#b9aa98]" />
-                      )}
-
-                      {/* ITEMS COUNT BADGE */}
-                      {itemsCount > 0 && (
-                        <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                          <Gift className="h-3 w-3 text-[#d4a553]" />
-                          {itemsCount} Item{itemsCount !== 1 ? "s" : ""} Inside
-                        </span>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleWishlist?.({ ...gift, __wishlistType: "gift" });
-                        }}
-                        className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
-                          isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"
-                        }`}
-                        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                      >
-                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
-                      </button>
-
-                      {/* STATUS OR SIZE BADGE */}
-                      <span
-                        className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${
-                          isOutOfStock
-                            ? "border border-red-200 bg-red-50 text-red-600"
-                            : "bg-white/95 text-[#1a3c36]"
-                        }`}
-                      >
-                        {isOutOfStock ? "Out of Stock" : gift.box_size || "Gift Box"}
-                      </span>
-
-                      {/* DISCOUNT BADGE */}
-                      {discount > 0 && (
-                        <span className="absolute left-3 top-3 rounded-full bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">
-                          {discount}% OFF
-                        </span>
-                      )}
-                    </div>
-
-                    {/* PRODUCT DETAILS AREA (MATCHING SHOP CARD) */}
-                    <div className="flex flex-1 flex-col p-5">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">
-                        {gift.category || "Gift Box"}
-                      </p>
-
-                      <h2
-                        onClick={() => openGiftModal(gift)}
-                        className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838] cursor-pointer"
-                        title={gift.name}
-                      >
-                        {gift.name}
-                      </h2>
-
-                      {gift.description && (
-                        <p className="mt-1 line-clamp-2 text-xs text-[#777]">
-                          {gift.description}
-                        </p>
-                      )}
-
-                      {/* PRICING (MATCHING SHOP CARD) */}
-                      <div className="mt-4 flex items-center justify-between">
-                        <div>
-                          <span className="text-xl font-black text-[#1a3c36]">
-                            ₹{sellingPrice || "--"}
-                          </span>
-                          {mrp > sellingPrice && (
-                            <span className="ml-2 text-xs text-[#999] line-through">
-                              ₹{mrp}
-                            </span>
-                          )}
-                        </div>
-
-                        {gift.theme && (
-                          <span className="truncate max-w-[100px] text-[11px] font-semibold text-[#888]">
-                            {gift.theme}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* CARD ACTIONS */}
-                      <div className="mt-auto border-t border-[#f0e8dc] pt-3 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openGiftModal(gift)}
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Box &amp; Order
-                        </button>
-                      </div>
-                    </div>
-                  </article>
+                    product={gift}
+                    type="gift"
+                    image={image}
+                    title={gift.name}
+                    category={gift.category || "Gift Box"}
+                    badgeText={itemsCount > 0 ? `${itemsCount} Item${itemsCount !== 1 ? "s" : ""} Inside` : ""}
+                    sizeText={gift.box_size || "Gift Box"}
+                    isOutOfStock={isOutOfStock}
+                    discount={discount}
+                    price={sellingPrice}
+                    originalPrice={mrp}
+                    metadata={gift.description}
+                    secondaryLabel={gift.theme}
+                    onOpen={openGiftModal}
+                  />
                 );
               })}
             </div>
