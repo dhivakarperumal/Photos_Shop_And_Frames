@@ -89,6 +89,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
   const productPayload = isAlbum
     ? {
         id,
+        item_type: "album",
         product_name: title,
         category: item.category || "Albums",
         price,
@@ -97,6 +98,8 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
       }
     : {
         id,
+        gift_box_id: item.gift_box_id || id,
+        item_type: "gift",
         product_name: title,
         category,
         price,
@@ -120,6 +123,8 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
       state: {
         checkoutItems: [{
           product_id: id,
+          gift_box_id: isAlbum ? null : (item.gift_box_id || id),
+          item_type: isAlbum ? "album" : "gift",
           product_name: title,
           category,
           size: isAlbum ? item.size || `${item.total_pages || 40} Pages` : item.box_size || "Standard Box",

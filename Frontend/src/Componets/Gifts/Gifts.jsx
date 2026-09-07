@@ -131,6 +131,8 @@ const Gifts = () => {
 
     const productPayload = {
       id: gift.id,
+      gift_box_id: gift.gift_box_id || gift.id,
+      item_type: "gift",
       product_name: gift.name,
       category: gift.category || "Gift Box",
       price: price,
@@ -159,6 +161,8 @@ const Gifts = () => {
     const price = Number(gift.selling_price || gift.mrp || 0);
     const checkoutItem = {
       product_id: gift.id,
+      gift_box_id: gift.gift_box_id || gift.id,
+      item_type: "gift",
       product_name: gift.name,
       category: gift.category || "Gift Box",
       size: gift.box_size || "Standard Box",

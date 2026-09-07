@@ -276,6 +276,8 @@ const Checkout = () => {
         clear_cart: !isDirectBuy, // only clear cart if checking out cart items
         items: checkoutItems.map((item) => ({
           product_id: item.product_id || item.id,
+          gift_box_id: item.gift_box_id || null,
+          item_type: item.item_type || (item.category?.toLowerCase().includes("gift") ? "gift" : "product"),
           product_name: item.product_name || "Photo Frame",
           category: item.category || "Photo Frames",
           size: item.size || item.variant_size || "Standard",

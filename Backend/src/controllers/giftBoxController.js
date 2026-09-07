@@ -22,7 +22,7 @@ const normalizeGiftBox = (body, user) => {
     discount_percentage: discount,
     selling_price: sellingPrice,
     current_stock: currentStock,
-    stock_status: currentStock <= 0 ? "Out of Stock" : "Available",
+    stock_status: body.stock_status || giftBoxModule.calculateStockStatus(currentStock),
     image: body.image || body.images?.[0] || "",
     images: Array.isArray(body.images) ? body.images : body.image ? [body.image] : [],
     customization: body.customization || {
@@ -83,6 +83,34 @@ const updateGiftBox = async (req, res) => {
   }
 };
 
+const adjustStock = async (req, res) => {
+  try {
+    const { action, amount, stock, current_stock, reduce_by } = req.body;
+    const finalStock = stock !== undefined ? stock : current_stock;
+    const finalAction = reduce_by !== undefined ? "reduce" : action;
+    const finalAmount = reduce_by !== undefined ? reduce_by : amount;
+
+    const result = await giftBoxModule.adjustGiftBoxStock(req.params.id, {
+      action: finalAction,
+      amount: finalAmount,
+      stock: finalStock,
+    });
+
+    if (!result) {
+      return res.status(404).json({ success: false, message: "Gift box not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Gift box stock updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Adjust gift box stock error:", error);
+    res.status(500).json({ success: false, message: error.message || "Failed to adjust stock" });
+  }
+};
+
 const deleteGiftBox = async (req, res) => {
   try {
     const result = await giftBoxModule.deleteGiftBox(req.params.id);
@@ -93,4 +121,11 @@ const deleteGiftBox = async (req, res) => {
   }
 };
 
-module.exports = { getAllGiftBoxes, getGiftBoxById, createGiftBox, updateGiftBox, deleteGiftBox };
+module.exports = {
+  getAllGiftBoxes,
+  getGiftBoxById,
+  createGiftBox,
+  updateGiftBox,
+  adjustStock,
+  deleteGiftBox,
+};
