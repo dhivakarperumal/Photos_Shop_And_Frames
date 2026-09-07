@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Camera, Heart, Layers3, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Camera, Clock3, Gift, Heart, Image, Layers3, ShieldCheck, Sparkles } from "lucide-react";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 
@@ -21,6 +21,36 @@ const values = [
   },
 ];
 
+const collections = [
+  {
+    icon: Image,
+    eyebrow: "For your walls",
+    title: "Custom Frames",
+    text: "Choose the finish, upload your photograph, and create a piece that belongs in your space.",
+    link: "/shop",
+    tone: "bg-[#efe2d0]",
+    image: "/images/1.png",
+  },
+  {
+    icon: BookOpen,
+    eyebrow: "For your milestones",
+    title: "Photo Albums",
+    text: "Turn weddings, travels, and family chapters into a beautiful book you can return to.",
+    link: "/albums",
+    tone: "bg-[#dfe9e2]",
+    image: "/images/hero-banner.png",
+  },
+  {
+    icon: Gift,
+    eyebrow: "For someone special",
+    title: "Personalized Gifts",
+    text: "Thoughtful gift boxes and keepsakes made for birthdays, celebrations, and everyday love.",
+    link: "/gifts",
+    tone: "bg-[#eee1e5]",
+    image: null,
+  },
+];
+
 const About = () => (
   <main className="min-h-screen overflow-hidden bg-[#f7f3ed] text-[#1d2925]">
     <PageHeader title="About Us" />
@@ -28,21 +58,76 @@ const About = () => (
       <PageContainer className="relative py-14 sm:py-20 lg:py-24">
         <div className="grid items-end gap-12 lg:grid-cols-[1fr_0.9fr]">
           <div className="max-w-2xl">
-            <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-[#edb66d]">The Q Frame Studio story</p>
-            <h1 className="max-w-xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">Keep the good days in view.</h1>
-            <p className="mt-7 max-w-lg text-base leading-7 text-[#d6dfd8] sm:text-lg">We turn photographs into pieces of home. Thoughtful frames, honest materials, and a little more feeling in the everyday.</p>
-            <Link to="/shop" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#edb66d] px-5 py-3 text-xs font-black text-[#1a3c36] transition hover:bg-[#f6cc91]">Explore the collection <ArrowRight className="h-4 w-4" /></Link>
+            <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-[#edb66d]">Frames · Albums · Gifts</p>
+            <h1 className="max-w-xl text-5xl font-black leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">Your memories, made tangible.</h1>
+            <p className="mt-7 max-w-lg text-base leading-7 text-[#d6dfd8] sm:text-lg">Q Frame Studio turns the photographs on your phone into custom frames, keepsake albums, and meaningful gifts made to be lived with.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/shop" className="inline-flex items-center gap-2 rounded-full bg-[#edb66d] px-5 py-3 text-xs font-black text-[#1a3c36] transition hover:bg-[#f6cc91]">Shop frames <ArrowRight className="h-4 w-4" /></Link>
+              <Link to="/gifts" className="inline-flex items-center gap-2 rounded-full border border-[#d6dfd8]/50 px-5 py-3 text-xs font-black text-[#f9f4ec] transition hover:border-[#edb66d] hover:text-[#edb66d]">Browse gifts</Link>
+            </div>
           </div>
           <div className="relative mx-auto w-full max-w-md lg:mr-0">
             <div className="absolute -left-5 -top-5 h-24 w-24 border-l border-t border-[#edb66d]/70" />
             <div className="aspect-[4/5] overflow-hidden border-[12px] border-[#d79d4a] bg-[#f2e8d8] shadow-[18px_18px_0_#102c28]">
-              <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=85" alt="Camera and photographs in a creative studio" className="h-full w-full object-cover" />
+              <img src="/images/hero-banner.png" alt="A family photograph displayed in a Q Techx frame" className="h-full w-full object-cover object-left" />
             </div>
             <p className="absolute -bottom-7 -right-2 max-w-[180px] bg-[#f7f3ed] px-4 py-3 text-xs font-bold leading-5 text-[#1a3c36] shadow-lg">Small moments. Beautifully held.</p>
           </div>
         </div>
       </PageContainer>
     </section>
+
+    <section className="border-b border-[#e5d8c9] bg-[#fbf8f3]">
+      <PageContainer className="grid divide-y divide-[#e5d8c9] py-2 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Made to last</p><p className="mt-0.5 text-xs text-[#69736e]">Materials chosen for everyday living.</p></div>
+        </div>
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <Clock3 className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Thoughtful turnaround</p><p className="mt-0.5 text-xs text-[#69736e]">From upload to doorstep, kept simple.</p></div>
+        </div>
+        <div className="flex items-center gap-3 px-2 py-5 sm:px-6">
+          <Heart className="h-5 w-5 shrink-0 text-[#b07838]" />
+          <div><p className="text-sm font-black text-[#1d2925]">Personal by design</p><p className="mt-0.5 text-xs text-[#69736e]">Built around the moments that matter.</p></div>
+        </div>
+      </PageContainer>
+    </section>
+
+    <PageContainer>
+      <section className="py-14 sm:py-18 lg:py-22">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#b07838]">Made for your moments</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Find your way to the memory.</h2>
+          </div>
+          <p className="max-w-sm text-sm leading-6 text-[#69736e]">One studio, three ways to keep the moments close.</p>
+        </div>
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {collections.map(({ icon: Icon, eyebrow, title, text, link, tone, image }) => (
+            <Link key={title} to={link} className="group overflow-hidden rounded-3xl border border-[#e5d8c9] bg-white transition hover:-translate-y-1 hover:shadow-xl">
+              <div className={`relative flex h-44 items-center justify-between overflow-hidden p-7 ${tone}`}>
+                {image ? (
+                  <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55 mix-blend-multiply transition duration-500 group-hover:scale-105" />
+                ) : (
+                  <div className="absolute -right-4 -top-8 h-40 w-40 rounded-full border-[18px] border-[#b97887]/20" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/20 to-transparent" />
+                <div>
+                  <p className="relative text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b6259]">{eyebrow}</p>
+                  <h3 className="relative mt-2 text-2xl font-black text-[#1d2925]">{title}</h3>
+                </div>
+                <Icon className="relative h-12 w-12 text-[#1a3c36]/75 transition duration-300 group-hover:scale-110" strokeWidth={1.4} />
+              </div>
+              <div className="p-6">
+                <p className="text-sm leading-6 text-[#69736e]">{text}</p>
+                <span className="mt-5 inline-flex items-center gap-2 text-xs font-black text-[#b07838]">Explore collection <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </PageContainer>
 
     <PageContainer>
       <section className="grid gap-10 py-16 lg:grid-cols-[0.8fr_1.2fr] lg:py-24">

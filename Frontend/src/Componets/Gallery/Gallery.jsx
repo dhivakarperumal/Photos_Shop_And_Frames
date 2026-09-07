@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Camera,
   ChevronDown,
-  ChevronRight,
   CircleUserRound,
   Gift,
   Grid2X2,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import api, { API_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
+import PageHeader from "../../CommonComponents/PageHeader";
 
 const categoryIcons = {
   Family: Users,
@@ -119,13 +119,11 @@ const Gallery = () => {
 
   return (
     <main className="bg-[#fffdfa] text-[#101d35]">
-      <section className="relative z-0 overflow-visible border-b border-[#eadfd5] bg-[#f4eee9] pt-28">
+      <PageHeader title="Gallery" />
+      <section className="relative z-0 overflow-visible border-b border-[#eadfd5] bg-[#f4eee9]">
         <PageContainer>
           <div className="grid min-h-[330px] items-center gap-8 py-10 lg:grid-cols-[0.82fr_1.18fr] lg:py-12">
             <div className="relative z-10 max-w-xl pl-2">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#d8791f]">
-                Our gallery
-              </p>
               <h1 className="mt-2 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">
                 Moments Framed
                 <br />
@@ -137,12 +135,6 @@ const Gallery = () => {
                 Explore beautiful memories captured by our customers and framed
                 with love.
               </p>
-              <a
-                href="#gallery-grid"
-                className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#102139] px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm hover:bg-[#1d3552]"
-              >
-                Submit your photo <ChevronRight className="h-4 w-4" />
-              </a>
             </div>
             <div className="relative flex min-h-[260px] items-end justify-center lg:min-h-[300px]">
               <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-[#6d914d]/20 blur-2xl" />

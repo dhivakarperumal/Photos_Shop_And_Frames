@@ -172,6 +172,17 @@ const getLatestAddressByUserId = async (userId) => {
   return rows[0] || null;
 };
 
+const getAddressesByUserId = async (userId) => {
+  const pool = getDB();
+  const [rows] = await pool.query(
+    `SELECT * FROM addresses
+     WHERE user_id = ? OR customer_id = ?
+     ORDER BY is_default DESC, updated_at DESC, id DESC`,
+    [userId, userId],
+  );
+  return rows;
+};
+
 const saveAddressByUserId = async (userId, address) => {
   const pool = getDB();
   const existing = await getLatestAddressByUserId(userId);
@@ -251,6 +262,7 @@ module.exports = {
   updateUser,
   updateUserByUserId,
   getLatestAddressByUserId,
+  getAddressesByUserId,
   saveAddressByUserId,
   getPasswordHashByUserId,
   updatePasswordByUserId,

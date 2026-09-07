@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   CreditCard,
+  LocateFixed,
+  Search,
   Image as ImageIcon,
   MapPin,
   Package,
@@ -53,6 +55,10 @@ const Checkout = () => {
   const checkoutItems = isDirectBuy ? directItems : cart;
 
   const [submitting, setSubmitting] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressSearch, setAddressSearch] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -91,6 +97,17 @@ const Checkout = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const userId = user?.user_id || user?.id;
+    if (!userId) return;
+
+    setLoadingAddresses(true);
+    api.get(`/users/addresses/${userId}`)
+      .then((response) => setSavedAddresses(Array.isArray(response.data?.data) ? response.data.data : []))
+      .catch(() => setSavedAddresses([]))
+      .finally(() => setLoadingAddresses(false));
+  }, [user]);
+
   const totalAmount = checkoutItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
     0
@@ -100,6 +117,103 @@ const Checkout = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported by this browser");
+      return;
+    }
+
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`,
+            { headers: { Accept: "application/json" } },
+          );
+          if (!response.ok) throw new Error("Location lookup failed");
+
+          const address = (await response.json()).address || {};
+          const doorNumber = address.house_number || address.building || "";
+          const street =
+            address.road ||
+            address.pedestrian ||
+            address.footway ||
+            address.path ||
+            address.cycleway ||
+            address.locality ||
+            address.suburb ||
+            address.neighbourhood ||
+            "";
+          const city = address.city || address.town || address.village || address.municipality || "";
+          const district = address.state_district || address.county || "";
+          const nextState = indianStates.includes(address.state) ? address.state : "Other";
+          const landmark =
+            address.suburb ||
+            address.neighbourhood ||
+            address.quarter ||
+            address.residential ||
+            address.hamlet ||
+            address.locality ||
+            "";
+
+          setFormData((prev) => ({
+            ...prev,
+            door_number: doorNumber || prev.door_number,
+            street_name: street || prev.street_name,
+            city: city || prev.city,
+            district: district || prev.district,
+            state: address.state ? nextState : prev.state,
+            country: address.country || prev.country,
+            pincode: address.postcode || prev.pincode,
+            landmark: landmark || prev.landmark,
+          }));
+          toast.success("Current delivery location added");
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          toast.error("Could not read this location. Please enter the address manually.");
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (error) => {
+        setFetchingLocation(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error("Please allow location access to use this feature");
+        } else {
+          toast.error("Could not fetch your current location");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+  const applySavedAddress = (address) => {
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: address.customer_name || prev.customer_name,
+      customer_phone: address.mobile_number || prev.customer_phone,
+      door_number: address.address_line2 || prev.door_number,
+      street_name: address.address_line1 || prev.street_name,
+      landmark: address.landmark || prev.landmark,
+      city: address.city || prev.city,
+      district: address.district || prev.district,
+      state: address.state || prev.state,
+      country: address.country || prev.country,
+      pincode: address.pincode || prev.pincode,
+    }));
+    setAddressSearch("");
+    toast.success("Saved address selected");
+  };
+
+  const filteredAddresses = savedAddresses.filter((address) =>
+    [address.customer_name, address.address_line1, address.address_line2, address.landmark, address.city, address.district, address.state, address.pincode]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(addressSearch.trim().toLowerCase()),
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -321,18 +435,80 @@ const Checkout = () => {
             <div className="space-y-6 lg:col-span-7">
               {/* CONTACT & SHIPPING DETAILS */}
               <div className="rounded-3xl border border-[#ebe3d7] bg-white p-6 shadow-sm sm:p-7">
-                <div className="mb-5 flex items-center gap-2.5 border-b border-[#f0e8dc] pb-3.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f4eee5] text-[#b07838]">
-                    <MapPin className="h-4 w-4" />
+                <div className="mb-5 flex items-center justify-between gap-3 border-b border-[#f0e8dc] pb-3.5">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f4eee5] text-[#b07838]">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="text-base font-bold text-[#1d2925]">
+                        Shipping &amp; Delivery Address
+                      </h2>
+                      <p className="text-[11px] text-[#777]">
+                        Where should we deliver your handcrafted frame?
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-[#1d2925]">
-                      Shipping &amp; Delivery Address
-                    </h2>
-                    <p className="text-[11px] text-[#777]">
-                      Where should we deliver your handcrafted frame?
-                    </p>
+                  <button
+                    type="button"
+                    onClick={handleUseCurrentLocation}
+                    disabled={fetchingLocation}
+                    className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-[#d8c7ae] bg-[#fffaf2] px-3 text-[11px] font-bold text-[#9b6b2d] transition hover:border-[#b07838] hover:bg-[#f8f0e4] disabled:cursor-wait disabled:opacity-60"
+                    title="Use your current location"
+                    aria-label="Use your current location"
+                  >
+                    <LocateFixed className={`h-4 w-4 ${fetchingLocation ? "animate-pulse" : ""}`} />
+                    <span className="hidden sm:inline">Use current location</span>
+                    <span className="sm:hidden">Locate me</span>
+                  </button>
+                </div>
+
+                <div className="mb-5 rounded-2xl border border-[#eadfce] bg-[#fdfaf5] p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-[#9b6b2d]">
+                      Search saved address
+                    </label>
+                    {savedAddresses.length > 0 && (
+                      <span className="text-[10px] font-semibold text-[#8a8176]">
+                        {savedAddresses.length} saved
+                      </span>
+                    )}
                   </div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#b07838]" />
+                    <input
+                      type="search"
+                      value={addressSearch}
+                      onChange={(event) => setAddressSearch(event.target.value)}
+                      placeholder="Search by city, street, landmark or PIN"
+                      className="h-11 w-full rounded-xl border border-[#d8cfc3] bg-white pl-9 pr-3 text-xs outline-none transition placeholder:text-[#aaa] focus:border-[#b07838] focus:ring-2 focus:ring-[#b07838]/10"
+                    />
+                  </div>
+                  {loadingAddresses && (
+                    <p className="mt-2 px-1 text-[11px] text-[#777]">Loading your saved addresses...</p>
+                  )}
+                  {!loadingAddresses && !savedAddresses.length && (
+                    <p className="mt-2 px-1 text-[11px] text-[#777]">No saved addresses found for this account.</p>
+                  )}
+                  {!loadingAddresses && savedAddresses.length > 0 && (addressSearch.trim() || filteredAddresses.length > 1) && (
+                    <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+                      {filteredAddresses.length > 0 ? filteredAddresses.map((address) => (
+                        <button
+                          key={address.id || address.address_id}
+                          type="button"
+                          onClick={() => applySavedAddress(address)}
+                          className="w-full rounded-xl border border-[#eadfce] bg-white p-3 text-left text-xs transition hover:border-[#b07838] hover:bg-[#fffaf2]"
+                        >
+                          <span className="block font-bold text-[#1d2925]">{address.customer_name || "Saved address"}</span>
+                          <span className="mt-1 block truncate text-[#6b6b63]">
+                            {[address.address_line2, address.address_line1, address.landmark, address.city, address.pincode].filter(Boolean).join(", ")}
+                          </span>
+                        </button>
+                      )) : (
+                        <p className="px-1 py-2 text-xs text-[#777]">No saved address matches your search.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4 text-xs">

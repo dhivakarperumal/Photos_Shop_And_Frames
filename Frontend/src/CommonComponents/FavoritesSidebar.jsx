@@ -29,8 +29,14 @@ const FavoritesSidebar = () => {
   if (!isFavoritesOpen) return null;
 
   const getImage = (item) => item.image || item.product_image || item.product_images?.[0];
-  const getName = (item) => item.product_name || item.name || "Favorite item";
+  const getName = (item) => item.product_name || item.item_name || item.name || "Favorite item";
   const getId = (item) => item.id || item._id || item.product_id;
+  const getPrice = (item) => item.price || item.total_price || item.selling_price || item.discount_price || 0;
+  const getProductPath = (item) => {
+    if (item.item_type === "gift") return `/gifts?giftId=${getId(item)}`;
+    if (item.item_type === "album") return `/albums?albumId=${getId(item)}`;
+    return `/products/${getId(item)}`;
+  };
 
   return (
     <div className="fixed inset-0 z-[999999] flex justify-end bg-black/65 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Favorites">
@@ -50,7 +56,7 @@ const FavoritesSidebar = () => {
           ) : wishlist.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center py-16 text-center"><div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f4eee5] text-[#b07838]"><Heart className="h-9 w-9" /></div><h3 className="mt-4 text-lg font-bold text-[#1d2925]">No favorites yet</h3><p className="mt-1 max-w-xs text-xs text-[#777]">Save products you love and find them here.</p><button type="button" onClick={() => { closeFavorites(); navigate("/shop"); }} className="mt-6 rounded-xl bg-[#1a3c36] px-6 py-2.5 text-xs font-bold text-white shadow transition hover:bg-[#235048]">Explore Frames</button></div>
           ) : (
-            <div className="space-y-3.5">{wishlist.map((item) => { const image = getImage(item); return <div key={getId(item)} className="flex gap-3 rounded-2xl border border-[#ece4d8] bg-[#fdfcfb] p-3"><div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ebdccb] bg-[#f7f3ed] p-1">{image ? <img src={image} alt={getName(item)} className="h-full w-full object-contain" /> : <Package className="h-6 w-6 text-[#b9aa98]" />}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><h3 className="truncate text-sm font-bold text-[#1d2925]">{getName(item)}</h3><button type="button" onClick={() => removeFromWishlist(getId(item))} className="text-[#999] transition hover:text-[#d04d4d]" title="Remove from favorites" aria-label={`Remove ${getName(item)} from favorites`}><Trash2 className="h-4 w-4" /></button></div><p className="mt-2 text-sm font-bold text-[#1a3c36]">₹{Number(item.price || item.offer_price || 0).toLocaleString("en-IN")}</p><button type="button" onClick={() => { closeFavorites(); navigate(`/products/${item.product_id || getId(item)}`); }} className="mt-3 text-xs font-bold text-[#b07838] underline underline-offset-2">View product</button></div></div>; })}</div>
+            <div className="space-y-3.5">{wishlist.map((item) => { const image = getImage(item); return <div key={getId(item)} className="flex gap-3 rounded-2xl border border-[#ece4d8] bg-[#fdfcfb] p-3"><div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ebdccb] bg-[#f7f3ed] p-1">{image ? <img src={image} alt={getName(item)} className="h-full w-full object-contain" /> : <Package className="h-6 w-6 text-[#b9aa98]" />}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><h3 className="truncate text-sm font-bold text-[#1d2925]">{getName(item)}</h3><button type="button" onClick={() => removeFromWishlist(getId(item))} className="text-[#999] transition hover:text-[#d04d4d]" title="Remove from favorites" aria-label={`Remove ${getName(item)} from favorites`}><Trash2 className="h-4 w-4" /></button></div><p className="mt-2 text-sm font-bold text-[#1a3c36]">₹{Number(getPrice(item)).toLocaleString("en-IN")}</p><button type="button" onClick={() => { closeFavorites(); navigate(getProductPath(item)); }} className="mt-3 text-xs font-bold text-[#b07838] underline underline-offset-2">View product</button></div></div>; })}</div>
           )}
         </div>
       </aside>

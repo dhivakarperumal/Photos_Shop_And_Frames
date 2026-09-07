@@ -13,6 +13,7 @@ router.post("/login", userController.loginUser);
 
 // Protected routes (require authentication)
 router.get("/profile/:userId", userController.getUserProfile);
+router.get("/addresses/:userId", userController.getUserAddresses);
 router.put("/profile/:userId", userController.updateUserProfile);
 router.get("/address/:userId", userController.getUserAddress);
 router.put("/address/:userId", userController.updateUserAddress);
