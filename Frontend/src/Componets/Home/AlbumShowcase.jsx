@@ -9,7 +9,7 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
-import CollectionCard from "../../CommonComponents/CollectionCard";
+import AlbumCard from "../../CommonComponents/AlbumCard";
 import PageContainer from "../../CommonComponents/PageContainer";
 
 // Fallback albums in case DB has few or no albums
@@ -248,16 +248,15 @@ const AlbumShowcase = () => {
 
                 return (
                   <SwiperSlide key={albumId} className="!h-auto">
-                    <CollectionCard
-                      product={album}
-                      type="album"
+                    <AlbumCard
+                      album={album}
                       image={image}
                       fallbackImage={DEFAULT_ALBUM_FALLBACK}
                       title={album.product_name}
                       category={album.sub_category || album.occasion || "Photo Album"}
                       badgeText={`${album.total_pages || 40} Pages • Lay Flat`}
-                      sizeText={album.size || album.orientation || "Album"}
-                      isOutOfStock={isOutOfStock}
+                      size={album.size || album.orientation || "Album"}
+                      outOfStock={isOutOfStock}
                       discount={discountPercentage}
                       price={discountPrice || sellingPrice}
                       originalPrice={sellingPrice}

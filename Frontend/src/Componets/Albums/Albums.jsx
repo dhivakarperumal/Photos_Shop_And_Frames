@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
-import CollectionCard from "../../CommonComponents/CollectionCard";
+import AlbumCard from "../../CommonComponents/AlbumCard";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
@@ -329,16 +329,15 @@ const Albums = () => {
                 const albumId = album.id || album.product_id;
 
                 return (
-                  <CollectionCard
+                  <AlbumCard
                     key={albumId}
-                    product={album}
-                    type="album"
+                    album={album}
                     image={image}
                     title={album.product_name}
                     category={album.sub_category || album.occasion || "Photo Album"}
                     badgeText={`${totalPages} Pages • Lay Flat`}
-                    sizeText={album.size || album.orientation || "Album"}
-                    isOutOfStock={isOutOfStock}
+                    size={album.size || album.orientation || "Album"}
+                    outOfStock={isOutOfStock}
                     discount={discount}
                     price={discountPrice || sellingPrice}
                     originalPrice={sellingPrice}

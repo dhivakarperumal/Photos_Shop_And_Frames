@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
-import CollectionCard from "../../CommonComponents/CollectionCard";
+import GiftCard from "../../CommonComponents/GiftCard";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
@@ -317,16 +317,15 @@ const Gifts = () => {
                 const giftId = gift.id || gift.gift_box_id;
 
                 return (
-                  <CollectionCard
+                  <GiftCard
                     key={giftId}
-                    product={gift}
-                    type="gift"
+                    gift={gift}
                     image={image}
                     title={gift.name}
                     category={gift.category || "Gift Box"}
                     badgeText={itemsCount > 0 ? `${itemsCount} Item${itemsCount !== 1 ? "s" : ""} Inside` : ""}
-                    sizeText={gift.box_size || "Gift Box"}
-                    isOutOfStock={isOutOfStock}
+                    size={gift.box_size || "Gift Box"}
+                    outOfStock={isOutOfStock}
                     discount={discount}
                     price={sellingPrice}
                     originalPrice={mrp}

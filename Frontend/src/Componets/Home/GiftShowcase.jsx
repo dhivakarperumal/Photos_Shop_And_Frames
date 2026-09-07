@@ -9,7 +9,7 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
-import CollectionCard from "../../CommonComponents/CollectionCard";
+import GiftCard from "../../CommonComponents/GiftCard";
 import PageContainer from "../../CommonComponents/PageContainer";
 
 // Fallback curated gift boxes
@@ -247,16 +247,15 @@ const GiftShowcase = () => {
 
                 return (
                   <SwiperSlide key={giftId} className="!h-auto">
-                    <CollectionCard
-                      product={gift}
-                      type="gift"
+                    <GiftCard
+                      gift={gift}
                       image={image}
                       fallbackImage={DEFAULT_GIFT_FALLBACK}
                       title={gift.name}
                       category={gift.category || "Gift Box"}
                       badgeText={itemCount > 0 ? `${itemCount} Item${itemCount !== 1 ? "s" : ""} Inside` : ""}
-                      sizeText={gift.box_size || "Gift Box"}
-                      isOutOfStock={isOutOfStock}
+                      size={gift.box_size || "Gift Box"}
+                      outOfStock={isOutOfStock}
                       discount={discount}
                       price={sellingPrice}
                       originalPrice={mrp}
