@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { ImagePlus, Plus, Trash2 } from 'lucide-react';
 import api from '../api';
 
 const albumProduct = {
@@ -14,6 +14,7 @@ const albumProduct = {
   occasion: 'Wedding',
   theme: 'Classic',
   size: '12 x 18 Inches',
+  sizeOptions: ['12 x 18 Inches'],
   width: '12 Inches',
   height: '18 Inches',
   orientation: 'Landscape',
@@ -25,6 +26,7 @@ const albumProduct = {
   coverMaterial: 'Leatherette',
   coverFinish: 'Matte',
   coverColor: 'Brown',
+  colorOptions: ['Brown'],
   printingType: 'Digital Printing',
   printQuality: 'High Definition',
   printingSides: 'Both Sides',
@@ -57,6 +59,17 @@ const albumProduct = {
 };
 
 const fieldStyle = 'w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm text-[#1f1f1f] outline-none focus:border-[#1a3c36]';
+
+const parseOptionList = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string' || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 const AddAlbum = () => {
   const navigate = useNavigate();
@@ -95,6 +108,7 @@ const AddAlbum = () => {
           occasion: album.occasion || '',
           theme: album.theme || '',
           size: album.size || '',
+          sizeOptions: parseOptionList(album.size_options),
           width: album.width || '',
           height: album.height || '',
           orientation: album.orientation || 'Landscape',
@@ -106,6 +120,7 @@ const AddAlbum = () => {
           coverMaterial: album.cover_material || album.coverMaterial || '',
           coverFinish: album.cover_finish || album.coverFinish || '',
           coverColor: album.cover_color || album.coverColor || '',
+          colorOptions: parseOptionList(album.color_options),
           printingType: album.printing_type || album.printingType || '',
           printQuality: album.print_quality || album.printQuality || '',
           printingSides: album.printing_sides || album.printingSides || '',
@@ -192,6 +207,27 @@ const AddAlbum = () => {
 
   const selectedCategory = categories.find((category) => category.category_name === formData.category) || categories[0] || null;
   const subCategoryOptions = Array.isArray(selectedCategory?.sub_categories) ? selectedCategory.sub_categories : [];
+
+  const addOption = (field) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...(Array.isArray(prev[field]) ? prev[field] : []), ''],
+    }));
+  };
+
+  const updateOption = (field, index, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].map((option, optionIndex) => optionIndex === index ? value : option),
+    }));
+  };
+
+  const removeOption = (field, index) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].filter((_, optionIndex) => optionIndex !== index),
+    }));
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -307,6 +343,7 @@ const AddAlbum = () => {
         occasion: formData.occasion,
         theme: formData.theme,
         size: formData.size,
+        size_options: formData.sizeOptions.filter(Boolean),
         width: formData.width,
         height: formData.height,
         orientation: formData.orientation,
@@ -318,6 +355,7 @@ const AddAlbum = () => {
         cover_material: formData.coverMaterial,
         cover_finish: formData.coverFinish,
         cover_color: formData.coverColor,
+        color_options: formData.colorOptions.filter(Boolean),
         printing_type: formData.printingType,
         print_quality: formData.printQuality,
         printing_sides: formData.printingSides,
@@ -515,6 +553,23 @@ const AddAlbum = () => {
                     <input name="coverColor" value={formData.coverColor} onChange={handleChange} className={fieldStyle} />
                   </label>
                 </div>
+                <div className="mt-5 border-t border-[#e7e0d8] pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#2d2d2d]">Available Colours</p>
+                      <p className="mt-1 text-xs text-[#777]">Add the cover colours customers can choose.</p>
+                    </div>
+                    <button type="button" onClick={() => addOption('colorOptions')} className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"><Plus className="h-3.5 w-3.5" /> Add colour</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {(formData.colorOptions || []).map((option, index) => (
+                      <div key={`colour-${index}`} className="flex items-center gap-2">
+                        <input value={option} onChange={(event) => updateOption('colorOptions', index, event.target.value)} placeholder="e.g. Brown" className={fieldStyle} />
+                        <button type="button" onClick={() => removeOption('colorOptions', index)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#b42318]" aria-label="Remove colour"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
@@ -539,6 +594,23 @@ const AddAlbum = () => {
                     <span className="text-sm font-medium text-[#2d2d2d]">Height</span>
                     <input name="height" value={formData.height} onChange={handleChange} className={fieldStyle} />
                   </label>
+                </div>
+                <div className="mt-5 border-t border-[#e7e0d8] pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#2d2d2d]">Available Sizes</p>
+                      <p className="mt-1 text-xs text-[#777]">Add every size customers can choose.</p>
+                    </div>
+                    <button type="button" onClick={() => addOption('sizeOptions')} className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"><Plus className="h-3.5 w-3.5" /> Add size</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {(formData.sizeOptions || []).map((option, index) => (
+                      <div key={`size-${index}`} className="flex items-center gap-2">
+                        <input value={option} onChange={(event) => updateOption('sizeOptions', index, event.target.value)} placeholder="e.g. 12 x 18 Inches" className={fieldStyle} />
+                        <button type="button" onClick={() => removeOption('sizeOptions', index)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#b42318]" aria-label="Remove size"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

@@ -207,11 +207,13 @@ const getAddressesByUserId = async (userId) => {
 const saveAddressByUserId = async (userId, address) => {
   const pool = getDB();
   const existing = await getLatestAddressByUserId(userId);
+  const addressLine1 = address.address_line1 || address.door_number || "";
+  const addressLine2 = address.address_line2 || address.street_name || "";
   const values = [
     address.customer_name || "",
     address.mobile_number || "",
-    address.address_line1 || "",
-    address.address_line2 || "",
+    addressLine1,
+    addressLine2,
     address.city || "",
     address.district || "",
     address.state || "",

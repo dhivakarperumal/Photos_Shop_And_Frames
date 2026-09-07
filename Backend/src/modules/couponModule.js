@@ -222,6 +222,60 @@ const deleteCoupon = async (id) => {
   };
 };
 
+const validateCoupon = async (code, orderTotal = 0) => {
+  await ensureCouponsTable();
+  const pool = getDB();
+
+  const [rows] = await pool.query(
+    `SELECT * FROM coupons WHERE UPPER(code) = UPPER(?) LIMIT 1`,
+    [String(code).trim()]
+  );
+
+  if (!rows.length) {
+    throw new Error("Invalid coupon code. Please check and try again.");
+  }
+
+  const coupon = normalizeCoupon(rows[0]);
+
+  if (coupon.status !== "active") {
+    throw new Error("This coupon is no longer active.");
+  }
+
+  const now = new Date();
+  if (coupon.start_date && new Date(coupon.start_date) > now) {
+    throw new Error("This coupon is not yet valid.");
+  }
+  if (coupon.expiry_date && new Date(coupon.expiry_date) < now) {
+    throw new Error("This coupon has expired.");
+  }
+
+  if (coupon.min_order_value > 0 && orderTotal < coupon.min_order_value) {
+    throw new Error(
+      `Minimum order value of ₹${coupon.min_order_value} required to use this coupon.`
+    );
+  }
+
+  // Calculate discount amount
+  let discountAmount = 0;
+  if (coupon.discount_type === "percentage") {
+    discountAmount = Math.round((orderTotal * coupon.discount_value) / 100);
+  } else {
+    // flat
+    discountAmount = Math.min(coupon.discount_value, orderTotal);
+  }
+
+  return {
+    valid: true,
+    coupon_id: coupon.id,
+    code: coupon.code,
+    name: coupon.name,
+    discount_type: coupon.discount_type,
+    discount_value: coupon.discount_value,
+    discount_amount: discountAmount,
+    final_amount: Math.max(0, orderTotal - discountAmount),
+  };
+};
+
 module.exports = {
   ensureCouponsTable,
   getAllCoupons,
@@ -229,4 +283,5 @@ module.exports = {
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  validateCoupon,
 };

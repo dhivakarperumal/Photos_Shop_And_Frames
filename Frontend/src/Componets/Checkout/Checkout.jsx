@@ -84,6 +84,11 @@ const Checkout = () => {
   const [addressSearch, setAddressSearch] = useState("");
   const [orderSuccess, setOrderSuccess] = useState(null);
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, name, discount_amount, discount_type, discount_value }
+
   const [formData, setFormData] = useState({
     customer_name: user?.displayName || user?.name || user?.username || "",
     customer_email: user?.email || "",
@@ -131,10 +136,40 @@ const Checkout = () => {
       .finally(() => setLoadingAddresses(false));
   }, [user]);
 
-  const totalAmount = checkoutItems.reduce(
+  const subtotal = checkoutItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
     0
   );
+  const discountAmount = appliedCoupon?.discount_amount || 0;
+  const totalAmount = Math.max(0, subtotal - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+    try {
+      setCouponApplying(true);
+      const res = await api.post("/coupons/validate", {
+        code: couponCode.trim(),
+        order_total: subtotal,
+      });
+      if (res.data?.success) {
+        setAppliedCoupon(res.data.data);
+        toast.success(`Coupon "${res.data.data.code}" applied! You save ₹${res.data.data.discount_amount}`);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Invalid coupon code");
+    } finally {
+      setCouponApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    toast.success("Coupon removed");
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -294,6 +329,9 @@ const Checkout = () => {
           pincode: formData.pincode.trim(),
         },
         total_amount: totalAmount,
+        subtotal_amount: subtotal,
+        coupon_code: appliedCoupon?.code || null,
+        discount_amount: discountAmount || 0,
         payment_method: formData.payment_method,
         notes: formData.notes.trim() || null,
         clear_cart: !isDirectBuy, // only clear cart if checking out cart items
@@ -807,11 +845,59 @@ const Checkout = () => {
                   })}
                 </div>
 
+                {/* COUPON CODE */}
+                <div className="mt-4 rounded-2xl border border-[#ede5db] bg-[#fdfaf6] p-3">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[#9b6b2d]">
+                    Have a coupon?
+                  </p>
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between rounded-xl border border-[#b8e0c9] bg-[#edf7f1] px-3 py-2">
+                      <div>
+                        <p className="text-xs font-bold text-[#1b794b]">
+                          ✓ {appliedCoupon.code}
+                        </p>
+                        <p className="text-[10px] text-[#2d7b5a]">
+                          {appliedCoupon.discount_type === "percentage"
+                            ? `${appliedCoupon.discount_value}% off`
+                            : `₹${appliedCoupon.discount_value} off`}
+                          {" "}— You save ₹{appliedCoupon.discount_amount}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="ml-3 rounded-lg bg-white px-2.5 py-1 text-[10px] font-bold text-[#d04d4d] border border-[#f3d7d7] hover:bg-[#fff0f0] transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                        placeholder="Enter coupon code"
+                        className="h-9 flex-1 rounded-xl border border-[#ded5c8] bg-white px-3 text-xs uppercase outline-none transition focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36] placeholder:normal-case placeholder:text-[#aaa]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponApplying}
+                        className="h-9 rounded-xl bg-[#1a3c36] px-4 text-xs font-bold text-white transition hover:bg-[#235048] disabled:opacity-60 disabled:cursor-wait"
+                      >
+                        {couponApplying ? "..." : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* PRICE BREAKDOWN */}
                 <div className="mt-5 space-y-2 border-t border-[#f0e8dc] pt-4 text-xs text-[#666]">
                   <div className="flex justify-between">
                     <span>Items Subtotal</span>
-                    <span className="font-bold text-[#222]">₹{totalAmount}</span>
+                    <span className="font-bold text-[#222]">₹{subtotal}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1">
@@ -819,6 +905,14 @@ const Checkout = () => {
                     </span>
                     <span className="font-bold text-[#1b794b]">FREE</span>
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-[#1b794b]">
+                      <span className="flex items-center gap-1">
+                        🏷 Coupon ({appliedCoupon.code})
+                      </span>
+                      <span className="font-bold">− ₹{discountAmount}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-[#e8dfd2] pt-2 text-sm font-black text-[#1d2925]">
                     <span>Total Amount</span>
                     <span className="text-lg text-[#1a3c36]">₹{totalAmount}</span>

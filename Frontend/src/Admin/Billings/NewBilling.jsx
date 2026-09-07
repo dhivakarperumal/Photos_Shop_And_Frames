@@ -98,6 +98,7 @@ const NewBilling = () => {
   const [productOptions, setProductOptions] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState("0");
+  const [selectedCategoryType, setSelectedCategoryType] = useState("Frame");
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [users, setUsers] = useState([]);
@@ -147,31 +148,67 @@ const NewBilling = () => {
   }, [total]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchCatalog = async () => {
       try {
-        const response = await api.get("/products");
-        const products = Array.isArray(response.data?.data)
-          ? response.data.data
-          : [];
-        const catalog = products.map((product, index) => ({
-          id: product.product_id || product.id || `product-${index}`,
-          name: product.product_name || product.name || "Unnamed Product",
+        const [productsResponse, albumsResponse, giftsResponse] = await Promise.all([
+          api.get("/products"),
+          api.get("/albums"),
+          api.get("/gift-boxes"),
+        ]);
+        const products = Array.isArray(productsResponse.data?.data) ? productsResponse.data.data : [];
+        const albums = Array.isArray(albumsResponse.data?.data) ? albumsResponse.data.data : [];
+        const gifts = Array.isArray(giftsResponse.data?.data) ? giftsResponse.data.data : [];
+
+        const frameCatalog = products.map((product, index) => ({
+          id: `frame-${product.id || product.product_id || index}`,
+          productId: product.id || product.product_id,
+          categoryType: "Frame",
+          name: product.product_name || product.name || "Unnamed Frame",
           productCode: product.product_code || product.product_id || "",
           detail: product.size || product.product_code || "",
-          category: product.category || "General",
+          category: product.category || "Photo Frames",
           price: Number(product.selling_price ?? product.price ?? 0),
           variants: parseVariants(product.size_variants),
           image: getProductImage(product),
           quantity: 1,
           discount: 0,
         }));
-        if (catalog.length) setProductOptions(catalog);
+        const albumCatalog = albums.map((album, index) => ({
+          id: `album-${album.id || album.product_id || index}`,
+          productId: album.id || album.product_id,
+          categoryType: "Albums",
+          name: album.product_name || "Unnamed Album",
+          productCode: album.product_code || album.product_id || "",
+          detail: album.size || `${album.total_pages || 40} Pages`,
+          category: album.category || "Albums",
+          price: Number(album.discount_price || album.selling_price || 0),
+          variants: [],
+          image: getProductImage(album),
+          quantity: 1,
+          discount: 0,
+        }));
+        const giftCatalog = gifts.map((gift, index) => ({
+          id: `gift-${gift.id || gift.gift_box_id || index}`,
+          productId: gift.id || gift.gift_box_id,
+          categoryType: "Gift",
+          name: gift.name || "Unnamed Gift Box",
+          productCode: gift.gift_box_id || String(gift.id || ""),
+          detail: gift.box_size || gift.theme || "Gift Box",
+          category: gift.category || "Gift",
+          price: Number(gift.selling_price || gift.mrp || 0),
+          variants: [],
+          image: getProductImage(gift),
+          quantity: 1,
+          discount: 0,
+        }));
+
+        setProductOptions([...frameCatalog, ...albumCatalog, ...giftCatalog]);
       } catch (error) {
-        console.error("Failed to load products for billing:", error);
+        console.error("Failed to load billing catalog:", error);
       }
     };
 
-    fetchProducts();
+    fetchCatalog();
   }, []);
 
   useEffect(() => {
@@ -219,10 +256,10 @@ const NewBilling = () => {
   const filteredProductOptions = productOptions.filter((product) => {
     const query = productSearch.trim().toLowerCase();
     return (
-      !query ||
-      `${product.name} ${product.detail} ${product.category}`
+      product.categoryType === selectedCategoryType &&
+      (!query || `${product.name} ${product.detail} ${product.category}`
         .toLowerCase()
-        .includes(query)
+        .includes(query))
     );
   });
   const filteredCustomers = users
@@ -300,6 +337,7 @@ const NewBilling = () => {
     const item = {
       ...product,
       id: `${product.id}-${selectedVariantIndex}`,
+      product_id: product.productId,
       detail: variant?.size || product.detail,
       image: product.image || "",
       price: Number(
@@ -752,6 +790,23 @@ const NewBilling = () => {
                 </button>
               </div>
               <label className="block text-xs font-semibold">
+                Category Type
+                <select
+                  value={selectedCategoryType}
+                  onChange={(event) => {
+                    setSelectedCategoryType(event.target.value);
+                    setSelectedProductId("");
+                    setSelectedVariantIndex("0");
+                    setProductSearch("");
+                  }}
+                  className={fieldClass}
+                >
+                  <option value="Frame">Frame</option>
+                  <option value="Albums">Albums</option>
+                  <option value="Gift">Gift</option>
+                </select>
+              </label>
+              <label className="mt-3 block text-xs font-semibold">
                 Search Product
                 <input
                   value={productSearch}
