@@ -55,13 +55,13 @@ const services = [
     icon: FiCamera,
     title: "Photo Printing",
     subtitle: "High Quality Prints",
-    link: "/shop",
+    link: "/frames",
   },
   {
     icon: FiMaximize,
     title: "Custom Frames",
     subtitle: "Design Your Frame",
-    link: "/shop",
+    link: "/custom-frame",
   },
   {
     icon: FiImage,
@@ -73,7 +73,7 @@ const services = [
     icon: FiBook,
     title: "Photo Albums",
     subtitle: "Save Your Memories",
-    link: "/shop",
+    link: "/albums",
   },
   {
     icon: FiUser,
@@ -85,7 +85,7 @@ const services = [
     icon: FiGift,
     title: "Photo Gifts",
     subtitle: "Personalized Gifts",
-    link: "/shop",
+    link: "/gifts",
   },
   {
     icon: FiLayers,
