@@ -20,6 +20,7 @@ import api from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageHeader from "../../CommonComponents/PageHeader";
+import OrderDetailsModal from "./OrderDetailsModal";
 
 const emptyAddress = {
   customer_name: "",
@@ -89,15 +90,60 @@ const Account = () => {
     confirm: false,
   });
   const [saving, setSaving] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Tab handling
   const tabFromUrl = searchParams.get("tab");
+  const orderIdFromUrl = searchParams.get("orderId");
   const validTabIds = TAB_CONFIG.map((t) => t.id);
   const activeTab = validTabIds.includes(tabFromUrl) ? tabFromUrl : "profile";
 
   const handleTabSelect = (tabId) => {
-    setSearchParams({ tab: tabId });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tabId);
+      if (tabId !== "orders") {
+        next.delete("orderId");
+      }
+      return next;
+    });
   };
+
+  const handleOpenOrder = (order) => {
+    setSelectedOrder(order);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "orders");
+      if (order?.order_id) {
+        next.set("orderId", String(order.order_id));
+      }
+      return next;
+    });
+  };
+
+  const handleCloseOrderModal = () => {
+    setSelectedOrder(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("orderId");
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (orderIdFromUrl && orders.length > 0) {
+      const matched = orders.find(
+        (o) =>
+          String(o.order_id) === String(orderIdFromUrl) ||
+          String(o.id) === String(orderIdFromUrl)
+      );
+      if (matched) {
+        setSelectedOrder(matched);
+      } else {
+        setSelectedOrder({ order_id: orderIdFromUrl });
+      }
+    }
+  }, [orderIdFromUrl, orders]);
 
   useEffect(() => {
     if (!userId) return;
@@ -727,12 +773,18 @@ const Account = () => {
                           return (
                             <div
                               key={order.order_id}
-                              className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between hover:bg-[#fcfbf9] px-3 rounded-lg transition-colors"
+                              onClick={() => handleOpenOrder(order)}
+                              className="group flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between hover:bg-[#faf8f5] px-3.5 rounded-xl transition-all cursor-pointer border border-transparent hover:border-[#dfd6ca] hover:shadow-xs"
                             >
-                              <div className="space-y-1">
-                                <p className="font-semibold text-[#1b2925] text-base tracking-wide">
-                                  #{order.order_id}
-                                </p>
+                              <div className="space-y-1.5 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-[#1b2925] text-base tracking-wide group-hover:text-[#b87840] transition-colors">
+                                    #{order.order_id}
+                                  </p>
+                                  <span className="text-[11px] font-medium text-[#b87840] bg-[#f4eee6] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline-block">
+                                    Click to view details
+                                  </span>
+                                </div>
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-[#7b8580]">
                                   <span>{formattedDate}</span>
                                   <span>•</span>
@@ -742,14 +794,21 @@ const Account = () => {
                                       ? "item"
                                       : "items"}
                                   </span>
+                                  {order.payment_method && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{order.payment_method}</span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-5">
+                              <div className="flex items-center justify-between sm:justify-end gap-3.5">
                                 <span
-                                  className={`rounded-md px-3 py-1 text-xs font-bold uppercase tracking-wide ${statusClass[status] ||
+                                  className={`rounded-md px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                                    statusClass[status] ||
                                     "bg-[#f3eee7] text-[#7b6a58] border border-[#dfd6ca]"
-                                    }`}
+                                  }`}
                                 >
                                   {status}
                                 </span>
@@ -759,6 +818,17 @@ const Account = () => {
                                     order.total_amount || 0
                                   ).toLocaleString("en-IN")}
                                 </strong>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenOrder(order);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfd6ca] bg-white px-3 py-1.5 text-xs font-semibold text-[#1b2925] group-hover:border-[#b87840] group-hover:bg-[#b87840] group-hover:text-white transition cursor-pointer shrink-0 shadow-2xs"
+                                >
+                                  <Eye size={14} />
+                                  <span>Details</span>
+                                </button>
                               </div>
                             </div>
                           );
@@ -936,6 +1006,14 @@ const Account = () => {
           </div>
         </PageContainer>
       </main>
+
+      {/* Order Details Popup Modal */}
+      <OrderDetailsModal
+        order={selectedOrder}
+        orderId={selectedOrder?.order_id || selectedOrder?.id}
+        isOpen={Boolean(selectedOrder)}
+        onClose={handleCloseOrderModal}
+      />
     </>
   );
 };

@@ -412,13 +412,15 @@ const getAllOrders = async (filters = {}) => {
 
 const getOrderById = async (orderId) => {
   const pool = getDB();
-  const isNumeric = !isNaN(orderId);
+  const isNumeric = !isNaN(orderId) && String(orderId).trim() !== "";
 
   const orderQuery = isNumeric
-    ? `SELECT * FROM orders WHERE id = ? LIMIT 1`
+    ? `SELECT * FROM orders WHERE id = ? OR order_id = ? LIMIT 1`
     : `SELECT * FROM orders WHERE order_id = ? LIMIT 1`;
 
-  const [orderRows] = await pool.query(orderQuery, [orderId]);
+  const orderParams = isNumeric ? [orderId, String(orderId)] : [orderId];
+
+  const [orderRows] = await pool.query(orderQuery, orderParams);
 
   if (!orderRows.length) return null;
 
