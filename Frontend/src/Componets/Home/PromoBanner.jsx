@@ -57,7 +57,7 @@ const PromoBanner = ({
   const photos = { ...DEFAULT_BANNER_PHOTOS, ...images };
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] text-white min-h-[460px] sm:min-h-[500px] lg:h-[520px] xl:h-[560px] flex items-center border-y border-white/10 shadow-2xl">
+    <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] text-white min-h-[480px] sm:min-h-[520px] lg:h-[540px] xl:h-[580px] flex items-center border-y border-white/10 shadow-2xl">
       
       {/* Subtle Ambient Glow */}
       <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#d5a65a]/10 blur-3xl" />
@@ -82,7 +82,7 @@ const PromoBanner = ({
           Ensures the left text ("✨ Q FRAMES", "Special Discount", "FRAME SHOP", description, button)
           aligns precisely with the Navbar logo and other page sections. */}
       <PageContainer className="relative z-20 w-full">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-8 lg:py-4 xl:py-5">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-8 lg:py-3 xl:py-4">
           
           {/* 1. LEFT COLUMN: Logo, Script Title, Main Title, Description, CTA Button */}
           <div className="w-full lg:max-w-[420px] xl:max-w-[500px] shrink-0 flex flex-col items-start text-left">
@@ -126,11 +126,11 @@ const PromoBanner = ({
             </div>
           </div>
 
-          {/* 2. MIDDLE COLUMN: 5-Diamond Grid (Enlarged size, exact placement preserved) */}
+          {/* 2. MIDDLE COLUMN: 5-Diamond Grid (Further enlarged, exact placement preserved) */}
           <div className="relative shrink-0 flex items-center justify-center my-6 lg:my-0 lg:mx-auto">
-            <div className="relative w-[230px] h-[230px] sm:w-[260px] sm:h-[260px] md:w-[290px] md:h-[290px] lg:w-[330px] lg:h-[330px] xl:w-[360px] xl:h-[360px] flex items-center justify-center">
+            <div className="relative w-[250px] h-[250px] sm:w-[275px] sm:h-[275px] md:w-[310px] md:h-[310px] lg:w-[350px] lg:h-[350px] xl:w-[385px] xl:h-[385px] flex items-center justify-center">
               {/* 3x3 Grid rotated 45 degrees */}
-              <div className="grid grid-cols-3 grid-rows-3 gap-2.5 sm:gap-3 lg:gap-3.5 w-full h-full rotate-45 transform">
+              <div className="grid grid-cols-3 grid-rows-3 gap-2.5 sm:gap-3 lg:gap-3.5 xl:gap-4 w-full h-full rotate-45 transform">
                 {/* Row 1 */}
                 <div className="w-full h-full pointer-events-none" />
                 <DiamondCard
