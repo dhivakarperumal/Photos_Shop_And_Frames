@@ -818,17 +818,7 @@ const Account = () => {
                                     order.total_amount || 0
                                   ).toLocaleString("en-IN")}
                                 </strong>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenOrder(order);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfd6ca] bg-white px-3 py-1.5 text-xs font-semibold text-[#1b2925] group-hover:border-[#b87840] group-hover:bg-[#b87840] group-hover:text-white transition cursor-pointer shrink-0 shadow-2xs"
-                                >
-                                  <Eye size={14} />
-                                  <span>Details</span>
-                                </button>
+                                
                               </div>
                             </div>
                           );
