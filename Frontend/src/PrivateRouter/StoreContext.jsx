@@ -118,11 +118,38 @@ export const StoreProvider = ({ children }) => {
         }
     }, [user?.user_id]);
 
-    // Load cart + wishlist when user logs in or mounts
+    const [undeliveredOrdersCount, setUndeliveredOrdersCount] = useState(0);
+
+    // ─── Fetch active/undelivered orders count ──────────────────
+    const fetchOrdersCount = useCallback(async () => {
+        const activeUserId = user?.user_id || user?.id;
+        if (!activeUserId) {
+            setUndeliveredOrdersCount(0);
+            return;
+        }
+        try {
+            const res = await api.get(`/orders/user/${activeUserId}`);
+            const orders = Array.isArray(res.data?.data)
+                ? res.data.data
+                : Array.isArray(res.data)
+                ? res.data
+                : [];
+            const count = orders.filter((o) => {
+                const s = String(o?.order_status || o?.status || "").trim().toUpperCase();
+                return s !== "DELIVERED" && s !== "COMPLETED" && s !== "CANCELLED" && s !== "RETURNED";
+            }).length;
+            setUndeliveredOrdersCount(count);
+        } catch (err) {
+            setUndeliveredOrdersCount(0);
+        }
+    }, [user?.user_id, user?.id]);
+
+    // Load cart + wishlist + undelivered orders count when user logs in or mounts
     useEffect(() => {
         fetchCart();
         fetchWishlist();
-    }, [fetchCart, fetchWishlist]);
+        fetchOrdersCount();
+    }, [fetchCart, fetchWishlist, fetchOrdersCount]);
 
     // ─── CART ACTIONS ────────────────────────────────────────────
 
@@ -350,6 +377,7 @@ export const StoreProvider = ({ children }) => {
             toggleWishlist,
             loadingCart, loadingWishlist,
             fetchCart, fetchWishlist,
+            undeliveredOrdersCount, fetchOrdersCount,
             isCartOpen, setIsCartOpen, openCart, closeCart,
             isFavoritesOpen, openFavorites, closeFavorites,
             productsCache, setProductsCache,

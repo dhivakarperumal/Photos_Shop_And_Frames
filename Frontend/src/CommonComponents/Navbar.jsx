@@ -15,7 +15,7 @@ import {
   FiMapPin,
   FiClock,
   FiPhone,
-  FiSearch,
+  FiPackage,
   FiFacebook,
   FiInstagram,
 } from "react-icons/fi";
@@ -54,6 +54,7 @@ const Navbar = () => {
   const {
     cart = [],
     wishlist = [],
+    undeliveredOrdersCount = 0,
     openCart,
     openFavorites,
   } = useContext(StoreContext) || {};
@@ -348,10 +349,19 @@ const Navbar = () => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
-                  aria-label="Search"
+                  onClick={() =>
+                    navigate(isLoggedIn ? "/account?tab=orders" : "/login")
+                  }
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  aria-label="My Orders"
+                  title="My Orders"
                 >
-                  <FiSearch className="text-lg" />
+                  <FiPackage className="text-lg" />
+                  {undeliveredOrdersCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111] shadow-xs">
+                      {undeliveredOrdersCount}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -442,6 +452,18 @@ const Navbar = () => {
                           >
                             <span>My Cart ({cart.length})</span>
                             <FiShoppingCart className="text-base text-[#7a7a7a]" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                            onClick={() => {
+                              setProfileDropdown(false);
+                              navigate("/account?tab=orders");
+                            }}
+                          >
+                            <span>My Orders {undeliveredOrdersCount > 0 ? `(${undeliveredOrdersCount} active)` : ""}</span>
+                            <FiPackage className="text-base text-[#7a7a7a]" />
                           </button>
 
                           <button

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { CheckCircle2, Package, ShoppingBag, Truck, X } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { StoreContext } from "../../PrivateRouter/StoreContext";
 
 const CheckoutModal = ({
   isOpen,
@@ -13,6 +14,7 @@ const CheckoutModal = ({
   onOrderPlaced,
 }) => {
   const navigate = useNavigate();
+  const { fetchOrdersCount } = useContext(StoreContext) || {};
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
 
@@ -95,6 +97,7 @@ const CheckoutModal = ({
       if (response.data?.success) {
         setOrderSuccess(response.data.data);
         if (onOrderPlaced) onOrderPlaced(response.data.data);
+        fetchOrdersCount?.();
         toast.success("Order placed successfully!");
       } else {
         toast.error(response.data?.message || "Failed to place order");
