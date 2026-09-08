@@ -178,10 +178,20 @@ export const StoreProvider = ({ children }) => {
             qty = Number(qtyParam) || 1;
         }
 
+        const itemType =
+            product.item_type ||
+            variantOrOptions?.item_type ||
+            (product.gift_box_id || String(product.category || "").toLowerCase().includes("gift")
+                ? "gift"
+                : (product.total_pages || product.sheet_count || String(product.category || "").toLowerCase().includes("album"))
+                ? "album"
+                : "product");
+
         try {
             await api.post("/cart", {
                 user_id: activeUserId,
-                product_id: product.id || product.product_id,
+                product_id: product.id || product.product_id || product.gift_box_id,
+                item_type: itemType,
                 customization_id: customizationId,
                 size: selectedSize,
                 price: price,

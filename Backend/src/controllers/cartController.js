@@ -37,6 +37,7 @@ const addToCart = async (req, res) => {
       quantity = 1,
       slot_photos,
       preview_image,
+      item_type,
     } = req.body;
 
     const finalUserId = user_id || req.user?.user_id || req.user?.id;
@@ -54,12 +55,36 @@ const addToCart = async (req, res) => {
       });
     }
 
+    let finalItemType = item_type;
+    if (!finalItemType || finalItemType === "product") {
+      const previewStr = String(preview_image || "").toLowerCase();
+      const catStr = String(req.body.category || "").toLowerCase();
+      if (
+        previewStr.includes("/gifts/") ||
+        previewStr.includes("uploads/gifts") ||
+        catStr.includes("gift") ||
+        Boolean(req.body.gift_box_id)
+      ) {
+        finalItemType = "gift";
+      } else if (
+        previewStr.includes("/albums/") ||
+        previewStr.includes("uploads/albums") ||
+        catStr.includes("album") ||
+        Boolean(req.body.album_id)
+      ) {
+        finalItemType = "album";
+      } else {
+        finalItemType = "product";
+      }
+    }
+
     const finalSize = size || variant_size || "Standard";
     const finalPrice = Number(price || 0);
 
     const result = await cartModule.addToCart({
       user_id: finalUserId,
       product_id,
+      item_type: finalItemType,
       customization_id: customization_id || null,
       size: finalSize,
       price: finalPrice,

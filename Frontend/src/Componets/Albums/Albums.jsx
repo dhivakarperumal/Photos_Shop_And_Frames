@@ -132,6 +132,7 @@ const Albums = () => {
 
     const productPayload = {
       id: album.id,
+      item_type: "album",
       product_name: album.product_name,
       category: album.category || "Albums",
       price: price,
@@ -140,6 +141,7 @@ const Albums = () => {
     };
 
     const options = {
+      item_type: "album",
       size: album.size || `${album.total_pages || 40} Pages`,
       price: price,
       quantity: quantity,

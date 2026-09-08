@@ -109,6 +109,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
 
   const addItemToCart = async () => {
     const success = await addToCart?.(productPayload, {
+      item_type: isAlbum ? "album" : "gift",
       size: isAlbum ? item.size || `${item.total_pages || 40} Pages` : item.box_size || "Standard Box",
       price,
       quantity,

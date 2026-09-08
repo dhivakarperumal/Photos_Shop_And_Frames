@@ -32,37 +32,96 @@ const getCartByUser = async (userId) => {
       c.preview_image,
       c.created_at,
       c.updated_at,
-      COALESCE(p.product_name, g.name, a.product_name, 'Item') AS product_name,
-      COALESCE(p.category, g.category, a.category, 'Albums') AS category,
+      COALESCE(
+        c.item_type,
+        CASE 
+          WHEN c.preview_image LIKE '%/gifts/%' OR c.preview_image LIKE '%uploads/gifts%' THEN 'gift'
+          WHEN c.preview_image LIKE '%/albums/%' OR c.preview_image LIKE '%uploads/albums%' THEN 'album'
+          WHEN p.id IS NOT NULL THEN 'product'
+          WHEN g.id IS NOT NULL THEN 'gift'
+          WHEN a.id IS NOT NULL THEN 'album'
+          ELSE 'product'
+        END
+      ) AS item_type,
+      COALESCE(
+        CASE 
+          WHEN c.item_type = 'gift' THEN g.name
+          WHEN c.item_type = 'album' THEN a.product_name
+          WHEN c.item_type = 'product' THEN p.product_name
+          WHEN (c.preview_image LIKE '%/gifts/%' OR c.preview_image LIKE '%uploads/gifts%') THEN g.name
+          WHEN (c.preview_image LIKE '%/albums/%' OR c.preview_image LIKE '%uploads/albums%') THEN a.product_name
+          ELSE NULL
+        END,
+        p.product_name, g.name, a.product_name, 'Item'
+      ) AS product_name,
+      COALESCE(
+        CASE 
+          WHEN c.item_type = 'gift' THEN g.category
+          WHEN c.item_type = 'album' THEN a.category
+          WHEN c.item_type = 'product' THEN p.category
+          WHEN (c.preview_image LIKE '%/gifts/%' OR c.preview_image LIKE '%uploads/gifts%') THEN g.category
+          WHEN (c.preview_image LIKE '%/albums/%' OR c.preview_image LIKE '%uploads/albums%') THEN a.category
+          ELSE NULL
+        END,
+        p.category, g.category, a.category, 'Albums'
+      ) AS category,
       p.product_images,
       p.frame_data,
       p.orientation,
       p.size_variants,
       g.image AS gift_image,
       g.images AS gift_images,
+      g.box_size AS gift_box_size,
+      g.current_stock AS gift_stock,
       a.thumbnail_image AS album_thumbnail,
-      a.product_images AS album_images
+      a.product_images AS album_images,
+      a.stock_quantity AS album_stock
     FROM carts c
-    LEFT JOIN products p ON c.product_id = p.id
-    LEFT JOIN gift_boxes g ON (c.product_id = g.id OR c.product_id = g.gift_box_id)
-    LEFT JOIN albums a ON (c.product_id = a.id OR c.product_id = a.product_id)
+    LEFT JOIN products p ON (
+      (c.item_type = 'product' OR (c.item_type IS NULL AND c.preview_image NOT LIKE '%/gifts/%' AND c.preview_image NOT LIKE '%/albums/%'))
+      AND c.product_id = p.id
+    )
+    LEFT JOIN gift_boxes g ON (
+      (c.item_type = 'gift' OR (c.item_type IS NULL AND (c.preview_image LIKE '%/gifts/%' OR c.preview_image LIKE '%uploads/gifts%')) OR (c.item_type IS NULL AND p.id IS NULL))
+      AND (c.product_id = g.id OR c.product_id = g.gift_box_id)
+    )
+    LEFT JOIN albums a ON (
+      (c.item_type = 'album' OR (c.item_type IS NULL AND (c.preview_image LIKE '%/albums/%' OR c.preview_image LIKE '%uploads/albums%')) OR (c.item_type IS NULL AND p.id IS NULL AND g.id IS NULL))
+      AND (c.product_id = a.id OR c.product_id = a.product_id)
+    )
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
   `;
 
   const [rows] = await pool.query(query, [userId]);
 
-  return rows.map((row) => ({
-    ...row,
-    preview_image: row.preview_image || row.gift_image || row.album_thumbnail || null,
-    product_images: parseJson(
-      row.product_images,
-      parseJson(row.gift_images, parseJson(row.album_images, row.gift_image ? [row.gift_image] : row.album_thumbnail ? [row.album_thumbnail] : []))
-    ),
-    slot_photos: parseJson(row.slot_photos, {}),
-    frame_data: parseJson(row.frame_data, null),
-    size_variants: parseJson(row.size_variants, []),
-  }));
+  return rows.map((row) => {
+    const isGift = row.item_type === "gift";
+    const isAlbum = row.item_type === "album";
+
+    const resolvedImages = isGift
+      ? parseJson(row.gift_images, row.gift_image ? [row.gift_image] : [])
+      : isAlbum
+      ? parseJson(row.album_images, row.album_thumbnail ? [row.album_thumbnail] : [])
+      : parseJson(row.product_images, []);
+
+    const resolvedStock = isGift
+      ? row.gift_stock
+      : isAlbum
+      ? row.album_stock
+      : undefined;
+
+    return {
+      ...row,
+      item_type: row.item_type || (isGift ? "gift" : isAlbum ? "album" : "product"),
+      stock_quantity: resolvedStock !== undefined ? resolvedStock : row.stock_quantity,
+      preview_image: row.preview_image || row.gift_image || row.album_thumbnail || null,
+      product_images: resolvedImages,
+      slot_photos: parseJson(row.slot_photos, {}),
+      frame_data: isGift || isAlbum ? null : parseJson(row.frame_data, null),
+      size_variants: isGift || isAlbum ? [] : parseJson(row.size_variants, []),
+    };
+  });
 };
 
 const addToCart = async (cartData) => {
@@ -75,6 +134,7 @@ const addToCart = async (cartData) => {
     quantity = 1,
     slot_photos = null,
     preview_image = null,
+    item_type = "product",
     created_by = null,
     updated_by = created_by,
   } = cartData;
@@ -83,12 +143,12 @@ const addToCart = async (cartData) => {
 
   // Check if identical item already in cart for this user
   const checkQuery = customization_id
-    ? `SELECT id, quantity FROM carts WHERE user_id = ? AND product_id = ? AND size = ? AND customization_id = ? LIMIT 1`
-    : `SELECT id, quantity FROM carts WHERE user_id = ? AND product_id = ? AND size = ? AND customization_id IS NULL LIMIT 1`;
+    ? `SELECT id, quantity FROM carts WHERE user_id = ? AND product_id = ? AND (item_type = ? OR (item_type IS NULL AND ? = 'product')) AND size = ? AND customization_id = ? LIMIT 1`
+    : `SELECT id, quantity FROM carts WHERE user_id = ? AND product_id = ? AND (item_type = ? OR (item_type IS NULL AND ? = 'product')) AND size = ? AND customization_id IS NULL LIMIT 1`;
 
   const checkValues = customization_id
-    ? [user_id, Number(product_id), size, customization_id]
-    : [user_id, Number(product_id), size];
+    ? [user_id, Number(product_id), item_type, item_type, size, customization_id]
+    : [user_id, Number(product_id), item_type, item_type, size];
 
   const [existing] = await pool.query(checkQuery, checkValues);
 
@@ -97,14 +157,15 @@ const addToCart = async (cartData) => {
     const newQty = existing[0].quantity + Number(quantity);
 
     await pool.query(
-      `UPDATE carts SET quantity = ?, price = ?, preview_image = COALESCE(?, preview_image), updated_by = ?, updated_at = NOW() WHERE id = ?`,
-      [newQty, Number(price), preview_image || null, updated_by, existingId]
+      `UPDATE carts SET quantity = ?, price = ?, item_type = ?, preview_image = COALESCE(?, preview_image), updated_by = ?, updated_at = NOW() WHERE id = ?`,
+      [newQty, Number(price), item_type, preview_image || null, updated_by, existingId]
     );
 
     return {
       id: existingId,
       user_id,
       product_id,
+      item_type,
       customization_id,
       size,
       price: Number(price),
@@ -117,6 +178,7 @@ const addToCart = async (cartData) => {
     INSERT INTO carts (
       user_id,
       product_id,
+      item_type,
       customization_id,
       size,
       price,
@@ -125,12 +187,13 @@ const addToCart = async (cartData) => {
       preview_image,
       created_by,
       updated_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const insertValues = [
     user_id,
     Number(product_id),
+    item_type,
     customization_id || null,
     size,
     Number(price),
@@ -147,6 +210,7 @@ const addToCart = async (cartData) => {
     id: result.insertId,
     user_id,
     product_id,
+    item_type,
     customization_id,
     size,
     price: Number(price),

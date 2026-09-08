@@ -141,6 +141,7 @@ const Gifts = () => {
     };
 
     const options = {
+      item_type: "gift",
       size: gift.box_size || "Standard Box",
       price: price,
       quantity: quantity,
