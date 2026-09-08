@@ -30,13 +30,9 @@ export const DEFAULT_BANNER_PHOTOS = {
     "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&auto=format&fit=crop&q=80",
 };
 
-// Reusable diamond card keeping the photo 100% upright
-const DiamondCard = ({ img, fallback, isCenter = false }) => (
-  <div
-    className={`relative w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 overflow-hidden rounded-xs border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-transform duration-300 hover:scale-105 ${
-      isCenter ? "z-20 scale-105 shadow-2xl" : "z-10"
-    }`}
-  >
+// Reusable diamond card keeping the photo 100% upright with clean non-overlapping borders
+const DiamondCard = ({ img, fallback }) => (
+  <div className="relative w-full h-full aspect-square overflow-hidden rounded-[2px] border-2 sm:border-[2.5px] border-white shadow-xl bg-[#14201d] transition-all duration-300 hover:brightness-110">
     <img
       src={img}
       alt="Gallery memory"
@@ -44,7 +40,7 @@ const DiamondCard = ({ img, fallback, isCenter = false }) => (
       onError={(e) => {
         e.currentTarget.src = fallback;
       }}
-      className="absolute top-1/2 left-1/2 w-[145%] h-[145%] max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-45 object-cover"
+      className="absolute top-1/2 left-1/2 w-[145%] h-[145%] max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-45 object-cover pointer-events-none select-none"
     />
   </div>
 );
@@ -89,7 +85,7 @@ const PromoBanner = ({
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-10 sm:py-12">
           
           {/* 1. LEFT COLUMN: Logo, Script Title, Main Title, Description, CTA Button */}
-          <div className="w-full lg:max-w-[440px] xl:max-w-[520px] shrink-0 flex flex-col items-start text-left">
+          <div className="w-full lg:max-w-[420px] xl:max-w-[500px] shrink-0 flex flex-col items-start text-left">
             {/* Logo / Badge */}
             <div className="flex items-center gap-2 text-white/90 mb-2">
               <Sparkles className="h-5 w-5 text-[#d5a65a]" />
@@ -130,18 +126,18 @@ const PromoBanner = ({
             </div>
           </div>
 
-          {/* 2. MIDDLE COLUMN: 5-Diamond Grid */}
-          <div className="relative shrink-0 flex items-center justify-center my-4 lg:my-0 lg:mx-auto">
-            <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] lg:w-[360px] lg:h-[360px] flex items-center justify-center">
+          {/* 2. MIDDLE COLUMN: 5-Diamond Grid (Strict cell bounds & uniform spacing, zero overlapping) */}
+          <div className="relative shrink-0 flex items-center justify-center my-6 lg:my-0 lg:mx-auto">
+            <div className="relative w-[210px] h-[210px] sm:w-[240px] sm:h-[240px] md:w-[260px] md:h-[260px] lg:w-[270px] lg:h-[270px] xl:w-[290px] xl:h-[290px] flex items-center justify-center">
               {/* 3x3 Grid rotated 45 degrees */}
-              <div className="grid grid-cols-3 grid-rows-3 gap-2 sm:gap-2.5 rotate-45 transform">
+              <div className="grid grid-cols-3 grid-rows-3 gap-2.5 sm:gap-3 lg:gap-3.5 w-full h-full rotate-45 transform">
                 {/* Row 1 */}
-                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
+                <div className="w-full h-full pointer-events-none" />
                 <DiamondCard
                   img={photos.diamondTopRight}
                   fallback={DEFAULT_BANNER_PHOTOS.diamondTopRight}
                 />
-                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
+                <div className="w-full h-full pointer-events-none" />
 
                 {/* Row 2 */}
                 <DiamondCard
@@ -151,7 +147,6 @@ const PromoBanner = ({
                 <DiamondCard
                   img={photos.diamondCenter}
                   fallback={DEFAULT_BANNER_PHOTOS.diamondCenter}
-                  isCenter
                 />
                 <DiamondCard
                   img={photos.diamondBottomRight}
@@ -159,18 +154,18 @@ const PromoBanner = ({
                 />
 
                 {/* Row 3 */}
-                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
+                <div className="w-full h-full pointer-events-none" />
                 <DiamondCard
                   img={photos.diamondBottomLeft}
                   fallback={DEFAULT_BANNER_PHOTOS.diamondBottomLeft}
                 />
-                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
+                <div className="w-full h-full pointer-events-none" />
               </div>
             </div>
           </div>
 
-          {/* Spacer for layout balance on wide screens so diamonds stay clear of semi-circle */}
-          <div className="hidden xl:block w-36 lg:w-48 shrink-0 pointer-events-none" />
+          {/* Spacer for layout balance on desktop screens so diamonds stay clear of semi-circle */}
+          <div className="hidden lg:block w-28 xl:w-44 2xl:w-52 shrink-0 pointer-events-none" />
         </div>
       </PageContainer>
     </section>
