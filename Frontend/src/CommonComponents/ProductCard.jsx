@@ -1,4 +1,4 @@
-import { Eye, Heart, ImagePlus } from "lucide-react";
+import { Eye, Heart, ImagePlus, Sparkles } from "lucide-react";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { StoreContext } from "../PrivateRouter/StoreContext";
@@ -83,7 +83,7 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        <div className="mt-auto border-t border-[#f0e8dc] pt-3">
+        <div className="mt-auto border-t border-[#f0e8dc] pt-3 space-y-2">
           <Link
             to={productPath}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
@@ -91,6 +91,16 @@ const ProductCard = ({ product }) => {
             {slotCount > 0 ? <ImagePlus className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             {slotCount > 0 ? "Customize Photos" : "View Product Details"}
           </Link>
+
+          {slotCount > 0 && (
+            <Link
+              to={`/custom-frame?productId=${product.id}`}
+              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#e2d9cd] bg-[#faf8f5] text-[11px] font-bold text-[#1a3c36] hover:border-[#1a3c36] hover:bg-[#eef6f3] transition"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-[#b07838]" />
+              <span>Open in Studio Designer</span>
+            </Link>
+          )}
         </div>
       </div>
     </article>
