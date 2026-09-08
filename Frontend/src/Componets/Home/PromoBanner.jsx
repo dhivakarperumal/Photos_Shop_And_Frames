@@ -33,7 +33,7 @@ export const DEFAULT_BANNER_PHOTOS = {
 // Reusable diamond card keeping the photo 100% upright
 const DiamondCard = ({ img, fallback, isCenter = false }) => (
   <div
-    className={`relative w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 overflow-hidden rounded-xs border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-transform duration-300 hover:scale-105 ${
+    className={`relative w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 overflow-hidden rounded-xs border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-transform duration-300 hover:scale-105 ${
       isCenter ? "z-20 scale-105 shadow-2xl" : "z-10"
     }`}
   >
@@ -61,15 +61,15 @@ const PromoBanner = ({
   const photos = { ...DEFAULT_BANNER_PHOTOS, ...images };
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] text-white min-h-[380px] lg:h-[400px] xl:h-[420px] flex items-center border-y border-white/10 shadow-2xl">
+    <section className="relative w-full overflow-hidden bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] text-white min-h-[460px] sm:min-h-[500px] lg:h-[520px] xl:h-[560px] flex items-center border-y border-white/10 shadow-2xl">
       
       {/* Subtle Ambient Glow */}
       <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#d5a65a]/10 blur-3xl" />
       <div className="pointer-events-none absolute right-0 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-[#d5a65a]/10 blur-3xl" />
 
-      {/* RIGHT SIDE: SEMI-CIRCLE IMAGE (Flush against the section's right edge, 100% height of banner) */}
-      <div className="absolute right-0 top-0 bottom-0 h-full w-[220px] sm:w-[280px] md:w-[340px] lg:w-[400px] xl:w-[460px] pointer-events-none overflow-hidden flex items-center justify-end z-10">
-        <div className="h-full aspect-square rounded-full overflow-hidden bg-[#14201d] translate-x-1/2 border-l-4 sm:border-l-[6px] border-white/20 shadow-2xl relative flex items-center justify-center">
+      {/* RIGHT SIDE: ENLARGED SEMI-CIRCLE IMAGE (Flush against the section's right edge, 100% height of banner) */}
+      <div className="absolute right-0 top-0 bottom-0 h-full w-[260px] sm:w-[320px] md:w-[380px] lg:w-[460px] xl:w-[540px] pointer-events-none overflow-hidden flex items-center justify-end z-10">
+        <div className="h-full aspect-square rounded-full overflow-hidden bg-[#14201d] translate-x-1/2 border-l-4 sm:border-l-[6px] lg:border-l-8 border-white/20 shadow-2xl relative flex items-center justify-center">
           <img
             src={photos.heroCircle}
             alt="Featured circular showcase"
@@ -86,44 +86,44 @@ const PromoBanner = ({
           Ensures the left text ("✨ Q FRAMES", "Special Discount", "FRAME SHOP", description, button)
           aligns precisely with the Navbar logo and other page sections. */}
       <PageContainer className="relative z-20 w-full">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8 py-10 sm:py-12">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-10 sm:py-12">
           
           {/* 1. LEFT COLUMN: Logo, Script Title, Main Title, Description, CTA Button */}
-          <div className="w-full lg:max-w-[360px] xl:max-w-[420px] shrink-0 flex flex-col items-start text-left">
+          <div className="w-full lg:max-w-[440px] xl:max-w-[520px] shrink-0 flex flex-col items-start text-left">
             {/* Logo / Badge */}
-            <div className="flex items-center gap-2 text-white/80 mb-1">
-              <Sparkles className="h-4 w-4 text-[#d5a65a]" />
-              <span className="text-xs font-bold uppercase tracking-[0.22em] text-white/80">
+            <div className="flex items-center gap-2 text-white/90 mb-2">
+              <Sparkles className="h-5 w-5 text-[#d5a65a]" />
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-[#d5a65a]">
                 {logoText}
               </span>
             </div>
 
-            {/* Handwritten Script Headline */}
+            {/* Handwritten Script Headline - Larger */}
             <p
               style={{ fontFamily: "'Dancing Script', cursive" }}
-              className="text-3xl sm:text-4xl lg:text-[44px] font-bold text-[#d5a65a] leading-tight tracking-wide drop-shadow-sm"
+              className="text-4xl sm:text-5xl lg:text-6xl xl:text-[68px] font-bold text-[#d5a65a] leading-tight tracking-wide drop-shadow-sm"
             >
               {scriptTitle}
             </p>
 
-            {/* Main Bold Title */}
-            <h2 className="mt-1 text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-none font-sans drop-shadow-md">
+            {/* Main Bold Title - Larger */}
+            <h2 className="mt-1 text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black uppercase tracking-tight text-white leading-none font-sans drop-shadow-md">
               {mainTitle}
             </h2>
 
-            {/* Description */}
-            <p className="mt-3.5 text-xs sm:text-sm text-white/70 leading-relaxed max-w-xs sm:max-w-sm">
+            {/* Description - Larger text & wider container */}
+            <p className="mt-4 sm:mt-5 text-sm sm:text-base lg:text-lg text-white/80 leading-relaxed max-w-sm sm:max-w-md xl:max-w-lg font-normal">
               {description}
             </p>
 
-            {/* Order Now CTA Button with Circular Arrow */}
-            <div className="mt-6 sm:mt-7">
+            {/* Order Now CTA Button with Circular Arrow - Scaled Up */}
+            <div className="mt-7 sm:mt-8">
               <Link
                 to={ctaLink}
-                className="group inline-flex items-center gap-3 rounded-full bg-[#d5a65a] pl-2.5 pr-5 py-2 text-xs sm:text-sm font-black uppercase tracking-wider text-[#14201d] transition-all duration-300 hover:bg-[#e0b468] hover:shadow-[0_0_20px_rgba(213,166,90,0.4)] hover:scale-105"
+                className="group inline-flex items-center gap-3.5 rounded-full bg-[#d5a65a] pl-3 pr-6 py-2.5 sm:py-3 text-sm sm:text-base font-black uppercase tracking-wider text-[#14201d] transition-all duration-300 hover:bg-[#e0b468] hover:shadow-[0_0_24px_rgba(213,166,90,0.45)] hover:scale-105"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[#14201d] shadow-sm transition-transform duration-300 group-hover:translate-x-0.5">
-                  <ArrowRight className="h-3.5 w-3.5" />
+                <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-[#14201d] shadow-sm transition-transform duration-300 group-hover:translate-x-1">
+                  <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                 </span>
                 <span>{ctaText}</span>
               </Link>
@@ -132,16 +132,16 @@ const PromoBanner = ({
 
           {/* 2. MIDDLE COLUMN: 5-Diamond Grid */}
           <div className="relative shrink-0 flex items-center justify-center my-4 lg:my-0 lg:mx-auto">
-            <div className="relative w-[260px] h-[260px] sm:w-[290px] sm:h-[290px] lg:w-[320px] lg:h-[320px] flex items-center justify-center">
+            <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] lg:w-[360px] lg:h-[360px] flex items-center justify-center">
               {/* 3x3 Grid rotated 45 degrees */}
-              <div className="grid grid-cols-3 grid-rows-3 gap-1.5 sm:gap-2 rotate-45 transform">
+              <div className="grid grid-cols-3 grid-rows-3 gap-2 sm:gap-2.5 rotate-45 transform">
                 {/* Row 1 */}
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
+                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
                 <DiamondCard
                   img={photos.diamondTopRight}
                   fallback={DEFAULT_BANNER_PHOTOS.diamondTopRight}
                 />
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
+                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
 
                 {/* Row 2 */}
                 <DiamondCard
@@ -159,18 +159,18 @@ const PromoBanner = ({
                 />
 
                 {/* Row 3 */}
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
+                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
                 <DiamondCard
                   img={photos.diamondBottomLeft}
                   fallback={DEFAULT_BANNER_PHOTOS.diamondBottomLeft}
                 />
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
+                <div className="w-22 h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 lg:w-32 lg:h-32 pointer-events-none" />
               </div>
             </div>
           </div>
 
           {/* Spacer for layout balance on wide screens so diamonds stay clear of semi-circle */}
-          <div className="hidden xl:block w-36 lg:w-44 shrink-0 pointer-events-none" />
+          <div className="hidden xl:block w-36 lg:w-48 shrink-0 pointer-events-none" />
         </div>
       </PageContainer>
     </section>
