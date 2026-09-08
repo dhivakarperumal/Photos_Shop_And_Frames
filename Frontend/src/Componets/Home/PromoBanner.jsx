@@ -32,7 +32,7 @@ export const DEFAULT_BANNER_PHOTOS = {
 
 // Reusable diamond card keeping the photo 100% upright with clean non-overlapping borders
 const DiamondCard = ({ img, fallback }) => (
-  <div className="relative w-full h-full aspect-square overflow-hidden rounded-[2px] border-2 sm:border-[2.5px] border-white shadow-xl bg-[#14201d] transition-all duration-300 hover:brightness-110">
+  <div className="relative w-full h-full aspect-square overflow-hidden rounded-[2px] border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-all duration-300 hover:brightness-110">
     <img
       src={img}
       alt="Gallery memory"
@@ -82,7 +82,7 @@ const PromoBanner = ({
           Ensures the left text ("✨ Q FRAMES", "Special Discount", "FRAME SHOP", description, button)
           aligns precisely with the Navbar logo and other page sections. */}
       <PageContainer className="relative z-20 w-full">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-10 sm:py-12">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-10 py-8 lg:py-4 xl:py-5">
           
           {/* 1. LEFT COLUMN: Logo, Script Title, Main Title, Description, CTA Button */}
           <div className="w-full lg:max-w-[420px] xl:max-w-[500px] shrink-0 flex flex-col items-start text-left">
@@ -126,9 +126,9 @@ const PromoBanner = ({
             </div>
           </div>
 
-          {/* 2. MIDDLE COLUMN: 5-Diamond Grid (Strict cell bounds & uniform spacing, zero overlapping) */}
+          {/* 2. MIDDLE COLUMN: 5-Diamond Grid (Enlarged size, exact placement preserved) */}
           <div className="relative shrink-0 flex items-center justify-center my-6 lg:my-0 lg:mx-auto">
-            <div className="relative w-[210px] h-[210px] sm:w-[240px] sm:h-[240px] md:w-[260px] md:h-[260px] lg:w-[270px] lg:h-[270px] xl:w-[290px] xl:h-[290px] flex items-center justify-center">
+            <div className="relative w-[230px] h-[230px] sm:w-[260px] sm:h-[260px] md:w-[290px] md:h-[290px] lg:w-[330px] lg:h-[330px] xl:w-[360px] xl:h-[360px] flex items-center justify-center">
               {/* 3x3 Grid rotated 45 degrees */}
               <div className="grid grid-cols-3 grid-rows-3 gap-2.5 sm:gap-3 lg:gap-3.5 w-full h-full rotate-45 transform">
                 {/* Row 1 */}
