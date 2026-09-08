@@ -8,9 +8,8 @@ import {
 import PageContainer from "../../CommonComponents/PageContainer";
 
 /* =========================================================================
-   REPLACE THESE IMAGES WITH YOUR OWN PHOTOS
-   You can easily replace these image URLs with your local images
-   or pass a custom `images` prop to the PromoBanner component.
+   ORIGINAL FRAME STUDIO ASSETS
+   Preserving original theme, colors, and product imagery.
 ========================================================================= */
 export const DEFAULT_BANNER_PHOTOS = {
   // Center diamond photo
@@ -28,7 +27,7 @@ export const DEFAULT_BANNER_PHOTOS = {
   // Bottom-right diamond photo
   diamondBottomRight:
     "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=600&auto=format&fit=crop&q=80",
-  // Large circular photo on the right
+  // Large semi-circle photo on the right
   heroCircle:
     "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&auto=format&fit=crop&q=80",
 };
@@ -36,7 +35,7 @@ export const DEFAULT_BANNER_PHOTOS = {
 // Reusable diamond card keeping the photo 100% upright
 const DiamondCard = ({ img, fallback, isCenter = false }) => (
   <div
-    className={`relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 overflow-hidden rounded-xs border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-transform duration-300 hover:scale-105 ${
+    className={`relative w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 overflow-hidden rounded-xs border-2 sm:border-[3px] border-white shadow-xl bg-[#14201d] transition-transform duration-300 hover:scale-105 ${
       isCenter ? "z-20 scale-105 shadow-2xl" : "z-10"
     }`}
   >
@@ -68,16 +67,36 @@ const PromoBanner = ({
   return (
     <section className="relative overflow-hidden bg-[#0a0d0c] py-10 sm:py-14 text-white">
       <PageContainer>
-        {/* Main Banner Card */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] border border-white/10 shadow-2xl min-h-[420px] flex flex-col justify-between">
+        {/* Main Banner Card - Original Dark Emerald & Gold Gradient Theme */}
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0d1210] via-[#111816] to-[#0a0d0c] border border-white/10 shadow-2xl min-h-[380px] lg:h-[400px] xl:h-[420px] flex flex-col justify-between">
+          
           {/* Subtle Ambient Glow */}
           <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#d5a65a]/10 blur-3xl" />
           <div className="pointer-events-none absolute right-0 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full bg-[#d5a65a]/10 blur-3xl" />
 
-          {/* Upper Content Area with 3 Balanced Sections: Left Text | Center Diamonds | Right Circle */}
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-8 xl:gap-12 px-6 sm:px-10 lg:px-12 xl:px-14 pt-8 sm:pt-10 lg:pt-12 pb-16 lg:pb-14">
+          {/* RIGHT SIDE: SEMI-CIRCLE IMAGE (Flush against the right edge, 100% height of banner, zero overflow) */}
+          <div className="absolute right-0 top-0 bottom-0 h-full w-[220px] sm:w-[280px] md:w-[340px] lg:w-[400px] xl:w-[440px] pointer-events-none overflow-hidden flex items-center justify-end z-10">
+            {/* The circle has diameter equal to the banner's full height.
+                Shifted to the right by half its width (translate-x-1/2),
+                forming a clean, flush semi-circle that touches the top and bottom borders.
+                Because it is styled with `h-full`, it does NOT increase or stretch the banner height! */}
+            <div className="h-full aspect-square rounded-full overflow-hidden bg-[#14201d] translate-x-1/2 border-l-4 sm:border-l-[6px] border-white/20 shadow-2xl relative flex items-center justify-center">
+              <img
+                src={photos.heroCircle}
+                alt="Featured circular showcase"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.src = DEFAULT_BANNER_PHOTOS.heroCircle;
+                }}
+                className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+              />
+            </div>
+          </div>
+
+          {/* Upper Content Area: Left Text & Center Diamonds */}
+          <div className="relative z-20 flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-6 xl:gap-10 px-6 sm:px-10 lg:px-12 xl:px-14 pt-8 sm:pt-10 lg:pt-12 pb-16 lg:pb-12 flex-1">
             
-            {/* 1. LEFT COLUMN: Logo, Titles, Description, CTA Button */}
+            {/* 1. LEFT COLUMN: Logo, Script Title, Main Title, Description, CTA Button */}
             <div className="w-full lg:max-w-[340px] xl:max-w-[390px] shrink-0 flex flex-col items-start text-left">
               {/* Logo / Badge */}
               <div className="flex items-center gap-2 text-white/80 mb-1">
@@ -101,7 +120,7 @@ const PromoBanner = ({
               </h2>
 
               {/* Description */}
-              <p className="mt-3.5 text-xs sm:text-sm text-white/70 leading-relaxed">
+              <p className="mt-3.5 text-xs sm:text-sm text-white/70 leading-relaxed max-w-xs sm:max-w-sm">
                 {description}
               </p>
 
@@ -119,18 +138,18 @@ const PromoBanner = ({
               </div>
             </div>
 
-            {/* 2. MIDDLE COLUMN: Perfectly Aligned 5-Diamond Grid */}
+            {/* 2. MIDDLE COLUMN: 5-Diamond Grid */}
             <div className="relative shrink-0 flex items-center justify-center my-4 lg:my-0 lg:mx-auto">
-              <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px] lg:w-[340px] lg:h-[340px] flex items-center justify-center">
-                {/* 3x3 Grid rotated 45 degrees forming an exact geometric cross */}
+              <div className="relative w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] lg:w-[320px] lg:h-[320px] flex items-center justify-center">
+                {/* 3x3 Grid rotated 45 degrees */}
                 <div className="grid grid-cols-3 grid-rows-3 gap-1.5 sm:gap-2 rotate-45 transform">
                   {/* Row 1 */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 pointer-events-none" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
                   <DiamondCard
                     img={photos.diamondTopRight}
                     fallback={DEFAULT_BANNER_PHOTOS.diamondTopRight}
                   />
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 pointer-events-none" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
 
                   {/* Row 2 */}
                   <DiamondCard
@@ -148,31 +167,18 @@ const PromoBanner = ({
                   />
 
                   {/* Row 3 */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 pointer-events-none" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
                   <DiamondCard
                     img={photos.diamondBottomLeft}
                     fallback={DEFAULT_BANNER_PHOTOS.diamondBottomLeft}
                   />
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 pointer-events-none" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-26 md:h-26 lg:w-28 lg:h-28 pointer-events-none" />
                 </div>
               </div>
             </div>
 
-            {/* 3. RIGHT COLUMN: Large Hero Circle with Clear Gap from Diamonds */}
-            <div className="relative shrink-0 hidden lg:flex items-center justify-end">
-              <div className="relative w-56 h-56 xl:w-72 xl:h-72 rounded-full overflow-hidden border-[5px] border-white/20 shadow-2xl bg-[#14201d] -mr-8 xl:-mr-12">
-                <img
-                  src={photos.heroCircle}
-                  alt="Featured circular showcase"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.src = DEFAULT_BANNER_PHOTOS.heroCircle;
-                  }}
-                  className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                />
-              </div>
-            </div>
-
+            {/* Spacer for desktop layout balance with the absolute semi-circle */}
+            <div className="hidden xl:block w-36 shrink-0 pointer-events-none" />
           </div>
 
           {/* BOTTOM GEOMETRIC INFO STRIP */}
