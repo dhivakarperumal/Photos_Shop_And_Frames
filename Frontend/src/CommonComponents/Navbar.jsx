@@ -59,6 +59,17 @@ const Navbar = () => {
     openFavorites,
   } = useContext(StoreContext) || {};
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName =
     userProfile?.displayName ||
@@ -177,7 +188,11 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="fixed left-0 top-0 z-50 w-full">
+      <header
+        className={`fixed left-0 top-0 z-50 w-full transition-transform duration-300 ease-in-out ${
+          isScrolled ? "-translate-y-[42px]" : "translate-y-0"
+        }`}
+      >
         <div className="bg-[#0d0d0d] text-white">
           <PageContainer>
             <div className="flex h-[42px] items-center justify-between text-[11px] font-medium tracking-wide text-[#f3f3f3]">
@@ -218,7 +233,13 @@ const Navbar = () => {
           </PageContainer>
         </div>
 
-        <div className="border-b border-[#d79d4a]/40 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.08)]">
+        <div
+          className={`border-b border-[#d79d4a]/40 bg-white transition-shadow duration-300 ${
+            isScrolled
+              ? "shadow-[0_8px_24px_rgba(0,0,0,0.1)]"
+              : "shadow-[0_4px_18px_rgba(0,0,0,0.08)]"
+          }`}
+        >
           <PageContainer>
             <div className="flex h-[88px] items-center justify-between gap-4 bg-white">
               <Link to="/" className="flex items-center gap-3">
