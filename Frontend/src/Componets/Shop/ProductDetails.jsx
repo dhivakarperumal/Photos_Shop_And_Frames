@@ -752,6 +752,10 @@ const ProductDetails = () => {
 
   const handleBuyNow = () => {
     if (!product) return;
+    if (!user?.user_id) {
+      toast.error("Please login before buying this item");
+      return;
+    }
     if (!inStock) {
       toast.error("Selected size variant is out of stock.");
       return;

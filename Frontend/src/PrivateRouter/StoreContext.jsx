@@ -5,6 +5,11 @@ import { AuthContext } from "./AuthContext";
 
 export const StoreContext = createContext();
 
+export const notifyLoginRequired = (message = "Please login to continue") => {
+    toast.error(message);
+    return false;
+};
+
 export const StoreProvider = ({ children }) => {
     const authContext = useContext(AuthContext);
     const user = authContext?.user || null;
@@ -21,12 +26,7 @@ export const StoreProvider = ({ children }) => {
     const [budgetMode, setBudgetMode] = useState(user?.budget_mode || false);
     const [budgetAmount, setBudgetAmount] = useState(user?.budget_amount || 0);
 
-    const requireLogin = useCallback((message) => {
-        toast.error(message);
-        if (window.location.pathname !== "/login") {
-            window.location.assign("/login");
-        }
-    }, []);
+    const requireLogin = useCallback((message) => notifyLoginRequired(message), []);
 
     // Global Cart Sidebar Drawer state
     const [isCartOpen, setIsCartOpen] = useState(false);
