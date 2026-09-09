@@ -217,6 +217,7 @@ const StockDetails = () => {
       setStockValues(variants.map((variant) => ({
         ...variant,
         stock: Number(variant.stock) || 0,
+        add: 0,
       })));
       return;
     }
@@ -227,16 +228,17 @@ const StockDetails = () => {
         setStockValues(variants.map((variant) => ({
           ...variant,
           stock: Number(variant.stock ?? variant.quantity ?? 0) || 0,
+          add: 0,
         })));
       } else {
-        setStockValues([{ size: row.rawData?.size || 'Standard', color: '', stock: Number(row.rawData?.stock_quantity ?? row.currentStock ?? 0) || 0 }]);
+        setStockValues([{ size: row.rawData?.size || 'Standard', color: '', stock: Number(row.rawData?.stock_quantity ?? row.currentStock ?? 0) || 0, add: 0 }]);
       }
       return;
     }
 
     if (row.type === 'gift') {
       const stock = Number(row.rawData?.current_stock ?? row.rawData?.stock_quantity ?? row.rawData?.currentStock ?? row.currentStock ?? 0);
-      setStockValues([{ size: 'Gift Box', color: '', stock }]);
+      setStockValues([{ size: 'Gift Box', color: '', stock, add: 0 }]);
     }
   };
 
@@ -252,8 +254,9 @@ const StockDetails = () => {
   };
 
   const updateStockValue = (index, value) => {
+    const parsed = Math.max(0, Number(value) || 0);
     setStockValues((current) => current.map((variant, variantIndex) => (
-      variantIndex === index ? { ...variant, stock: Math.max(0, Number(value) || 0) } : variant
+      variantIndex === index ? { ...variant, add: parsed } : variant
     )));
   };
 
@@ -265,21 +268,33 @@ const StockDetails = () => {
       setSavingStock(true);
 
       if (editingProduct.type === 'product') {
+        const productVariants = stockValues.map((variant) => {
+          const oldStock = Number(variant.stock ?? 0);
+          const addQty = Number(variant.add ?? 0);
+          return {
+            ...variant,
+            stock: Math.max(0, oldStock + addQty),
+          };
+        });
+
         await api.put(`/products/${editingProduct.rawData?.id ?? editingProduct.id}`, {
           ...editingProduct.rawData,
-          size_variants: stockValues.map((variant) => ({
-            ...variant,
-            stock: Math.max(0, Number(variant.stock) || 0),
-          })),
+          size_variants: productVariants,
         });
       }
 
       if (editingProduct.type === 'album') {
-        const nextVariants = stockValues.map((variant) => ({
-          ...variant,
-          stock: Math.max(0, Number(variant.stock) || 0),
-        }));
-        const totalStock = nextVariants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+        const nextVariants = stockValues.map((variant) => {
+          const oldStock = Number(variant.stock ?? variant.quantity ?? 0);
+          const addQty = Number(variant.add ?? 0);
+          return {
+            ...variant,
+            stock: Math.max(0, oldStock + addQty),
+            quantity: Math.max(0, oldStock + addQty),
+          };
+        });
+        const totalStock = nextVariants.reduce((sum, variant) => sum + Number(variant.stock || variant.quantity || 0), 0);
+
         await api.put(`/albums/${editingProduct.rawData?.product_id ?? editingProduct.rawData?.id ?? editingProduct.id}`, {
           ...editingProduct.rawData,
           variants: nextVariants,
@@ -289,11 +304,14 @@ const StockDetails = () => {
       }
 
       if (editingProduct.type === 'gift') {
-        const totalStock = stockValues.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0);
+        const oldStock = Number(editingProduct.rawData?.current_stock ?? editingProduct.rawData?.stock_quantity ?? editingProduct.rawData?.currentStock ?? 0);
+        const addQty = Number(stockValues[0]?.add ?? 0);
+        const nextStock = Math.max(0, oldStock + addQty);
+
         await api.put(`/gift-boxes/${editingProduct.rawData?.gift_box_id ?? editingProduct.rawData?.id ?? editingProduct.id}`, {
           ...editingProduct.rawData,
-          current_stock: totalStock,
-          stock_status: totalStock <= 0 ? 'Out of Stock' : 'Available',
+          current_stock: nextStock,
+          stock_status: nextStock <= 0 ? 'Out of Stock' : 'Available',
         });
       }
 
@@ -542,14 +560,17 @@ const StockDetails = () => {
                       <span className="block text-sm font-semibold text-[#222]">{variant.size || `Size ${index + 1}`}</span>
                       <span className="text-xs text-[#777]">Current stock: {variant.stock}</span>
                     </span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={variant.stock}
-                      onChange={(event) => updateStockValue(index, event.target.value)}
-                      className="h-10 w-24 rounded-lg border border-[#dfe2e5] bg-white px-3 text-right text-sm font-semibold outline-none focus:border-[#1a3c36]"
-                      aria-label={`Stock for ${variant.size || `size ${index + 1}`}`}
-                    />
+                    <div className="flex flex-col items-end gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.add}
+                        onChange={(event) => updateStockValue(index, event.target.value)}
+                        className="h-10 w-24 rounded-lg border border-[#dfe2e5] bg-white px-3 text-right text-sm font-semibold outline-none focus:border-[#1a3c36]"
+                        aria-label={`Add stock for ${variant.size || `size ${index + 1}`}`}
+                      />
+                      <span className="text-[10px] text-[#777]">Add units</span>
+                    </div>
                   </label>
                 ))}
               </div>
