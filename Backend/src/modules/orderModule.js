@@ -340,72 +340,7 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
               `Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for album "${album.product_name}"`
             );
           }
-        throw new Error(`Invalid quantity for product ${rawId}`);
-      }
 
-      const inventory = await resolveOrderItemInventory(connection, item);
-
-      if (inventory.kind === "product") {
-        const variants = parseSizeVariants(inventory.record.size_variants);
-        const variantIndex = findMatchingVariantIndex(variants, inventory.selectedSize);
-
-        if (variantIndex >= 0) {
-          await connection.query(
-            `UPDATE products SET size_variants = ?, updated_at = NOW() WHERE id = ?`,
-            [JSON.stringify(inventory.variants), inventory.record.id],
-          );
-        }
-      } else if (inventory.kind === "album") {
-        const albumVariantPayload = Array.isArray(inventory.variants) ? inventory.variants : parseSizeVariants(inventory.record.variants);
-        const albumKey = String(rawId || "").trim();
-        const albumRow = await connection.query(
-          `SELECT id, product_id FROM albums WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ? LIMIT 1`,
-          [Number(rawId) || 0, albumKey, albumKey, albumKey.toLowerCase()],
-        );
-        const albumMatch = albumRow?.[0]?.[0] || null;
-        const albumIdValue = albumMatch?.id ?? (Number(rawId) || 0);
-        const albumProductIdValue = albumMatch?.product_id ?? albumKey;
-
-        const albumVariantTotal = albumVariantPayload.length
-          ? albumVariantPayload.reduce((sum, variant) => sum + Number(variant?.stock ?? variant?.quantity ?? 0), 0)
-          : Math.max(Number(inventory.record.stock_quantity || 0) - quantity, 0);
-
-        await connection.query(
-          `UPDATE albums
-           SET variants = ?,
-               stock_quantity = ?,
-               stock_status = CASE WHEN ? <= 0 THEN 'Out of Stock' ELSE 'In Stock' END,
-               updated_at = NOW()
-           WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ?`,
-          [
-            JSON.stringify(albumVariantPayload),
-            albumVariantTotal,
-            albumVariantTotal,
-            albumIdValue,
-            albumIdValue ? String(albumIdValue) : albumKey,
-            albumProductIdValue,
-            albumProductIdValue.toLowerCase(),
-          ],
-        );
-      } else if (inventory.kind === "gift") {
-        const normalizedRawId = String(rawId || "").trim();
-        const strippedRawId = normalizedRawId.replace(/^gift[-_\s]*/i, "");
-        const giftUpdates = [
-          `UPDATE gift_boxes
-           SET current_stock = GREATEST(current_stock - ?, 0),
-               stock_status = CASE WHEN GREATEST(current_stock - ?, 0) <= 0 THEN 'Out of Stock' ELSE 'Available' END,
-               updated_at = NOW()
-           WHERE id = ? OR CAST(id AS CHAR) = ? OR gift_box_id = ? OR LOWER(gift_box_id) = ?`,
-          [quantity, quantity, Number(rawId) || 0, String(rawId), normalizedRawId, normalizedRawId.toLowerCase()],
-        ];
-
-        if (strippedRawId && strippedRawId !== normalizedRawId) {
-          giftUpdates[0] += ` OR gift_box_id = ? OR LOWER(gift_box_id) = ?`;
-          giftUpdates[1].push(strippedRawId, strippedRawId.toLowerCase());
-        }
-
-        await connection.query(giftUpdates[0], giftUpdates[1]);
-      }
           if (variants.length > 0) {
             const variantIdx = variants.findIndex(
               (v) =>
@@ -579,7 +514,6 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
             ];
 
             await connection.query(insertItemQuery, itemValues);
-            continue;
           }
 
           // Fallback 2: Check if it exists in albums table before failing
@@ -654,7 +588,6 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
             ];
 
             await connection.query(insertItemQuery, itemValues);
-            continue;
           }
 
           throw new Error(`Product ${rawProductId} was not found`);
