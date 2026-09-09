@@ -167,8 +167,12 @@ const Header = ({ onMenuClick }) => {
         ]);
 
         const productItems = (productsRes?.data?.data || []).flatMap((product) => {
-          const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
-          const stock = variants.reduce((sum, variant) => sum + (Number(variant?.stock) || 0), 0);
+          let variants = [];
+          if (Array.isArray(product.size_variants)) variants = product.size_variants;
+          else if (typeof product.size_variants === 'string') {
+            try { variants = JSON.parse(product.size_variants); } catch { variants = []; }
+          }
+          const stock = variants.length ? variants.reduce((sum, variant) => sum + (Number(variant?.stock) || 0), 0) : 0;
           return stock <= 15 ? [{ name: product.product_name || 'Unnamed Product', stock }] : [];
         });
 

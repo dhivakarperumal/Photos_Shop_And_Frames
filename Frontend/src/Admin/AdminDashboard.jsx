@@ -249,7 +249,7 @@ const AdminDashboard = () => {
             })()
           : 0;
 
-      if (variantStock <= 10) {
+      if (variantStock <= 15) {
         items.push({ name: product.product_name || 'Product', type: 'Product', stock: variantStock });
       }
     });
@@ -267,14 +267,14 @@ const AdminDashboard = () => {
             })()
           : Number(album.stock_quantity || 0);
 
-      if (variantStock <= 10) {
+      if (variantStock <= 15) {
         items.push({ name: album.product_name || 'Album', type: 'Album', stock: variantStock });
       }
     });
 
     catalogItems.gifts.forEach((gift) => {
       const stock = Number(gift.current_stock ?? gift.stock_quantity ?? 0);
-      if (stock <= 10) {
+      if (stock <= 15) {
         items.push({ name: gift.name || 'Gift Box', type: 'Gift', stock });
       }
     });
