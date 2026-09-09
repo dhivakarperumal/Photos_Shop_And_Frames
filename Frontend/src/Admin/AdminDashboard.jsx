@@ -279,8 +279,10 @@ const AdminDashboard = () => {
       }
     });
 
-    return items.slice(0, 5);
+    return items;
   }, [catalogItems]);
+
+  const visibleLowStockAlerts = lowStockAlerts.slice(0, 5);
 
   const paymentBreakdown = useMemo(() => {
     const totals = new Map();
@@ -586,10 +588,10 @@ const AdminDashboard = () => {
         <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-gray-800">Low Stock Alerts</h2>
-            <span className="text-xs text-gray-500">{lowStockAlerts.length} items</span>
+            <span className="text-xs text-gray-500">{lowStockAlerts.length} {lowStockAlerts.length === 1 ? 'item' : 'items'}</span>
           </div>
           <div className="space-y-4">
-            {lowStockAlerts.length ? lowStockAlerts.map((item, index) => (
+            {visibleLowStockAlerts.length ? visibleLowStockAlerts.map((item, index) => (
               <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50 px-3 py-2">
                 <div>
                   <p className="text-sm font-medium text-gray-800">{item.name}</p>
