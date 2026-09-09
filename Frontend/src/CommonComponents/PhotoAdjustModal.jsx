@@ -129,7 +129,7 @@ export const DEFAULT_ADJUSTMENT = {
   flipV: false,
   angle: 0,
   cropRatio: "free",
-  fitMode: "cover",
+  fitMode: "contain",
   innerBorderColor: "transparent",
   innerBorderWidth: 0,
   outerBorderColor: "transparent",
@@ -185,7 +185,7 @@ const PhotoAdjustModal = ({
   const [flipV, setFlipV] = useState(false);
   const [cropRatio, setCropRatio] = useState("free");
   const [fitMode, setFitMode] = useState(
-    initialAdjustment?.fitMode || slot?.objectFit || "cover"
+    initialAdjustment?.fitMode || "contain"
   );
   const [naturalSize, setNaturalSize] = useState({ w: 800, h: 600 });
 
@@ -222,7 +222,7 @@ const PhotoAdjustModal = ({
   useEffect(() => {
     if (isOpen) {
       const init = { ...DEFAULT_ADJUSTMENT, ...initialAdjustment };
-      const currentFit = init.fitMode || slot?.objectFit || "cover";
+      const currentFit = init.fitMode || "contain";
       setFitMode(currentFit);
       setPanX(init.panX || 0);
       setPanY(init.panY || 0);
@@ -234,7 +234,7 @@ const PhotoAdjustModal = ({
       setFlipH(Boolean(init.flipH));
       setFlipV(Boolean(init.flipV));
       setCropRatio(init.cropRatio || "free");
-      setFitMode(init.fitMode || slot?.objectFit || "cover");
+      setFitMode(init.fitMode || "contain");
 
       setInnerBorderColor(init.innerBorderColor || "transparent");
       setInnerBorderWidth(init.innerBorderWidth || 0);
@@ -406,7 +406,7 @@ const PhotoAdjustModal = ({
     setFlipH(false);
     setFlipV(false);
     setCropRatio("free");
-    setFitMode(slot?.objectFit || "cover");
+    setFitMode("contain");
     setInnerBorderColor("transparent");
     setInnerBorderWidth(0);
     setOuterBorderColor("transparent");

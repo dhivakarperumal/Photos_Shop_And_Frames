@@ -174,7 +174,7 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
                 const slotRatio = psw / psh;
                 let baseW = psw, baseH = psh;
-                const fitMode = adj.fitMode || slot.objectFit || "cover";
+                const fitMode = adj.fitMode || "contain";
 
                 if (fitMode === "contain") {
                   if (imgRatio > slotRatio) {
@@ -1385,7 +1385,7 @@ const AddProducts = () => {
                                 >
                                   {(() => {
                                     const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                    const fitMode = adj.fitMode || slot.objectFit || "cover";
+                                    const fitMode = adj.fitMode || "contain";
                                     const isContain = fitMode === "contain";
                                     const rot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
 
@@ -1394,14 +1394,14 @@ const AddProducts = () => {
                                         src={uploaded.preview}
                                         alt={slot.name}
                                         draggable={false}
-                                        className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full select-none object-center origin-center"
+                                        className="pointer-events-none absolute h-full w-full select-none object-center origin-center"
                                         style={{
+                                          top: `calc(50% + ${adj.panY || 0}%)`,
+                                          left: `calc(50% + ${adj.panX || 0}%)`,
                                           objectFit: isContain ? "contain" : "cover",
                                           transform: `translate(-50%, -50%) scale(${adj.scale || 1.0}) rotate(${rot}deg) scaleX(${
                                             adj.flipH ? -1 : 1
                                           }) scaleY(${adj.flipV ? -1 : 1})`,
-                                          marginLeft: `${adj.panX || 0}%`,
-                                          marginTop: `${adj.panY || 0}%`,
                                           transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
                                         }}
                                       />
@@ -1427,7 +1427,7 @@ const AddProducts = () => {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                        const nextMode = (curr.fitMode || slot.objectFit) === "contain" ? "cover" : "contain";
+                                        const nextMode = (curr.fitMode || "contain") === "contain" ? "cover" : "contain";
                                         setSlotAdjustments((prev) => ({
                                           ...prev,
                                           [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
@@ -1437,7 +1437,7 @@ const AddProducts = () => {
                                       className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#333] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
                                       title="Toggle between showing full image vs filling frame"
                                     >
-                                      {(slotAdjustments[slot.id]?.fitMode || slot.objectFit) === "contain" ? "Fill Frame" : "Fit Full"}
+                                      {(slotAdjustments[slot.id]?.fitMode || "contain") === "contain" ? "Fill Frame" : "Fit Full"}
                                     </button>
 
                                     <button
@@ -1516,7 +1516,7 @@ const AddProducts = () => {
                                 type="button"
                                 onClick={() => {
                                   const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                  const nextMode = (curr.fitMode || slot.objectFit) === "contain" ? "cover" : "contain";
+                                  const nextMode = (curr.fitMode || "contain") === "contain" ? "cover" : "contain";
                                   setSlotAdjustments((prev) => ({
                                     ...prev,
                                     [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
@@ -1526,7 +1526,7 @@ const AddProducts = () => {
                                 className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2 py-1 text-[11px] font-semibold text-[#555] hover:bg-[#faf7f3]"
                                 title="Toggle fit full image vs fill frame"
                               >
-                                {(slotAdjustments[slot.id]?.fitMode || slot.objectFit) === "contain" ? "Fill Frame" : "Fit Full"}
+                                {(slotAdjustments[slot.id]?.fitMode || "contain") === "contain" ? "Fill Frame" : "Fit Full"}
                               </button>
                             )}
                             <button
