@@ -48,6 +48,13 @@ const detailItems = [
   ['Binding Type', 'binding_type'],
 ];
 
+const listStringFromValue = (value) => {
+  if (Array.isArray(value)) return value.map((entry) => typeof entry === 'string' ? entry : (entry?.name || entry?.size || entry?.label || entry?.color || JSON.stringify(entry))).join(', ');
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return 'Not specified';
+};
+
 const AlbumDetails = () => {
   const navigate = useNavigate();
   const { albumId } = useParams();
@@ -93,6 +100,9 @@ const AlbumDetails = () => {
   const images = Array.from(new Set([...topLevelImages, ...variantImages])).map(getImageUrl).filter(Boolean);
   const status = album.status || 'Active';
   const stock = Number(album.stock_quantity || 0);
+  const sizeOptions = readArray(album.size_options);
+  const colorOptions = readArray(album.color_options);
+  const variantRows = readArray(album.variants);
 
   return (
     <div className="min-h-screen bg-[#f2f3f0] p-4 md:p-6">
@@ -147,6 +157,62 @@ const AlbumDetails = () => {
         <section className="mt-6 rounded-[18px] border border-[#e7e0d8] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-[#1f1d1b]">Description</h2>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#5f5f5f]">{album.description || 'No description available.'}</p>
+        </section>
+
+        <section className="mt-6 rounded-[18px] border border-[#e7e0d8] bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-[#1f1d1b]">Album Structure Details</h2>
+            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-[#7a7a7a]">size_options · color_options · variants</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-[#ece7dd] bg-[#faf9f7] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-[#202020]">size_options</span>
+                <span className="rounded-full bg-[#e8efeb] px-2.5 py-1 text-[11px] font-semibold text-[#1a3c36]">{sizeOptions.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {sizeOptions.length ? sizeOptions.map((size, index) => (
+                  <span key={`${size}-${index}`} className="rounded-full border border-[#d7ccb0] bg-white px-3 py-1 text-xs font-medium text-[#404040]">{typeof size === 'string' ? size : size?.size || size?.label || JSON.stringify(size)}</span>
+                )) : <span className="text-xs text-[#777]">Not specified</span>}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#ece7dd] bg-[#faf9f7] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-[#202020]">color_options</span>
+                <span className="rounded-full bg-[#e8efeb] px-2.5 py-1 text-[11px] font-semibold text-[#1a3c36]">{colorOptions.length}</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {colorOptions.length ? colorOptions.map((color, index) => {
+                  const colorName = typeof color === 'string' ? color : color?.name || color?.color || JSON.stringify(color);
+                  const colorCode = typeof color === 'string' ? '' : color?.code || color?.hex || '#d8d8d8';
+                  return (
+                    <span key={`${colorName}-${index}`} className="inline-flex items-center gap-2 rounded-full border border-[#d7ccb0] bg-white px-2 py-1 text-xs font-medium text-[#404040]">
+                      {colorCode ? <span className="h-3 w-3 rounded-full border border-[#e0d9cc]" style={{ backgroundColor: colorCode }} /> : null}
+                      {colorName}
+                    </span>
+                  );
+                }) : <span className="text-xs text-[#777]">Not specified</span>}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#ece7dd] bg-[#faf9f7] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-bold text-[#202020]">variants</span>
+                <span className="rounded-full bg-[#e8efeb] px-2.5 py-1 text-[11px] font-semibold text-[#1a3c36]">{variantRows.length}</span>
+              </div>
+              <div className="space-y-2">
+                {variantRows.length ? variantRows.map((variant, index) => (
+                  <div key={`${variant?.id || variant?.color || variant?.size || index}-${index}`} className="rounded-lg border border-[#e7e0d8] bg-white px-3 py-2 text-[11px] text-[#505050]">
+                    <span className="font-semibold text-[#202020]">{variant?.color || 'Color'} / {variant?.size || 'Size'}</span>
+                    <span className="ml-2 text-[#777]">stock: {variant?.stock ?? variant?.quantity ?? 0}</span>
+                    <span className="block text-[#777]">{variant?.image || variant?.images?.[0] || 'No image'}</span>
+                  </div>
+                )) : <span className="text-xs text-[#777]">No variant rows</span>}
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
