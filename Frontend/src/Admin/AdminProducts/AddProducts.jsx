@@ -1323,30 +1323,28 @@ const AddProducts = () => {
         </form>
 
         {/* PHOTO ADJUST MODAL FOR ADMIN DEMO PHOTOS */}
-        <PhotoAdjustModal
-          isOpen={Boolean(adjustingSlot)}
-          onClose={() => setAdjustingSlot(null)}
-          photoSrc={
-            adjustingSlot
-              ? slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
-              : null
-          }
-          slot={adjustingSlot}
-          initialAdjustment={
-            adjustingSlot
-              ? slotAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
-              : { panX: 0, panY: 0, scale: 1.0 }
-          }
-          onSave={(adj) => {
-            if (adjustingSlot) {
-              setSlotAdjustments((prev) => ({
-                ...prev,
-                [adjustingSlot.id]: adj,
-              }));
-              toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
+        {Boolean(adjustingSlot) && (
+          <PhotoAdjustModal
+            isOpen={Boolean(adjustingSlot)}
+            onClose={() => setAdjustingSlot(null)}
+            photoSrc={
+              slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
             }
-          }}
-        />
+            slot={adjustingSlot}
+            initialAdjustment={
+              slotAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
+            }
+            onSave={(adj) => {
+              if (adjustingSlot) {
+                setSlotAdjustments((prev) => ({
+                  ...prev,
+                  [adjustingSlot.id]: adj,
+                }));
+                toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

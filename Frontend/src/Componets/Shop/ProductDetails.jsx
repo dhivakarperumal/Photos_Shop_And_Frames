@@ -1578,30 +1578,28 @@ const ProductDetails = () => {
       )}
 
       {/* PHOTO ADJUST MODAL */}
-      <PhotoAdjustModal
-        isOpen={Boolean(adjustingSlot)}
-        onClose={() => setAdjustingSlot(null)}
-        photoSrc={
-          adjustingSlot
-            ? customerPhotos[adjustingSlot.id] || product?.slot_photos?.[adjustingSlot.id]
-            : null
-        }
-        slot={adjustingSlot}
-        initialAdjustment={
-          adjustingSlot
-            ? photoAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
-            : { panX: 0, panY: 0, scale: 1.0 }
-        }
-        onSave={(adj) => {
-          if (adjustingSlot) {
-            setPhotoAdjustments((prev) => ({
-              ...prev,
-              [adjustingSlot.id]: adj,
-            }));
-            toast.success(`Position adjusted for ${adjustingSlot.name || "slot"}!`);
+      {Boolean(adjustingSlot) && (
+        <PhotoAdjustModal
+          isOpen={Boolean(adjustingSlot)}
+          onClose={() => setAdjustingSlot(null)}
+          photoSrc={
+            customerPhotos[adjustingSlot.id] || product?.slot_photos?.[adjustingSlot.id]
           }
-        }}
-      />
+          slot={adjustingSlot}
+          initialAdjustment={
+            photoAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
+          }
+          onSave={(adj) => {
+            if (adjustingSlot) {
+              setPhotoAdjustments((prev) => ({
+                ...prev,
+                [adjustingSlot.id]: adj,
+              }));
+              toast.success(`Position adjusted for ${adjustingSlot.name || "slot"}!`);
+            }
+          }}
+        />
+      )}
 
       {/* CHECKOUT MODAL */}
       <CheckoutModal

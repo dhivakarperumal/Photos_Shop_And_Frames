@@ -129,6 +129,7 @@ export const DEFAULT_ADJUSTMENT = {
   flipV: false,
   angle: 0,
   cropRatio: "free",
+  fitMode: "cover",
   innerBorderColor: "transparent",
   innerBorderWidth: 0,
   outerBorderColor: "transparent",
@@ -183,6 +184,9 @@ const PhotoAdjustModal = ({
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
   const [cropRatio, setCropRatio] = useState("free");
+  const [fitMode, setFitMode] = useState(
+    initialAdjustment?.fitMode || slot?.objectFit || "cover"
+  );
 
   const [innerBorderColor, setInnerBorderColor] = useState("transparent");
   const [innerBorderWidth, setInnerBorderWidth] = useState(0);
@@ -225,6 +229,7 @@ const PhotoAdjustModal = ({
       setFlipH(Boolean(init.flipH));
       setFlipV(Boolean(init.flipV));
       setCropRatio(init.cropRatio || "free");
+      setFitMode(init.fitMode || slot?.objectFit || "cover");
 
       setInnerBorderColor(init.innerBorderColor || "transparent");
       setInnerBorderWidth(init.innerBorderWidth || 0);
@@ -246,6 +251,23 @@ const PhotoAdjustModal = ({
       setActiveTab("crop");
     }
   }, [isOpen, initialAdjustment]);
+
+  // Build combined CSS filter string (must be called before any early return to satisfy Rules of Hooks)
+  const activePreset = FILTER_PRESETS.find((p) => p.id === filter) || FILTER_PRESETS[0];
+  const combinedFilterCss = useMemo(() => {
+    const parts = [];
+    if (activePreset.id !== "normal") {
+      parts.push(activePreset.filterCss);
+    }
+    if (brightness !== 100) parts.push(`brightness(${brightness}%)`);
+    if (contrast !== 100) parts.push(`contrast(${contrast}%)`);
+    if (saturation !== 100) parts.push(`saturate(${saturation}%)`);
+    if (blur > 0) parts.push(`blur(${blur}px)`);
+    if (sharpness > 0) {
+      parts.push(`contrast(${100 + Math.round(sharpness * 0.4)}%)`);
+    }
+    return parts.length > 0 ? parts.join(" ") : "none";
+  }, [activePreset, brightness, contrast, saturation, blur, sharpness]);
 
   if (!isOpen || !photoSrc) return null;
 
@@ -304,7 +326,7 @@ const PhotoAdjustModal = ({
     const deltaPercentX = (dx / (boxW || 1)) * 100;
     const deltaPercentY = (dy / (boxH || 1)) * 100;
 
-    const maxPan = Math.max(45, (scale - 1) * 65 + 45);
+    const maxPan = Math.max(140, (scale - 1) * 80 + 140);
 
     const newPanX = Math.min(
       maxPan,
@@ -332,7 +354,7 @@ const PhotoAdjustModal = ({
     e.preventDefault();
     const zoomStep = 0.08;
     const newScale =
-      e.deltaY < 0 ? Math.min(3.0, scale + zoomStep) : Math.max(1.0, scale - zoomStep);
+      e.deltaY < 0 ? Math.min(3.0, scale + zoomStep) : Math.max(0.3, scale - zoomStep);
     setScale(Math.round(newScale * 100) / 100);
   };
 
@@ -345,6 +367,7 @@ const PhotoAdjustModal = ({
     setFlipH(false);
     setFlipV(false);
     setCropRatio("free");
+    setFitMode(slot?.objectFit || "cover");
     setInnerBorderColor("transparent");
     setInnerBorderWidth(0);
     setOuterBorderColor("transparent");
@@ -379,6 +402,7 @@ const PhotoAdjustModal = ({
         flipH,
         flipV,
         cropRatio,
+        fitMode,
         innerBorderColor,
         innerBorderWidth,
         outerBorderColor,
@@ -395,26 +419,9 @@ const PhotoAdjustModal = ({
     onClose();
   };
 
-  // Build combined CSS filter string
-  const activePreset = FILTER_PRESETS.find((p) => p.id === filter) || FILTER_PRESETS[0];
-  const combinedFilterCss = useMemo(() => {
-    const parts = [];
-    if (activePreset.id !== "normal") {
-      parts.push(activePreset.filterCss);
-    }
-    if (brightness !== 100) parts.push(`brightness(${brightness}%)`);
-    if (contrast !== 100) parts.push(`contrast(${contrast}%)`);
-    if (saturation !== 100) parts.push(`saturate(${saturation}%)`);
-    if (blur > 0) parts.push(`blur(${blur}px)`);
-    if (sharpness > 0) {
-      parts.push(`contrast(${100 + Math.round(sharpness * 0.4)}%)`);
-    }
-    return parts.length > 0 ? parts.join(" ") : "none";
-  }, [activePreset, brightness, contrast, saturation, blur, sharpness]);
-
   // Combined transform
   const totalRotate = (rotate + angle) % 360;
-  const transformCss = `translate(calc(-50% + ${panX}%), calc(-50% + ${panY}%)) scale(${scale}) rotate(${totalRotate}deg) scaleX(${
+  const transformCss = `translate(-50%, -50%) scale(${scale}) rotate(${totalRotate}deg) scaleX(${
     flipH ? -1 : 1
   }) scaleY(${flipV ? -1 : 1})`;
 
@@ -538,11 +545,25 @@ const PhotoAdjustModal = ({
                     draggable={false}
                     className="pointer-events-none absolute select-none origin-center"
                     style={{
-                      top: "50%",
-                      left: "50%",
-                      width: "100%",
-                      height: "100%",
-                      objectFit: slot?.objectFit === "contain" ? "contain" : "cover",
+                      top: `calc(50% + ${panY}%)`,
+                      left: `calc(50% + ${panX}%)`,
+                      ...(fitMode === "contain"
+                        ? {
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                            width: "auto",
+                            height: "auto",
+                            objectFit: "contain",
+                          }
+                        : {
+                            minWidth: "100%",
+                            minHeight: "100%",
+                            width: "auto",
+                            height: "auto",
+                            maxWidth: "none",
+                            maxHeight: "none",
+                            objectFit: "cover",
+                          }),
                       transform: transformCss,
                       filter: combinedFilterCss,
                       transition: isDragging ? "none" : "transform 0.05s ease-out, filter 0.2s ease",
@@ -617,20 +638,96 @@ const PhotoAdjustModal = ({
             {/* ================= TAB 1: CROP & PAN ================= */}
             {activeTab === "crop" && (
               <div className="space-y-4">
+                {/* 1. DISPLAY FIT MODE (SHOW FULL IMAGE VS FILL FRAME) */}
+                <div className="rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-3.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#1d2925]">
+                    <span>Image Display Mode</span>
+                    <span className="text-[11px] font-semibold text-[#b07838]">
+                      {fitMode === "contain" ? "Showing 100% Full Image" : "Filling Frame (Cropped)"}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-[#777]">
+                    Choose &quot;Fit Full Image&quot; to see the entire photo without cutting edges, or &quot;Fill Frame&quot; to fill the whole slot.
+                  </p>
+                  <div className="mt-2.5 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFitMode("contain");
+                        setPanX(0);
+                        setPanY(0);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                        fitMode === "contain"
+                          ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
+                          : "border-[#e2d9cd] bg-white text-[#555] hover:border-[#b07838]"
+                      }`}
+                    >
+                      <span>🖼️ Fit Full Image (No Crop)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFitMode("cover")}
+                      className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                        fitMode === "cover"
+                          ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
+                          : "border-[#e2d9cd] bg-white text-[#555] hover:border-[#b07838]"
+                      }`}
+                    >
+                      <span>🔲 Fill Frame (Cover)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. QUICK FOCUS ALIGNMENT */}
+                <div className="rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-3.5">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#1d2925]">
+                    <span>Quick Vertical Focus</span>
+                    <span className="text-[11px] text-[#777]">Bring top/face into view</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPanY(45)}
+                      className="flex items-center justify-center gap-1 rounded-xl border border-[#e2d9cd] bg-white py-2 text-xs font-bold text-[#1a3c36] hover:border-[#1a3c36] hover:bg-[#f0f6f4] transition shadow-2xs cursor-pointer"
+                      title="Focus on top of photo (shows head and face)"
+                    >
+                      <span>⬆️ Show Top (Face)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPanX(0);
+                        setPanY(0);
+                      }}
+                      className="flex items-center justify-center gap-1 rounded-xl border border-[#e2d9cd] bg-white py-2 text-xs font-bold text-[#444] hover:border-[#1a3c36] hover:bg-[#f0f6f4] transition shadow-2xs cursor-pointer"
+                      title="Center the photo in the frame"
+                    >
+                      <span>🎯 Center</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPanY(-45)}
+                      className="flex items-center justify-center gap-1 rounded-xl border border-[#e2d9cd] bg-white py-2 text-xs font-bold text-[#444] hover:border-[#1a3c36] hover:bg-[#f0f6f4] transition shadow-2xs cursor-pointer"
+                      title="Focus on bottom of photo"
+                    >
+                      <span>⬇️ Bottom</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. ASPECT RATIO */}
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
-                    1. Aspect Ratio Cropping
+                    Aspect Ratio Cropping
                   </h4>
-                  <p className="mt-1 text-xs text-[#777]">
-                    Lock to standard photo frame proportions or fit to slot.
-                  </p>
-                  <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="mt-2 grid grid-cols-3 gap-2">
                     {ASPECT_RATIOS.map((r) => (
                       <button
                         key={r.id}
                         type="button"
                         onClick={() => setCropRatio(r.id)}
-                        className={`rounded-xl border p-2.5 text-xs font-bold transition ${
+                        className={`rounded-xl border p-2 text-xs font-bold transition cursor-pointer ${
                           cropRatio === r.id
                             ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
                             : "border-[#e2d9cd] bg-[#faf8f5] text-[#555] hover:border-[#b07838]"
@@ -642,23 +739,24 @@ const PhotoAdjustModal = ({
                   </div>
                 </div>
 
-                {/* ZOOM CONTROL */}
-                <div className="rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-4">
+                {/* 4. ZOOM CONTROL */}
+                <div className="rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-3.5">
                   <div className="flex items-center justify-between text-xs font-bold text-[#1d2925]">
                     <span>Photo Zoom &amp; Scale</span>
                     <span className="font-mono text-[#1a3c36]">{Math.round(scale * 100)}%</span>
                   </div>
-                  <div className="mt-3 flex items-center gap-3">
+                  <div className="mt-2.5 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setScale((s) => Math.max(1.0, Math.round((s - 0.1) * 10) / 10))}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] hover:bg-[#f0ebe3]"
+                      onClick={() => setScale((s) => Math.max(0.3, Math.round((s - 0.1) * 10) / 10))}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] hover:bg-[#f0ebe3] cursor-pointer"
+                      title="Zoom out"
                     >
                       <ZoomOut className="h-4 w-4" />
                     </button>
                     <input
                       type="range"
-                      min="1.0"
+                      min="0.3"
                       max="3.0"
                       step="0.05"
                       value={scale}
@@ -668,7 +766,8 @@ const PhotoAdjustModal = ({
                     <button
                       type="button"
                       onClick={() => setScale((s) => Math.min(3.0, Math.round((s + 0.1) * 10) / 10))}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] hover:bg-[#f0ebe3]"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] hover:bg-[#f0ebe3] cursor-pointer"
+                      title="Zoom in"
                     >
                       <ZoomIn className="h-4 w-4" />
                     </button>
@@ -678,7 +777,7 @@ const PhotoAdjustModal = ({
                 {/* PAN OFFSET DISPLAY & RESET */}
                 <div className="flex items-center justify-between border-t border-[#eee5d8] pt-3 text-xs">
                   <span className="text-[11px] text-[#777]">
-                    Pan: <strong className="font-mono text-[#333]">{panX}%, {panY}%</strong>
+                    Pan Position: <strong className="font-mono text-[#333]">{panX}%, {panY}%</strong>
                   </span>
                   <button
                     type="button"
@@ -687,7 +786,7 @@ const PhotoAdjustModal = ({
                       setPanY(0);
                       setScale(1.0);
                     }}
-                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#888] hover:bg-[#f4efe8] hover:text-[#222]"
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#888] hover:bg-[#f4efe8] hover:text-[#222] cursor-pointer"
                   >
                     <RotateCcw className="h-3 w-3" /> Reset Position
                   </button>
