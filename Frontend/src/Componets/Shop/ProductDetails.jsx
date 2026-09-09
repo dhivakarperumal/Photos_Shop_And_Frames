@@ -1,19 +1,29 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   AlertCircle,
   ArrowLeft,
+  Bold,
   Check,
   CheckCircle2,
+  Crop,
   Download,
   Eye,
   EyeOff,
+  FlipHorizontal,
+  FlipVertical,
   Heart,
   Image as ImageIcon,
   ImagePlus,
+  Italic,
   Layers,
   Move,
   Package,
+  Palette,
+  RotateCcw,
   RotateCw,
   Share2,
   ShieldCheck,
@@ -23,15 +33,25 @@ import {
   Sparkles,
   Trash2,
   Truck,
+  Type,
   UploadCloud,
+  Wand2,
   X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import api from "../../api";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import CheckoutModal from "../Checkout/CheckoutModal";
-import PhotoAdjustModal from "../../CommonComponents/PhotoAdjustModal";
+import PhotoAdjustModal, {
+  DEFAULT_ADJUSTMENT,
+  FILTER_PRESETS,
+  FONT_FAMILIES,
+  INNER_BORDER_COLORS,
+  OUTER_BORDER_COLORS,
+} from "../../CommonComponents/PhotoAdjustModal";
 import PageHeader from "../../CommonComponents/PageHeader";
 import PageContainer from "../../CommonComponents/PageContainer";
 
@@ -304,11 +324,15 @@ const ProductDetails = () => {
   const [activeDraggingSlot, setActiveDraggingSlot] = useState(null);
   const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
 
-  // View mode: 'editor' (interactive frame with slots) vs 'preview' (whole merged composite photo)
+  // View mode: 'editor' (interactive frame with slots) | 'wall' (living room ambient wall) | 'preview' (whole merged composite photo)
   const [viewMode, setViewMode] = useState("editor");
   const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [compositeServerUrl, setCompositeServerUrl] = useState(null);
+
+  // Active slot & Studio tool tab for inline customization
+  const [activeSlotId, setActiveSlotId] = useState(null);
+  const [activeStudioTab, setActiveStudioTab] = useState("filters"); // 'filters' | 'text' | 'crop' | 'borders' | 'rotate'
 
   const fileInputRefs = useRef({});
 
@@ -353,6 +377,93 @@ const ProductDetails = () => {
   const sizeVariants = product?.size_variants || [];
   const selectedVariant = sizeVariants[selectedVariantIndex] || {};
   const inStock = (selectedVariant.stock ?? 1) > 0;
+
+  // Ensure activeSlotId defaults to the first slot when slots are available
+  useEffect(() => {
+    if (photoSlots.length > 0 && (!activeSlotId || !photoSlots.some((s) => s.id === activeSlotId))) {
+      setActiveSlotId(photoSlots[0].id);
+    }
+  }, [photoSlots, activeSlotId]);
+
+  const activeSlot = photoSlots.find((s) => s.id === activeSlotId) || photoSlots[0] || null;
+  const activeAdjustment = useMemo(() => {
+    if (!activeSlot) return DEFAULT_ADJUSTMENT;
+    const existing = photoAdjustments[activeSlot.id];
+    return {
+      ...DEFAULT_ADJUSTMENT,
+      fitMode: activeSlot.objectFit || "cover",
+      ...(existing || {}),
+    };
+  }, [photoAdjustments, activeSlot]);
+
+  // Helper to mutate adjustment for the ACTIVE slot only
+  const updateActiveAdjustment = (updates) => {
+    if (!activeSlot?.id) return;
+    setPhotoAdjustments((prev) => {
+      const current = prev[activeSlot.id] || {
+        ...DEFAULT_ADJUSTMENT,
+        fitMode: activeSlot.objectFit || "cover",
+      };
+      return {
+        ...prev,
+        [activeSlot.id]: {
+          ...current,
+          ...updates,
+        },
+      };
+    });
+  };
+
+  // Helper to update text overlay for the ACTIVE slot only
+  const updateActiveTextOverlay = (textUpdates) => {
+    if (!activeSlot?.id) return;
+    setPhotoAdjustments((prev) => {
+      const currentAdj = prev[activeSlot.id] || {
+        ...DEFAULT_ADJUSTMENT,
+        fitMode: activeSlot.objectFit || "cover",
+      };
+      return {
+        ...prev,
+        [activeSlot.id]: {
+          ...currentAdj,
+          textOverlay: {
+            ...(currentAdj.textOverlay || DEFAULT_ADJUSTMENT.textOverlay),
+            ...textUpdates,
+          },
+        },
+      };
+    });
+  };
+
+  // Download High-Resolution Composite Frame handler
+  const handleDownloadHighRes = async () => {
+    if (!frameData.frame_image) return;
+    const toastId = toast.loading("Rendering high-resolution custom frame...");
+    try {
+      const { dataUrl } = await generateCompositeFrameBlobAndDataUrl(
+        frameData.frame_image,
+        photoSlots,
+        customerPhotos,
+        product?.slot_photos || {},
+        photoAdjustments
+      );
+      if (dataUrl) {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${(product?.product_name || "frame").toLowerCase().replace(/\s+/g, "-")}-custom-${Date.now()}.jpg`;
+        a.click();
+        toast.dismiss(toastId);
+        toast.success("High-resolution frame downloaded!");
+      } else {
+        toast.dismiss(toastId);
+        toast.error("Could not render frame image.");
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error("Download error:", err);
+      toast.error("Failed to download frame image.");
+    }
+  };
 
   // Refresh merged whole frame preview whenever customer photos or adjustments change
   useEffect(() => {
@@ -400,19 +511,42 @@ const ProductDetails = () => {
       const url = res.data?.url || res.data?.urls?.[0];
       if (!url) throw new Error("Upload did not return photo URL");
 
+      const slotObj = photoSlots.find((s) => s.id === slotId);
+      const defaultFit = slotObj?.objectFit || "cover";
+
       setCustomerPhotos((prev) => ({
         ...prev,
         [slotId]: url,
       }));
+      setActiveSlotId(slotId);
       setPhotoAdjustments((prev) => ({
         ...prev,
-        [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+        [slotId]: prev[slotId] || {
+          ...DEFAULT_ADJUSTMENT,
+          fitMode: defaultFit,
+        },
       }));
       setHighlightMissingSlots(false);
       toast.success("Photo uploaded to frame slot!");
     } catch (err) {
       console.error("Slot upload error:", err);
-      toast.error("Could not upload photo. Please try again.");
+      toast.error("Upload failed, using local preview.");
+      const localUrl = URL.createObjectURL(file);
+      const slotObj = photoSlots.find((s) => s.id === slotId);
+      const defaultFit = slotObj?.objectFit || "cover";
+
+      setCustomerPhotos((prev) => ({
+        ...prev,
+        [slotId]: localUrl,
+      }));
+      setActiveSlotId(slotId);
+      setPhotoAdjustments((prev) => ({
+        ...prev,
+        [slotId]: prev[slotId] || {
+          ...DEFAULT_ADJUSTMENT,
+          fitMode: defaultFit,
+        },
+      }));
     } finally {
       setUploadingSlot(null);
       event.target.value = "";
@@ -757,7 +891,11 @@ const ProductDetails = () => {
                       <Sparkles className="h-4 w-4" />
                     </span>
                     <h3 className="text-sm font-bold text-[#1d2925]">
-                      {viewMode === "editor" ? "Interactive Photo Slots" : "Whole Merged Frame Preview"}
+                      {viewMode === "editor"
+                        ? "Interactive Photo Slots"
+                        : viewMode === "wall"
+                        ? "Wall Visualizer Simulation"
+                        : "Whole Merged Frame Preview"}
                     </h3>
                   </div>
                   <p className="mt-0.5 text-[11px] text-[#777]">
@@ -767,35 +905,81 @@ const ProductDetails = () => {
                   </p>
                 </div>
 
-                {/* VIEW MODE TOGGLE BUTTONS */}
-                <div className="inline-flex rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs">
+                {/* VIEW MODE TOGGLE BUTTONS & TOOLBAR */}
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setViewMode("editor")}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
-                      viewMode === "editor"
-                        ? "bg-[#1a3c36] text-white shadow-xs"
-                        : "text-[#666] hover:text-[#1d2925]"
+                    onClick={() => setViewMode((m) => (m === "wall" ? "editor" : "wall"))}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition shadow-xs ${
+                      viewMode === "wall"
+                        ? "border-[#1a3c36] bg-[#1a3c36] text-white"
+                        : "border-[#d8cfc3] bg-white text-[#1d2925] hover:bg-[#faf8f5]"
                     }`}
                   >
-                    <Layers className="h-3.5 w-3.5" /> Slot Editor
+                    <Eye className="h-3.5 w-3.5 text-[#b07838]" />
+                    <span>{viewMode === "wall" ? "Studio View" : "Wall Visualizer"}</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setViewMode("preview")}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
-                      viewMode === "preview"
-                        ? "bg-[#1a3c36] text-white shadow-xs"
-                        : "text-[#666] hover:text-[#1d2925]"
-                    }`}
+                    onClick={handleDownloadHighRes}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#d8cfc3] bg-white px-3 py-1.5 text-xs font-bold text-[#1d2925] hover:bg-[#faf8f5] shadow-xs transition"
+                    title="Download high-resolution custom frame image"
                   >
-                    <Eye className="h-3.5 w-3.5" /> Whole Frame Preview
+                    <Download className="h-3.5 w-3.5 text-[#b07838]" />
+                    <span>Download High-Res</span>
                   </button>
+
+                  <div className="inline-flex rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("editor")}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition ${
+                        viewMode === "editor"
+                          ? "bg-[#1a3c36] text-white shadow-xs"
+                          : "text-[#666] hover:text-[#1d2925]"
+                      }`}
+                    >
+                      <Layers className="h-3.5 w-3.5" /> Slot Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("preview")}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition ${
+                        viewMode === "preview"
+                          ? "bg-[#1a3c36] text-white shadow-xs"
+                          : "text-[#666] hover:text-[#1d2925]"
+                      }`}
+                    >
+                      <Eye className="h-3.5 w-3.5" /> Whole Frame Preview
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* FRAME STAGE */}
-              <div className="relative flex min-h-[440px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5efe7] p-4 sm:p-8">
+              <div
+                className={`relative flex min-h-[460px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] p-4 sm:p-8 transition-all duration-300 ${
+                  viewMode === "wall"
+                    ? "bg-cover bg-center shadow-inner"
+                    : "bg-[#f5efe7]"
+                }`}
+                style={
+                  viewMode === "wall"
+                    ? {
+                        backgroundImage:
+                          "radial-gradient(circle at center, rgba(245,240,230,0.92) 0%, rgba(220,210,195,0.96) 100%)",
+                      }
+                    : {}
+                }
+              >
+                {/* WALL VISUALIZER AMBIENT FOOTER */}
+                {viewMode === "wall" && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-9 border-t border-[#d8cfc3] bg-[#e4dacd]/60 backdrop-blur-xs flex items-center justify-center text-[10px] font-bold text-[#888]">
+                    Wall Hanging Simulation • Living Room Ambient Lighting
+                  </div>
+                )}
+
                 {frameData.frame_image ? (
                   viewMode === "preview" ? (
                     /* ================= WHOLE MERGED COMPOSITE PREVIEW ================= */
@@ -838,6 +1022,7 @@ const ProductDetails = () => {
 
                       {/* PHOTO SLOTS OVERLAY */}
                       {photoSlots.map((slot, idx) => {
+                        const isActive = activeSlotId === slot.id;
                         const userPhoto = customerPhotos[slot.id];
                         const demoPhoto = product.slot_photos?.[slot.id];
                         const activePhoto = userPhoto || demoPhoto;
@@ -855,12 +1040,17 @@ const ProductDetails = () => {
                             />
 
                             <div
-                              className={`group absolute overflow-hidden border-2 select-none transition ${
-                                userPhoto
-                                  ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
-                                  : highlightMissingSlots
-                                  ? "border-2 border-red-500 bg-red-100/50 ring-4 ring-red-400/50 animate-pulse"
-                                  : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
+                              onClick={() => setActiveSlotId(slot.id)}
+                              className={`group absolute overflow-hidden select-none transition-all duration-150 cursor-pointer ${
+                                isActive
+                                  ? "ring-4 ring-[#1a3c36] ring-offset-2 ring-offset-white z-30 shadow-2xl border-transparent"
+                                  : `hover:ring-2 hover:ring-[#b07838] z-10 ${
+                                      userPhoto
+                                        ? "border-[#1b794b] ring-2 ring-[#1b794b]/30"
+                                        : highlightMissingSlots
+                                        ? "border-2 border-red-500 bg-red-100/50 ring-4 ring-red-400/50 animate-pulse"
+                                        : "border-dashed border-[#b07838] bg-white/70 hover:bg-white/95"
+                                    }`
                               }`}
                               style={{
                                 top: slot.top,
@@ -869,6 +1059,7 @@ const ProductDetails = () => {
                                 height: slot.height,
                                 borderRadius: slot.shape === "circle" ? "9999px" : "6px",
                               }}
+                              title={`Click to select & edit ${slot.name || `Photo ${idx + 1}`}`}
                             >
                               {activePhoto ? (
                                 <div
@@ -972,15 +1163,26 @@ const ProductDetails = () => {
                                     );
                                   })()}
 
-                                  {userPhoto ? (
-                                    <div className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#1b794b] text-white shadow z-10 pointer-events-none">
-                                      <Check className="h-2.5 w-2.5" />
-                                    </div>
-                                  ) : (
-                                    <div className="absolute top-1 left-1 rounded bg-[#b07838] px-1.5 py-0.5 text-[8px] font-bold text-white shadow z-10 pointer-events-none">
-                                      {highlightMissingSlots ? "Upload Needed" : "Sample Photo"}
-                                    </div>
-                                  )}
+                                  {/* SLOT BADGE (INDEX & ACTIVE STATUS) */}
+                                  <div className="pointer-events-none absolute top-1 left-1 flex items-center gap-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white shadow z-20 backdrop-blur-xs">
+                                    <span className="text-[#d5a65a]">#{idx + 1}</span>
+                                    {isActive && <span className="text-[8px] text-[#4ade80]">• Editing</span>}
+                                  </div>
+
+                                  {/* QUICK CHANGE PHOTO BUTTON (TOP RIGHT) */}
+                                  <button
+                                    type="button"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveSlotId(slot.id);
+                                      fileInputRefs.current[slot.id]?.click();
+                                    }}
+                                    className="pointer-events-auto absolute top-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 hover:bg-[#1a3c36] text-white/90 hover:text-[#d5a65a] shadow transition cursor-pointer"
+                                    title="Change Photo"
+                                  >
+                                    <UploadCloud className="h-3.5 w-3.5" />
+                                  </button>
 
                                   {/* HOVER OVERLAY: ADJUST, FIT MODE & CHANGE */}
                                   <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
@@ -989,6 +1191,7 @@ const ProductDetails = () => {
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        setActiveSlotId(slot.id);
                                         setAdjustingSlot(slot);
                                       }}
                                       className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
@@ -1021,6 +1224,7 @@ const ProductDetails = () => {
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        setActiveSlotId(slot.id);
                                         fileInputRefs.current[slot.id]?.click();
                                       }}
                                       className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1 cursor-pointer"
@@ -1033,7 +1237,10 @@ const ProductDetails = () => {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => fileInputRefs.current[slot.id]?.click()}
+                                  onClick={() => {
+                                    setActiveSlotId(slot.id);
+                                    fileInputRefs.current[slot.id]?.click();
+                                  }}
                                   className="flex h-full w-full flex-col items-center justify-center p-1 text-center"
                                 >
                                   <UploadCloud className={`h-5 w-5 ${highlightMissingSlots ? "text-red-500" : "text-[#b07838]"}`} />
@@ -1070,7 +1277,9 @@ const ProductDetails = () => {
                   <span className="text-base">📸</span>
                   <span>
                     {viewMode === "editor"
-                      ? "Currently in Slot Editor mode. Click on any slot to upload photos."
+                      ? "Currently in Slot Editor mode. Click on any slot to select and customize it."
+                      : viewMode === "wall"
+                      ? "Wall visualizer simulates living room lighting on this custom frame."
                       : "Currently in Whole Merged Frame Preview mode showing your combined result."}
                   </span>
                 </div>
@@ -1083,6 +1292,65 @@ const ProductDetails = () => {
                   {viewMode === "editor" ? "Preview Whole Frame →" : "← Back to Slot Editor"}
                 </button>
               </div>
+
+              {/* ================= MULTI-PHOTO POSITION STRIP ================= */}
+              {photoSlots.length > 0 && (
+                <div className="mt-4 flex w-full flex-col gap-2.5 rounded-2xl border border-[#e2d9cd] bg-white p-3.5 shadow-xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#1d2925]">
+                      Photos inside this frame ({photoSlots.length} Positions):
+                    </span>
+                    <span className="text-[11px] text-[#b07838] font-bold">
+                      Editing: {activeSlot?.name || `Photo 1`}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {photoSlots.map((slot, idx) => {
+                      const isSel = activeSlotId === slot.id;
+                      const photo = customerPhotos[slot.id] || product.slot_photos?.[slot.id];
+                      return (
+                        <button
+                          key={slot.id || idx}
+                          type="button"
+                          onClick={() => {
+                            setActiveSlotId(slot.id);
+                            if (viewMode === "preview") setViewMode("editor");
+                          }}
+                          className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
+                            isSel
+                              ? "border-[#1a3c36] bg-[#eef6f3] ring-2 ring-[#1a3c36]/20 shadow-xs"
+                              : "border-[#e0d6c8] bg-[#faf8f5] hover:border-[#b07838]"
+                          }`}
+                        >
+                          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#ddd] border border-[#ccc]">
+                            {photo ? (
+                              <img
+                                src={photo}
+                                alt={slot.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <ImageIcon className="m-auto h-4 w-4 text-[#888]" />
+                            )}
+                            <span className="absolute bottom-0 right-0 rounded-tl bg-black/70 px-1 text-[8px] font-bold text-white">
+                              #{idx + 1}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-bold text-[#1d2925]">
+                              {slot.name || `Photo ${idx + 1}`}
+                            </p>
+                            <p className="text-[10px] text-[#666]">
+                              {customerPhotos[slot.id] ? "Uploaded" : "Sample/Empty"}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1196,75 +1464,713 @@ const ProductDetails = () => {
                 </div>
               </div>
 
-              {/* ================= PHOTO CUSTOMIZATION SECTION ================= */}
-              <div className={`mt-6 rounded-2xl border p-4 transition ${
+              {/* ================= INLINE STUDIO CUSTOMIZER & PHOTO WORKSPACE ================= */}
+              <div className={`mt-6 rounded-3xl border p-5 transition ${
                 highlightMissingSlots && customPhotoCount < totalSlotsCount
-                  ? "border-red-300 bg-red-50/40 ring-2 ring-red-400/30"
-                  : "border-[#ebdcc8] bg-[#fdfbf8]"
+                  ? "border-red-300 bg-[#fffbfb] ring-2 ring-red-400/30"
+                  : "border-[#e5ded4] bg-white shadow-xs"
               }`}>
-                <div className="flex items-center justify-between border-b border-[#eee3d3] pb-3">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
-                      Customize Your Photos
-                    </h3>
-                    <p className="text-[11px] text-[#666]">
-                      {customPhotoCount === totalSlotsCount
-                        ? "All customer photos uploaded! Ready to add to cart."
-                        : `Upload photos for all ${totalSlotsCount} positions in this frame`}
-                    </p>
+                {/* CURRENTLY EDITING CARD */}
+                <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#f7f5f0] p-3 border border-[#ede4d8]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1a3c36] text-[#d5a65a] shadow-xs">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#b07838]">
+                          Currently Editing
+                        </span>
+                        <span className="rounded bg-[#1a3c36]/10 px-1.5 text-[9px] font-bold text-[#1a3c36]">
+                          {activeSlot ? `#${photoSlots.findIndex((s) => s.id === activeSlot.id) + 1}` : "#1"}
+                        </span>
+                      </div>
+                      <h3 className="text-xs font-black text-[#1d2925]">
+                        {activeSlot?.name || "Selected Photo Position"}
+                      </h3>
+                    </div>
                   </div>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                    customPhotoCount === totalSlotsCount
-                      ? "bg-[#edf7f1] text-[#1b794b]"
-                      : "bg-[#fff4e3] text-[#b07838]"
-                  }`}>
-                    {customPhotoCount} / {totalSlotsCount} Uploaded
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {customerPhotos[activeSlot?.id] && (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomerPhoto(activeSlot.id)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5] transition cursor-pointer"
+                        title="Remove photo from this slot"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeSlotId) {
+                          fileInputRefs.current[activeSlotId]?.click();
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#1a3c36] px-3.5 py-1.5 text-xs font-bold text-white shadow hover:bg-[#235048] transition cursor-pointer"
+                    >
+                      <UploadCloud className="h-3.5 w-3.5 text-[#d5a65a]" />
+                      <span>{customerPhotos[activeSlot?.id] ? "Replace Photo" : "Upload Photo"}</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* PROGRESS BAR */}
-                {totalSlotsCount > 0 && (
-                  <div className="mt-3">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#eee5d8]">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          customPhotoCount === totalSlotsCount ? "bg-[#1b794b]" : "bg-[#b07838]"
+                {/* STUDIO NAVIGATION PILLS */}
+                <div className="flex overflow-x-auto border-b border-[#f0e8dc] pb-3 text-xs font-bold scrollbar-none gap-1.5">
+                  {[
+                    { id: "filters", label: "Brightness & Filters", icon: Wand2 },
+                    { id: "text", label: "Add Text", icon: Type },
+                    { id: "crop", label: "Crop & Pan", icon: Crop },
+                    { id: "borders", label: "Borders", icon: Palette },
+                    { id: "rotate", label: "Rotate", icon: RotateCw },
+                  ].map((t) => {
+                    const Icon = t.icon;
+                    const isTabActive = activeStudioTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setActiveStudioTab(t.id)}
+                        className={`flex items-center gap-1.5 rounded-xl px-3 py-2 whitespace-nowrap transition cursor-pointer ${
+                          isTabActive
+                            ? "bg-[#1a3c36] text-white shadow-xs"
+                            : "bg-[#faf8f5] text-[#666] hover:bg-[#f0ebe3] hover:text-[#1d2925]"
                         }`}
-                        style={{ width: `${(customPhotoCount / totalSlotsCount) * 100}%` }}
-                      />
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* TAB 1: BRIGHTNESS & FILTERS */}
+                {activeStudioTab === "filters" && (
+                  <div className="mt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                        Brightness &amp; Tone ({activeSlot?.name || "Selected Pic"})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateActiveAdjustment({
+                            filter: "normal",
+                            brightness: 100,
+                            contrast: 100,
+                            saturation: 100,
+                          })
+                        }
+                        className="text-[11px] font-semibold text-[#888] hover:text-[#222] cursor-pointer"
+                      >
+                        Reset Tone
+                      </button>
                     </div>
-                    {highlightMissingSlots && customPhotoCount < totalSlotsCount && (
-                      <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        Please upload your photo for all {totalSlotsCount} positions before adding to cart or buy now.
-                      </p>
-                    )}
+
+                    <div className="rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-3.5 text-xs space-y-3">
+                      <div>
+                        <div className="flex justify-between font-bold text-[#1d2925]">
+                          <span>Brightness</span>
+                          <span className="font-mono text-[#1a3c36]">{activeAdjustment.brightness ?? 100}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="50"
+                          max="150"
+                          value={activeAdjustment.brightness ?? 100}
+                          onChange={(e) =>
+                            updateActiveAdjustment({ brightness: parseInt(e.target.value, 10) })
+                          }
+                          className="mt-1 h-2 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                        />
+                        <div className="mt-1 flex justify-between text-[10px] text-[#888]">
+                          <span>Dim (50%)</span>
+                          <span>Normal (100%)</span>
+                          <span>Bright (150%)</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between font-bold text-[#1d2925]">
+                          <span>Contrast</span>
+                          <span className="font-mono text-[#1a3c36]">{activeAdjustment.contrast ?? 100}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="50"
+                          max="150"
+                          value={activeAdjustment.contrast ?? 100}
+                          onChange={(e) =>
+                            updateActiveAdjustment({ contrast: parseInt(e.target.value, 10) })
+                          }
+                          className="mt-1 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between font-bold text-[#1d2925]">
+                          <span>Color Saturation</span>
+                          <span className="font-mono text-[#1a3c36]">{activeAdjustment.saturation ?? 100}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="200"
+                          value={activeAdjustment.saturation ?? 100}
+                          onChange={(e) =>
+                            updateActiveAdjustment({ saturation: parseInt(e.target.value, 10) })
+                          }
+                          className="mt-1 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                        Color Filter Presets
+                      </h4>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {FILTER_PRESETS.map((p) => {
+                          const isFActive = (activeAdjustment.filter || "normal") === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => updateActiveAdjustment({ filter: p.id })}
+                              className={`rounded-xl border p-2 text-center transition cursor-pointer ${
+                                isFActive
+                                  ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
+                                  : "border-[#e0d6c8] bg-[#faf8f5] text-[#444] hover:border-[#b07838]"
+                              }`}
+                            >
+                              <span className="block text-xs font-bold">{p.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {photoSlots.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-[#888]">
-                    This product frame has no dedicated photo slots.
-                  </p>
-                ) : (
-                  <div className="mt-3 space-y-2.5">
+                {/* TAB 2: ADD TEXT */}
+                {activeStudioTab === "text" && (
+                  <div className="mt-4 space-y-3.5">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                          Caption on {activeSlot?.name || "this pic"}
+                        </label>
+                        {activeAdjustment.textOverlay?.text && (
+                          <button
+                            type="button"
+                            onClick={() => updateActiveTextOverlay({ text: "" })}
+                            className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                          >
+                            Clear Text
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={activeAdjustment.textOverlay?.text || ""}
+                        onChange={(e) => updateActiveTextOverlay({ text: e.target.value })}
+                        placeholder={`e.g. Love, Mom, 2026 on ${activeSlot?.name || "photo"}`}
+                        className="mt-1.5 w-full rounded-xl border border-[#d8cfc3] bg-[#faf8f5] px-3.5 py-2.5 text-xs text-[#1d2925] outline-none focus:border-[#1a3c36] focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] font-bold text-[#666]">Font Style</span>
+                        <select
+                          value={activeAdjustment.textOverlay?.fontFamily || "Inter, sans-serif"}
+                          onChange={(e) => updateActiveTextOverlay({ fontFamily: e.target.value })}
+                          className="mt-1 w-full rounded-lg border border-[#d8cfc3] bg-[#faf8f5] px-2 py-1.5 text-xs text-[#333] outline-none"
+                        >
+                          {FONT_FAMILIES.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <span className="text-[11px] font-bold text-[#666]">
+                          Size ({activeAdjustment.textOverlay?.fontSize || 18}px)
+                        </span>
+                        <input
+                          type="range"
+                          min="12"
+                          max="36"
+                          value={activeAdjustment.textOverlay?.fontSize || 18}
+                          onChange={(e) =>
+                            updateActiveTextOverlay({ fontSize: parseInt(e.target.value, 10) })
+                          }
+                          className="mt-2.5 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-[11px] font-bold text-[#666]">Position</span>
+                        <div className="mt-1 grid grid-cols-3 gap-1">
+                          {["top", "center", "bottom"].map((pos) => {
+                            const isPos = (activeAdjustment.textOverlay?.position || "bottom") === pos;
+                            return (
+                              <button
+                                key={pos}
+                                type="button"
+                                onClick={() => updateActiveTextOverlay({ position: pos })}
+                                className={`rounded-lg border py-1 text-[10px] font-bold capitalize transition cursor-pointer ${
+                                  isPos
+                                    ? "border-[#1a3c36] bg-[#1a3c36] text-white"
+                                    : "border-[#d8cfc3] bg-[#faf8f5] text-[#666]"
+                                }`}
+                              >
+                                {pos}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[11px] font-bold text-[#666]">Alignment</span>
+                        <div className="mt-1 flex items-center gap-1">
+                          {[
+                            { id: "left", icon: AlignLeft },
+                            { id: "center", icon: AlignCenter },
+                            { id: "right", icon: AlignRight },
+                          ].map((al) => {
+                            const Icon = al.icon;
+                            const isAl = (activeAdjustment.textOverlay?.align || "center") === al.id;
+                            return (
+                              <button
+                                key={al.id}
+                                type="button"
+                                onClick={() => updateActiveTextOverlay({ align: al.id })}
+                                className={`flex flex-1 items-center justify-center rounded-lg border py-1 text-xs transition cursor-pointer ${
+                                  isAl
+                                    ? "border-[#1a3c36] bg-[#1a3c36] text-white"
+                                    : "border-[#d8cfc3] bg-[#faf8f5] text-[#666]"
+                                }`}
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-[#f0e8dc] pt-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-[#666]">Color:</span>
+                        {["#ffffff", "#18181b", "#d5a65a", "#e11d48", "#2563eb"].map((clr) => (
+                          <button
+                            key={clr}
+                            type="button"
+                            onClick={() => updateActiveTextOverlay({ color: clr })}
+                            className={`h-5 w-5 rounded-full border cursor-pointer ${
+                              (activeAdjustment.textOverlay?.color || "#ffffff") === clr
+                                ? "ring-2 ring-[#1a3c36]"
+                                : "border-[#ccc]"
+                            }`}
+                            style={{ backgroundColor: clr }}
+                          />
+                        ))}
+                        <input
+                          type="color"
+                          value={activeAdjustment.textOverlay?.color || "#ffffff"}
+                          onChange={(e) => updateActiveTextOverlay({ color: e.target.value })}
+                          className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateActiveTextOverlay({ bold: !activeAdjustment.textOverlay?.bold })
+                          }
+                          className={`h-6 w-6 rounded border font-bold text-[11px] cursor-pointer ${
+                            activeAdjustment.textOverlay?.bold
+                              ? "bg-[#1a3c36] text-white"
+                              : "bg-[#faf8f5] text-[#555]"
+                          }`}
+                        >
+                          B
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateActiveTextOverlay({ italic: !activeAdjustment.textOverlay?.italic })
+                          }
+                          className={`h-6 w-6 rounded border italic text-[11px] cursor-pointer ${
+                            activeAdjustment.textOverlay?.italic
+                              ? "bg-[#1a3c36] text-white"
+                              : "bg-[#faf8f5] text-[#555]"
+                          }`}
+                        >
+                          I
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: CROP & PAN */}
+                {activeStudioTab === "crop" && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                          Zoom &amp; Scale ({activeSlot?.name || "Selected Pic"})
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const curr = photoAdjustments[activeSlot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                            const nextMode = (curr.fitMode || activeSlot.objectFit) === "contain" ? "cover" : "contain";
+                            updateActiveAdjustment({ fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 });
+                            toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
+                          }}
+                          className="rounded-md border border-[#d8cfc3] bg-[#faf8f5] px-2 py-0.5 text-[10px] font-bold text-[#1a3c36] hover:bg-white cursor-pointer"
+                        >
+                          {(activeAdjustment.fitMode || activeSlot?.objectFit) === "contain" ? "Switch to Fill Frame" : "Switch to Fit Full"}
+                        </button>
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-3 rounded-2xl border border-[#ede4d8] bg-[#faf8f5] p-3.5">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateActiveAdjustment({
+                              scale: Math.max(1.0, Math.round(((activeAdjustment.scale || 1.0) - 0.1) * 10) / 10),
+                            })
+                          }
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] cursor-pointer"
+                        >
+                          <ZoomOut className="h-3.5 w-3.5" />
+                        </button>
+                        <input
+                          type="range"
+                          min="1.0"
+                          max="3.0"
+                          step="0.05"
+                          value={activeAdjustment.scale || 1.0}
+                          onChange={(e) =>
+                            updateActiveAdjustment({ scale: parseFloat(e.target.value) })
+                          }
+                          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateActiveAdjustment({
+                              scale: Math.min(3.0, Math.round(((activeAdjustment.scale || 1.0) + 0.1) * 10) / 10),
+                            })
+                          }
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] cursor-pointer"
+                        >
+                          <ZoomIn className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-12 font-mono text-xs font-bold text-[#1a3c36] text-right">
+                          {Math.round((activeAdjustment.scale || 1.0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-[#eee5d8] pt-3 text-xs">
+                      <span className="text-[11px] text-[#777]">
+                        Pan: <strong className="font-mono text-[#333]">{activeAdjustment.panX || 0}%, {activeAdjustment.panY || 0}%</strong> (Drag directly on canvas)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateActiveAdjustment({ panX: 0, panY: 0, scale: 1.0 })}
+                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-[#888] hover:bg-[#f4efe8] hover:text-[#222] cursor-pointer"
+                      >
+                        <RotateCcw className="h-3 w-3" /> Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: BORDERS */}
+                {activeStudioTab === "borders" && (
+                  <div className="mt-4 space-y-4">
+                    {/* INNER MAT BORDER */}
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                            Inner Border Color ({activeSlot?.name})
+                          </h4>
+                          <p className="text-[11px] text-[#777]">
+                            Mat border surrounding this specific photo
+                          </p>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-[#1a3c36]">
+                          {activeAdjustment.innerBorderWidth || 0}px
+                        </span>
+                      </div>
+
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        step="1"
+                        value={activeAdjustment.innerBorderWidth || 0}
+                        onChange={(e) =>
+                          updateActiveAdjustment({ innerBorderWidth: parseInt(e.target.value, 10) })
+                        }
+                        className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                      />
+
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        {INNER_BORDER_COLORS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => {
+                              updateActiveAdjustment({
+                                innerBorderColor: c.value,
+                                innerBorderWidth:
+                                  c.value !== "transparent" && !activeAdjustment.innerBorderWidth
+                                    ? 12
+                                    : activeAdjustment.innerBorderWidth,
+                              });
+                            }}
+                            title={c.label}
+                            className={`h-7 w-7 rounded-full border-2 transition cursor-pointer ${
+                              activeAdjustment.innerBorderColor === c.value
+                                ? "border-[#1a3c36] scale-110 shadow"
+                                : "border-[#ddd] hover:scale-105"
+                            }`}
+                            style={{
+                              backgroundColor: c.value === "transparent" ? "#f0f0f0" : c.value,
+                            }}
+                          >
+                            {c.value === "transparent" && <span className="text-[9px] text-[#888]">✕</span>}
+                          </button>
+                        ))}
+                        <label className="flex h-7 items-center gap-1 rounded-full border border-[#d8cfc3] bg-white px-2 text-[10px] font-bold text-[#555] cursor-pointer">
+                          <span>Custom</span>
+                          <input
+                            type="color"
+                            value={activeAdjustment.innerBorderColor === "transparent" ? "#ffffff" : activeAdjustment.innerBorderColor || "#ffffff"}
+                            onChange={(e) =>
+                              updateActiveAdjustment({
+                                innerBorderColor: e.target.value,
+                                innerBorderWidth: activeAdjustment.innerBorderWidth || 12,
+                              })
+                            }
+                            className="h-4 w-4 cursor-pointer rounded border-0 bg-transparent"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* OUTER BORDER */}
+                    <div className="border-t border-[#f0e8dc] pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                            Outer Border Color ({activeSlot?.name})
+                          </h4>
+                          <p className="text-[11px] text-[#777]">
+                            Outer solid framing edge on this slot
+                          </p>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-[#1a3c36]">
+                          {activeAdjustment.outerBorderWidth || 0}px
+                        </span>
+                      </div>
+
+                      <input
+                        type="range"
+                        min="0"
+                        max="30"
+                        step="1"
+                        value={activeAdjustment.outerBorderWidth || 0}
+                        onChange={(e) =>
+                          updateActiveAdjustment({ outerBorderWidth: parseInt(e.target.value, 10) })
+                        }
+                        className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[#dfd6c9] accent-[#1a3c36]"
+                      />
+
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        {OUTER_BORDER_COLORS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => {
+                              updateActiveAdjustment({
+                                outerBorderColor: c.value,
+                                outerBorderWidth:
+                                  c.value !== "transparent" && !activeAdjustment.outerBorderWidth
+                                    ? 12
+                                    : activeAdjustment.outerBorderWidth,
+                              });
+                            }}
+                            title={c.label}
+                            className={`h-7 w-7 rounded-full border-2 transition cursor-pointer ${
+                              activeAdjustment.outerBorderColor === c.value
+                                ? "border-[#1a3c36] scale-110 shadow"
+                                : "border-[#ddd] hover:scale-105"
+                            }`}
+                            style={{
+                              backgroundColor: c.value === "transparent" ? "#f0f0f0" : c.value,
+                            }}
+                          >
+                            {c.value === "transparent" && <span className="text-[9px] text-[#888]">✕</span>}
+                          </button>
+                        ))}
+                        <label className="flex h-7 items-center gap-1 rounded-full border border-[#d8cfc3] bg-white px-2 text-[10px] font-bold text-[#555] cursor-pointer">
+                          <span>Custom</span>
+                          <input
+                            type="color"
+                            value={activeAdjustment.outerBorderColor === "transparent" ? "#18181b" : activeAdjustment.outerBorderColor || "#18181b"}
+                            onChange={(e) =>
+                              updateActiveAdjustment({
+                                outerBorderColor: e.target.value,
+                                outerBorderWidth: activeAdjustment.outerBorderWidth || 12,
+                              })
+                            }
+                            className="h-4 w-4 cursor-pointer rounded border-0 bg-transparent"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 5: ROTATE */}
+                {activeStudioTab === "rotate" && (
+                  <div className="mt-4 space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#b07838]">
+                      Rotate &amp; Flip ({activeSlot?.name})
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateActiveAdjustment({
+                            rotate: (((activeAdjustment.rotate || 0) - 90 + 360) % 360),
+                          })
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl border border-[#d8cfc3] bg-[#faf8f5] p-3 text-xs font-bold text-[#1d2925] hover:bg-[#f0ebe3] transition cursor-pointer"
+                      >
+                        <RotateCcw className="h-4 w-4 text-[#b07838]" /> Left 90°
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateActiveAdjustment({
+                            rotate: (((activeAdjustment.rotate || 0) + 90) % 360),
+                          })
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl border border-[#d8cfc3] bg-[#faf8f5] p-3 text-xs font-bold text-[#1d2925] hover:bg-[#f0ebe3] transition cursor-pointer"
+                      >
+                        <RotateCw className="h-4 w-4 text-[#b07838]" /> Right 90°
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => updateActiveAdjustment({ flipH: !activeAdjustment.flipH })}
+                        className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                          activeAdjustment.flipH
+                            ? "border-[#1a3c36] bg-[#1a3c36] text-white"
+                            : "border-[#d8cfc3] bg-[#faf8f5] text-[#1d2925] hover:bg-[#f0ebe3]"
+                        }`}
+                      >
+                        <FlipHorizontal className="h-4 w-4" /> Flip Horizontal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateActiveAdjustment({ flipV: !activeAdjustment.flipV })}
+                        className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
+                          activeAdjustment.flipV
+                            ? "border-[#1a3c36] bg-[#1a3c36] text-white"
+                            : "border-[#d8cfc3] bg-[#faf8f5] text-[#1d2925] hover:bg-[#f0ebe3]"
+                        }`}
+                      >
+                        <FlipVertical className="h-4 w-4" /> Flip Vertical
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* COMPACT SLOT UPLOAD PROGRESS CHECKLIST */}
+                <div className="mt-5 border-t border-[#f0e8dc] pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                        Frame Positions Checklist
+                      </h4>
+                      <p className="text-[11px] text-[#666]">
+                        {customPhotoCount === totalSlotsCount
+                          ? "All slots customized! Ready to order."
+                          : `Uploaded ${customPhotoCount} of ${totalSlotsCount} required photos`}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                      customPhotoCount === totalSlotsCount
+                        ? "bg-[#edf7f1] text-[#1b794b]"
+                        : "bg-[#fff4e3] text-[#b07838]"
+                    }`}>
+                      {customPhotoCount} / {totalSlotsCount} Uploaded
+                    </span>
+                  </div>
+
+                  {/* PROGRESS BAR */}
+                  {totalSlotsCount > 0 && (
+                    <div className="mt-2.5">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#eee5d8]">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            customPhotoCount === totalSlotsCount ? "bg-[#1b794b]" : "bg-[#b07838]"
+                          }`}
+                          style={{ width: `${(customPhotoCount / totalSlotsCount) * 100}%` }}
+                        />
+                      </div>
+                      {highlightMissingSlots && customPhotoCount < totalSlotsCount && (
+                        <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          Please upload your photo for all {totalSlotsCount} positions before adding to cart or buy now.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SLOT TILES */}
+                  <div className="mt-3 space-y-2">
                     {photoSlots.map((slot, index) => {
                       const userPhoto = customerPhotos[slot.id];
                       const isUploading = uploadingSlot === slot.id;
-                      const isMissing = !userPhoto;
+                      const isEditing = activeSlotId === slot.id;
 
                       return (
                         <div
                           key={slot.id || index}
-                          className={`flex items-center gap-3 rounded-xl border p-2.5 shadow-xs transition ${
-                            userPhoto
-                              ? "border-[#cce8db] bg-[#f9fdfa]"
+                          onClick={() => setActiveSlotId(slot.id)}
+                          className={`flex items-center gap-3 rounded-xl border p-2 shadow-xs transition cursor-pointer ${
+                            isEditing
+                              ? "border-[#1a3c36] bg-[#f0f7f4] ring-2 ring-[#1a3c36]/20"
+                              : userPhoto
+                              ? "border-[#cce8db] bg-[#f9fdfa] hover:bg-white"
                               : highlightMissingSlots
                               ? "border-red-300 bg-white ring-2 ring-red-200"
-                              : "border-[#ede3d5] bg-white"
+                              : "border-[#ede3d5] bg-white hover:bg-[#faf8f5]"
                           }`}
                         >
-                          <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
+                          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#eee7de]">
                             {userPhoto ? (
                               <img
                                 src={userPhoto}
@@ -1272,75 +2178,65 @@ const ProductDetails = () => {
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              <ImagePlus className={`h-5 w-5 ${highlightMissingSlots ? "text-red-400" : "text-[#b9aa98]"}`} />
+                              <ImagePlus className={`h-4 w-4 ${highlightMissingSlots ? "text-red-400" : "text-[#b9aa98]"}`} />
                             )}
                             {userPhoto && (
-                              <div className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
+                              <div className="absolute right-0.5 top-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-[#1b794b] text-white shadow">
                                 <Check className="h-2 w-2" />
                               </div>
                             )}
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-[#333]">
-                              {slot.name || `Photo Position ${index + 1}`}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-xs font-bold text-[#333]">
+                                {slot.name || `Photo Position ${index + 1}`}
+                              </p>
+                              {isEditing && (
+                                <span className="rounded bg-[#1a3c36] px-1.5 py-0.2 text-[9px] font-bold text-white">
+                                  Active
+                                </span>
+                              )}
+                            </div>
                             <div className="mt-0.5 flex items-center gap-1.5">
                               {userPhoto ? (
                                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1b794b]">
-                                  <CheckCircle2 className="h-3 w-3" /> Photo Attached
+                                  <CheckCircle2 className="h-2.5 w-2.5" /> Photo Attached
                                 </span>
                               ) : (
                                 <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
                                   highlightMissingSlots ? "text-red-600" : "text-amber-700"
                                 }`}>
-                                  <AlertCircle className="h-3 w-3" /> Photo Required
+                                  <AlertCircle className="h-2.5 w-2.5" /> Photo Required
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {userPhoto && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => setAdjustingSlot(slot)}
-                                  title="Drag and adjust photo position & zoom"
-                                  className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-[#faf8f5] px-2.5 py-1.5 text-xs font-semibold text-[#333] transition hover:bg-white hover:text-[#1a3c36]"
-                                >
-                                  <Move className="h-3.5 w-3.5 text-[#b07838]" /> Adjust
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeCustomerPhoto(slot.id)}
-                                  title="Remove photo"
-                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#f0d8d8] bg-[#fff5f5] text-[#d04d4d] hover:bg-[#ffe5e5]"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            )}
-
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
-                              onClick={() => fileInputRefs.current[slot.id]?.click()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveSlotId(slot.id);
+                                fileInputRefs.current[slot.id]?.click();
+                              }}
                               disabled={isUploading}
-                              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
+                              className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition disabled:opacity-50 cursor-pointer ${
                                 userPhoto
-                                  ? "border border-[#d8d0c5] bg-[#faf8f5] text-[#333] hover:bg-white"
+                                  ? "border border-[#d8cfc3] bg-[#faf8f5] text-[#333] hover:bg-white"
                                   : "border border-[#b07838] bg-[#fff8ef] text-[#9b6b2d] hover:bg-[#ffeed7] shadow-xs"
                               }`}
                             >
-                              <UploadCloud className="h-3.5 w-3.5" />
-                              {isUploading ? "Uploading..." : userPhoto ? "Change" : "Upload Photo"}
+                              <UploadCloud className="h-3 w-3" />
+                              {isUploading ? "..." : userPhoto ? "Change" : "Upload"}
                             </button>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
+                </div>
               </div>
 
               {/* QUANTITY & ACTIONS */}
