@@ -22,31 +22,37 @@ import {
 import toast from "react-hot-toast";
 import api, { API_URL } from "../../api";
 
+const trackingStatuses = [
+  "Order Placed",
+  "Confirmed",
+  "Processing",
+  "Packing",
+  "Ready",
+  "Shipped",
+  "Out for Delivery",
+  "Delivered",
+];
+
+const normalizeStatus = (status) => {
+  const normalized = String(status || "").trim().toUpperCase().replace(/_/g, " ");
+  if (normalized === "PENDING" || normalized === "NEW" || normalized === "NEW ORDER") {
+    return "ORDER PLACED";
+  }
+  return normalized;
+};
+
 const statusColorMap = {
-  Delivered: {
-    badge: "bg-[#e1f2e8] text-[#1e6f43] border-[#c3e6d1]",
-    stepIndex: 3,
-  },
-  Shipped: {
-    badge: "bg-[#e3edf7] text-[#245b85] border-[#b8daff]",
-    stepIndex: 2,
-  },
-  Processing: {
-    badge: "bg-[#fef3c7] text-[#92400e] border-[#fde68a]",
-    stepIndex: 1,
-  },
-  Confirmed: {
-    badge: "bg-[#e8f5e9] text-[#2e7d32] border-[#c8e6c9]",
-    stepIndex: 1,
-  },
-  Cancelled: {
-    badge: "bg-[#fae5e2] text-[#a43e32] border-[#f5c6cb]",
-    stepIndex: -1,
-  },
-  Pending: {
-    badge: "bg-[#fff3e0] text-[#b26a00] border-[#ffe0b2]",
-    stepIndex: 0,
-  },
+  DELIVERED: "bg-[#e1f2e8] text-[#1e6f43] border-[#c3e6d1]",
+  "OUT FOR DELIVERY": "bg-[#e3edf7] text-[#245b85] border-[#b8daff]",
+  SHIPPED: "bg-[#e3edf7] text-[#245b85] border-[#b8daff]",
+  PROCESSING: "bg-[#fef3c7] text-[#92400e] border-[#fde68a]",
+  PACKING: "bg-[#fef3c7] text-[#92400e] border-[#fde68a]",
+  READY: "bg-[#e8f5e9] text-[#2e7d32] border-[#c8e6c9]",
+  CONFIRMED: "bg-[#e8f5e9] text-[#2e7d32] border-[#c8e6c9]",
+  CANCELLED: "bg-[#fae5e2] text-[#a43e32] border-[#f5c6cb]",
+  "ON HOLD": "bg-[#fff3e0] text-[#b26a00] border-[#ffe0b2]",
+  RETURNED: "bg-[#fae5e2] text-[#a43e32] border-[#f5c6cb]",
+  "ORDER PLACED": "bg-[#fff3e0] text-[#b26a00] border-[#ffe0b2]",
 };
 
 const resolveImageUrl = (value) => {
@@ -203,10 +209,14 @@ const OrderDetailsModal = ({ order: initialOrder, orderId, isOpen, onClose }) =>
 
   const currentOrder = orderDetails || initialOrder || {};
   const currentStatus = currentOrder.order_status || "Processing";
-  const isCancelled = currentStatus.toUpperCase() === "CANCELLED";
-  const statusInfo = statusColorMap[currentStatus] || {
-    badge: "bg-[#f3eee7] text-[#7b6a58] border-[#dfd6ca]",
-    stepIndex: 1,
+  const normalizedStatus = normalizeStatus(currentStatus);
+  const isCancelled = ["CANCELLED", "RETURNED"].includes(normalizedStatus);
+  const statusIndex = trackingStatuses.findIndex(
+    (status) => normalizeStatus(status) === normalizedStatus,
+  );
+  const statusInfo = {
+    badge: statusColorMap[normalizedStatus] || "bg-[#f3eee7] text-[#7b6a58] border-[#dfd6ca]",
+    stepIndex: statusIndex >= 0 ? statusIndex : 0,
   };
 
   const rawDate = currentOrder.created_at || currentOrder.order_date;
@@ -253,13 +263,17 @@ const OrderDetailsModal = ({ order: initialOrder, orderId, isOpen, onClose }) =>
   // Steps for timeline
   const trackingSteps = [
     { title: "Order Placed", desc: formattedDate },
+    { title: "Confirmed", desc: "Order confirmed" },
     { title: "Processing", desc: "Crafting & framing" },
+    { title: "Packing", desc: "Being packed securely" },
+    { title: "Ready", desc: "Ready for dispatch" },
     {
       title: "Shipped",
       desc: currentOrder.shipped_at
         ? new Date(currentOrder.shipped_at).toLocaleDateString("en-IN")
         : "Courier transit",
     },
+    { title: "Out for Delivery", desc: "Arriving today" },
     { title: "Delivered", desc: "Safe doorstep delivery" },
   ];
 
@@ -349,7 +363,7 @@ const OrderDetailsModal = ({ order: initialOrder, orderId, isOpen, onClose }) =>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                   {trackingSteps.map((step, idx) => {
                     const isCompleted = idx <= statusInfo.stepIndex;
                     const isCurrent = idx === statusInfo.stepIndex;
