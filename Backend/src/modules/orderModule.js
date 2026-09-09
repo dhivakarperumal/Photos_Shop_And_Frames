@@ -322,15 +322,21 @@ const createOrder = async ({ orderData, items = [], address = null }) => {
         const albumIdValue = albumMatch?.id ?? (Number(rawId) || 0);
         const albumProductIdValue = albumMatch?.product_id ?? albumKey;
 
+        const albumVariantTotal = albumVariantPayload.length
+          ? albumVariantPayload.reduce((sum, variant) => sum + Number(variant?.stock ?? variant?.quantity ?? 0), 0)
+          : Math.max(Number(inventory.record.stock_quantity || 0) - quantity, 0);
+
         await connection.query(
           `UPDATE albums
            SET variants = ?,
-               stock_quantity = GREATEST(stock_quantity - ?, 0),
+               stock_quantity = ?,
+               stock_status = CASE WHEN ? <= 0 THEN 'Out of Stock' ELSE 'In Stock' END,
                updated_at = NOW()
            WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ?`,
           [
             JSON.stringify(albumVariantPayload),
-            quantity,
+            albumVariantTotal,
+            albumVariantTotal,
             albumIdValue,
             albumIdValue ? String(albumIdValue) : albumKey,
             albumProductIdValue,
