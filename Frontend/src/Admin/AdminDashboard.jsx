@@ -46,13 +46,14 @@ const salesData = [
   { name: '31 May', value: 145000 }
 ];
 
-const orderStatusData = [
-  { name: 'Delivered', value: 520, color: '#166534' },
-  { name: 'Processing', value: 310, color: '#f59e0b' },
-  { name: 'Shipped', value: 215, color: '#3b82f6' },
-  { name: 'Cancelled', value: 123, color: '#a855f7' },
-  { name: 'Returned', value: 80, color: '#9ca3af' }
-];
+const statusColors = {
+  DELIVERED: '#166534',
+  PROCESSING: '#f59e0b',
+  SHIPPED: '#3b82f6',
+  CANCELLED: '#a855f7',
+  RETURNED: '#9ca3af',
+  PENDING: '#64748b',
+};
 
 const dateKey = (value) => {
   if (!value) return '';
@@ -80,6 +81,7 @@ const AdminDashboard = () => {
     cancelled: 0,
   });
   const [orders, setOrders] = useState([]);
+  const [catalogItems, setCatalogItems] = useState({ products: [], albums: [], gifts: [] });
   const [dateFilter, setDateFilter] = useState('this-month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -139,29 +141,135 @@ const AdminDashboard = () => {
     cancelled: filteredOrders.filter((order) => String(order.order_status || '').toLowerCase() === 'cancelled').length,
   }), [filteredOrders]);
 
+  const orderStatusData = useMemo(() => {
+    const buckets = {
+      Delivered: 0,
+      Processing: 0,
+      Shipped: 0,
+      Cancelled: 0,
+      Returned: 0,
+    };
+
+    filteredOrders.forEach((order) => {
+      const rawStatus = String(order.order_status || '').trim();
+      const key = rawStatus.toLowerCase();
+      if (['delivered', 'completed'].includes(key)) {
+        buckets.Delivered += 1;
+      } else if (['processing', 'packing', 'ready', 'out for delivery', 'out_for_delivery'].includes(key)) {
+        buckets.Processing += 1;
+      } else if (['shipped'].includes(key)) {
+        buckets.Shipped += 1;
+      } else if (['cancelled'].includes(key)) {
+        buckets.Cancelled += 1;
+      } else if (['returned'].includes(key)) {
+        buckets.Returned += 1;
+      }
+    });
+
+    const total = Object.values(buckets).reduce((sum, value) => sum + value, 0) || 1;
+
+    return [
+      { name: 'Delivered', value: buckets.Delivered, color: statusColors.DELIVERED },
+      { name: 'Processing', value: buckets.Processing, color: statusColors.PROCESSING },
+      { name: 'Shipped', value: buckets.Shipped, color: statusColors.SHIPPED },
+      { name: 'Cancelled', value: buckets.Cancelled, color: statusColors.CANCELLED },
+      { name: 'Returned', value: buckets.Returned, color: statusColors.RETURNED },
+    ].map((entry) => ({
+      ...entry,
+      percent: Math.round((entry.value / total) * 100),
+    }));
+  }, [filteredOrders]);
+
+  const topCategories = useMemo(() => {
+    const counts = new Map();
+    const addEntries = (items, type = 'Category') => {
+      items.forEach((item) => {
+        const label = String(item?.category || item?.sub_category || type || 'General').trim() || type;
+        const key = label.toLowerCase();
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    };
+
+    addEntries(catalogItems.products, 'Photo Frames');
+    addEntries(catalogItems.albums, 'Albums');
+    addEntries(catalogItems.gifts, 'Gifts');
+
+    const entries = [...counts.entries()]
+      .map(([key, value]) => ({
+        name: key === 'general' ? 'General' : key.charAt(0).toUpperCase() + key.slice(1),
+        value,
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 4);
+
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0) || 1;
+    return entries.map((entry) => ({
+      ...entry,
+      percent: Math.max(5, Math.round((entry.value / total) * 100)),
+      icon: /gift/.test(entry.name.toLowerCase())
+        ? <Package size={18} className="text-red-600" />
+        : /album/.test(entry.name.toLowerCase())
+          ? <ImageIcon size={18} className="text-emerald-700" />
+          : <ImageIcon size={18} className="text-amber-700" />,
+      iconBg: /gift/.test(entry.name.toLowerCase())
+        ? 'bg-red-100'
+        : /album/.test(entry.name.toLowerCase())
+          ? 'bg-emerald-100'
+          : 'bg-amber-100',
+    }));
+  }, [catalogItems]);
+
   useEffect(() => {
     const fetchDashboardCounts = async () => {
       try {
-        const [ordersResponse, usersResponse, productsResponse] = await Promise.all([
+        const [ordersResponse, usersResponse, productsResponse, albumsResponse, giftsResponse] = await Promise.all([
           api.get('/orders'),
           api.get('/users'),
           api.get('/products'),
+          api.get('/albums'),
+          api.get('/gift-boxes'),
         ]);
         const orders = Array.isArray(ordersResponse.data?.data) ? ordersResponse.data.data : [];
         const users = Array.isArray(usersResponse.data?.data) ? usersResponse.data.data : [];
         const products = Array.isArray(productsResponse.data?.data) ? productsResponse.data.data : [];
-        const lowStock = products.filter((product) => {
-          const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
-          const stock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+        const albums = Array.isArray(albumsResponse.data?.data) ? albumsResponse.data.data : [];
+        const gifts = Array.isArray(giftsResponse.data?.data) ? giftsResponse.data.data : [];
+
+        const lowStockProducts = products.filter((product) => {
+          let variants = [];
+          if (Array.isArray(product.size_variants)) variants = product.size_variants;
+          else if (typeof product.size_variants === 'string') {
+            try { variants = JSON.parse(product.size_variants); } catch (e) { variants = []; }
+          }
+          const stock = variants.length ? variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0) : 0;
           return stock <= 15;
         }).length;
 
+        const lowStockAlbums = albums.filter((album) => {
+          let variants = [];
+          if (Array.isArray(album.variants)) variants = album.variants;
+          else if (typeof album.variants === 'string') {
+            try { variants = JSON.parse(album.variants); } catch (e) { variants = []; }
+          }
+          const stock = variants.length ? variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0) : Number(album.stock_quantity || 0);
+          return stock <= 15;
+        }).length;
+
+        const lowStockGifts = gifts.filter((gift) => {
+          const stock = Number(gift.current_stock ?? gift.stock_quantity ?? 0);
+          return stock <= 15;
+        }).length;
+
+        const totalProducts = products.length + albums.length + gifts.length;
+        const totalLowStock = lowStockProducts + lowStockAlbums + lowStockGifts;
+
         setOrders(orders);
+        setCatalogItems({ products, albums, gifts });
         setDashboardCounts((current) => ({
           ...current,
           customers: users.filter((user) => !['admin', 'super admin'].includes(String(user.role || '').toLowerCase())).length,
-          products: products.length,
-          lowStock,
+          products: totalProducts,
+          lowStock: totalLowStock,
         }));
       } catch (error) {
         console.error('Failed to load dashboard counts:', error);
@@ -321,30 +429,43 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {[
-                  { id: '#PF1250', name: 'Arun Kumar', amt: '₹2,450', status: 'Delivered', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-                  { id: '#PF1249', name: 'Priya Sharma', amt: '₹1,850', status: 'Processing', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' },
-                  { id: '#PF1248', name: 'Karthik R', amt: '₹3,200', status: 'Shipped', bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
-                  { id: '#PF1247', name: 'Sneha Iyer', amt: '₹1,120', status: 'Delivered', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-                  { id: '#PF1246', name: 'Vijay Kumar', amt: '₹2,750', status: 'Processing', bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' }
-                ].map((order, i) => (
-                  <tr key={i} className="hover:bg-gray-50/50">
-                    <td className="py-3 flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-gray-200 rounded overflow-hidden">
-                        <img src="https://via.placeholder.com/24" alt="prod" className="w-full h-full object-cover grayscale opacity-80" />
-                      </div>
-                      <span className="font-medium text-gray-700 text-xs">{order.id}</span>
-                    </td>
-                    <td className="py-3 text-xs text-gray-600">{order.name}</td>
-                    <td className="py-3 text-xs font-medium text-gray-800">{order.amt}</td>
-                    <td className="py-3 text-right">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${order.bg} ${order.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full mr-1 ${order.dot}`}></span>
-                        {order.status}
-                      </span>
-                    </td>
+                {orders.slice(0, 5).map((order, i) => {
+                  const status = String(order.order_status || 'Pending');
+                  const statusLower = status.toLowerCase();
+                  const badgeStyle = ['delivered', 'completed'].includes(statusLower)
+                    ? { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' }
+                    : ['processing', 'packing', 'ready', 'out for delivery', 'out_for_delivery'].includes(statusLower)
+                      ? { bg: 'bg-amber-100', text: 'text-amber-700', dot: 'bg-amber-500' }
+                      : ['shipped'].includes(statusLower)
+                        ? { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' }
+                        : ['cancelled'].includes(statusLower)
+                          ? { bg: 'bg-rose-100', text: 'text-rose-700', dot: 'bg-rose-500' }
+                          : { bg: 'bg-slate-100', text: 'text-slate-700', dot: 'bg-slate-500' };
+
+                  return (
+                    <tr key={order.order_id || order.id || i} className="hover:bg-gray-50/50">
+                      <td className="py-3 flex items-center space-x-2">
+                        <div className="w-6 h-6 bg-gray-200 rounded overflow-hidden">
+                          <img src="https://via.placeholder.com/24" alt="prod" className="w-full h-full object-cover grayscale opacity-80" />
+                        </div>
+                        <span className="font-medium text-gray-700 text-xs">{order.order_id || `#${order.id || i + 1}`}</span>
+                      </td>
+                      <td className="py-3 text-xs text-gray-600">{order.customer_name || 'Customer'}</td>
+                      <td className="py-3 text-xs font-medium text-gray-800">₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</td>
+                      <td className="py-3 text-right">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${badgeStyle.bg} ${badgeStyle.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full mr-1 ${badgeStyle.dot}`}></span>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!orders.length && (
+                  <tr>
+                    <td colSpan="4" className="py-4 text-center text-xs text-gray-500">No recent orders available.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -363,13 +484,8 @@ const AdminDashboard = () => {
             </button>
           </div>
           <div className="space-y-6">
-            {[
-              { name: 'Photo Frames', val: 35, icon: <ImageIcon size={18} className="text-amber-700" />, iconBg: 'bg-amber-100' },
-              { name: 'Photo Printing', val: 28, icon: <ImageIcon size={18} className="text-gray-700" />, iconBg: 'bg-gray-100' },
-              { name: 'Custom Frames', val: 20, icon: <ImageIcon size={18} className="text-emerald-700" />, iconBg: 'bg-emerald-100' },
-              { name: 'Gifts', val: 17, icon: <Package size={18} className="text-red-600" />, iconBg: 'bg-red-100' },
-            ].map((cat, i) => (
-              <div key={i}>
+            {topCategories.length ? topCategories.map((cat, i) => (
+              <div key={`${cat.name}-${i}`}>
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center space-x-3">
                     <div className={`p-1.5 rounded-md ${cat.iconBg}`}>
@@ -377,13 +493,15 @@ const AdminDashboard = () => {
                     </div>
                     <span className="text-sm font-medium text-gray-700">{cat.name}</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-800">{cat.val}%</span>
+                  <span className="text-sm font-bold text-gray-800">{cat.percent}%</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-1.5">
-                  <div className="bg-emerald-800 h-1.5 rounded-full" style={{ width: `${cat.val}%` }}></div>
+                  <div className="bg-emerald-800 h-1.5 rounded-full" style={{ width: `${cat.percent}%` }}></div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-sm text-gray-500">No category data available yet.</div>
+            )}
           </div>
         </div>
 
@@ -416,7 +534,7 @@ const AdminDashboard = () => {
                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: status.color }}></span>
                          <span className="text-gray-600">{status.name}</span>
                        </div>
-                       <span className="font-medium text-gray-800">{status.value} ({Math.round((status.value/1248)*100)}%)</span>
+                       <span className="font-medium text-gray-800">{status.value} ({status.percent}%)</span>
                     </li>
                   ))}
                 </ul>
