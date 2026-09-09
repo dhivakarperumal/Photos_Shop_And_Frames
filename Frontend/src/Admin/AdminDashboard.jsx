@@ -385,7 +385,7 @@ const AdminDashboard = () => {
             <option value="last-month">Last Month</option>
             <option value="custom">Custom Range</option>
           </select>
-          <ChevronDown size={16} className="text-gray-500" />
+          
           </label>
           {dateFilter === 'custom' && (
             <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -443,7 +443,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Middle Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-3">
         {/* Sales Overview Chart */}
         <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm lg:col-span-2">
           <div className="flex justify-between items-center mb-6">
@@ -515,9 +515,11 @@ const AdminDashboard = () => {
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Recent Orders Table */}
-        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+      {/* Recent Orders Table */}
+      <div className="mb-6">
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm w-full">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-2">
                <ShoppingBag size={18} className="text-amber-500" />
