@@ -71,9 +71,14 @@ const colorOptions = [
  * Generate a composite image containing the frame background
  * and all uploaded slot photos properly positioned & clipped
  */
+/**
+ * Generate a composite image containing the frame background
+ * and all uploaded slot photos properly positioned & clipped with full studio adjustments.
+ * Returns both { blob, dataUrl } for live preview and upload saving.
+ */
 const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotAdjustments = {}) => {
   return new Promise((resolve) => {
-    if (!frameImageUrl) return resolve(null);
+    if (!frameImageUrl) return resolve({ blob: null, dataUrl: null });
 
     const frameImg = new Image();
     frameImg.crossOrigin = "anonymous";
@@ -98,10 +103,10 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
           return parseFloat(val) || 0;
         };
 
-        // 2. Draw slot photos with pan & zoom
+        // 2. Draw slot photos with studio adjustments
         for (const slot of slots || []) {
           const photoData = slotPhotos[slot.id];
-          const photoSrc = photoData?.preview || photoData?.url;
+          const photoSrc = typeof photoData === "string" ? photoData : (photoData?.preview || photoData?.url);
 
           if (photoSrc) {
             const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
@@ -122,12 +127,12 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 const sw = parsePercentage(slot.width, w);
                 const sh = parsePercentage(slot.height, h);
 
-                // Clip region
+                // Clip region (circle or rounded rectangle)
                 ctx.beginPath();
+                const radius = Math.min(12, Math.min(sw, sh) * 0.05);
                 if (slot.shape === "circle") {
                   ctx.arc(sx + sw / 2, sy + sh / 2, Math.min(sw, sh) / 2, 0, Math.PI * 2);
                 } else {
-                  const radius = Math.min(12, Math.min(sw, sh) * 0.05);
                   if (ctx.roundRect) {
                     ctx.roundRect(sx, sy, sw, sh, radius);
                   } else {
@@ -137,37 +142,148 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 ctx.closePath();
                 ctx.clip();
 
+                // Inner Border & Outer Border calculation
+                const innerBorderWidth = adj.innerBorderWidth ? Math.round((adj.innerBorderWidth / 320) * sw) : 0;
+                const innerBorderColor = adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : null;
+                const outerBorderWidth = adj.outerBorderWidth ? Math.round((adj.outerBorderWidth / 320) * sw) : 0;
+                const outerBorderColor = adj.outerBorderColor && adj.outerBorderColor !== "transparent" ? adj.outerBorderColor : null;
+
+                if (innerBorderColor) {
+                  ctx.fillStyle = innerBorderColor;
+                  ctx.fillRect(sx, sy, sw, sh);
+                }
+
+                const psx = sx + innerBorderWidth;
+                const psy = sy + innerBorderWidth;
+                const psw = Math.max(10, sw - innerBorderWidth * 2);
+                const psh = Math.max(10, sh - innerBorderWidth * 2);
+
+                ctx.save();
+                ctx.beginPath();
+                if (slot.shape === "circle") {
+                  ctx.arc(psx + psw / 2, psy + psh / 2, Math.min(psw, psh) / 2, 0, Math.PI * 2);
+                } else {
+                  const innerRadius = Math.max(0, radius - innerBorderWidth * 0.5);
+                  if (ctx.roundRect) ctx.roundRect(psx, psy, psw, psh, innerRadius);
+                  else ctx.rect(psx, psy, psw, psh);
+                }
+                ctx.closePath();
+                ctx.clip();
+
                 // Object-fit calculation (cover vs contain) with pan & zoom
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
-                const slotRatio = sw / sh;
-                let baseW = sw, baseH = sh;
+                const slotRatio = psw / psh;
+                let baseW = psw, baseH = psh;
+                const fitMode = adj.fitMode || slot.objectFit || "cover";
 
-                if (slot.objectFit === "contain") {
+                if (fitMode === "contain") {
                   if (imgRatio > slotRatio) {
-                    baseW = sw;
-                    baseH = sw / imgRatio;
+                    baseW = psw;
+                    baseH = psw / imgRatio;
                   } else {
-                    baseH = sh;
-                    baseW = sh * imgRatio;
+                    baseH = psh;
+                    baseW = psh * imgRatio;
                   }
                 } else {
                   // cover
                   if (imgRatio > slotRatio) {
-                    baseH = sh;
-                    baseW = sh * imgRatio;
+                    baseH = psh;
+                    baseW = psh * imgRatio;
                   } else {
-                    baseW = sw;
-                    baseH = sw / imgRatio;
+                    baseW = psw;
+                    baseH = psw / imgRatio;
                   }
                 }
 
                 const dw = baseW * scale;
                 const dh = baseH * scale;
-                const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
-                const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
+                const safePanX = fitMode === "contain" && scale <= 1 ? 0 : panX;
+                const safePanY = fitMode === "contain" && scale <= 1 ? 0 : panY;
+                const dx = psx + (psw - dw) / 2 + (safePanX / 100) * psw;
+                const dy = psy + (psh - dh) / 2 + (safePanY / 100) * psh;
 
-                ctx.drawImage(pImg, dx, dy, dw, dh);
+                // Apply Filters
+                const filterParts = [];
+                if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+                else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+                else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+                else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+                else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+                else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+                else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+                else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+                const brightness = adj.brightness ?? 100;
+                const contrast = (adj.contrast ?? 100) + Math.round((adj.sharpness || 0) * 0.4);
+                const saturation = adj.saturation ?? 100;
+                const blur = adj.blur || 0;
+
+                if (brightness !== 100) filterParts.push(`brightness(${brightness}%)`);
+                if (contrast !== 100) filterParts.push(`contrast(${contrast}%)`);
+                if (saturation !== 100) filterParts.push(`saturate(${saturation}%)`);
+                if (blur > 0) filterParts.push(`blur(${Math.max(1, Math.round(blur * (w / 1000)))}px)`);
+
+                if (filterParts.length > 0 && ctx.filter) {
+                  ctx.filter = filterParts.join(" ");
+                }
+
+                // Rotate and Flip Transform
+                const totalRot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+                const flipH = Boolean(adj.flipH);
+                const flipV = Boolean(adj.flipV);
+
+                ctx.save();
+                ctx.translate(dx + dw / 2, dy + dh / 2);
+                if (totalRot !== 0) {
+                  ctx.rotate((totalRot * Math.PI) / 180);
+                }
+                if (flipH || flipV) {
+                  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+                }
+                ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
                 ctx.restore();
+                ctx.filter = "none";
+                ctx.restore(); // Restore sub-clip
+
+                // Draw Outer Border stroke if specified
+                if (outerBorderColor && outerBorderWidth > 0) {
+                  ctx.strokeStyle = outerBorderColor;
+                  ctx.lineWidth = outerBorderWidth;
+                  ctx.stroke();
+                }
+
+                // Draw Text Overlay
+                if (adj.textOverlay?.text) {
+                  ctx.save();
+                  const fontSz = Math.max(14, Math.round(((adj.textOverlay.fontSize || 18) / 320) * sw));
+                  const fontFam = adj.textOverlay.fontFamily || "sans-serif";
+                  const isBold = adj.textOverlay.bold ? "bold " : "";
+                  const isItalic = adj.textOverlay.italic ? "italic " : "";
+                  ctx.font = `${isBold}${isItalic}${fontSz}px ${fontFam}`;
+                  ctx.fillStyle = adj.textOverlay.color || "#ffffff";
+                  ctx.textAlign = adj.textOverlay.align || "center";
+                  ctx.textBaseline = "middle";
+
+                  if (adj.textOverlay.shadow) {
+                    ctx.shadowColor = "rgba(0,0,0,0.85)";
+                    ctx.shadowBlur = 5;
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 2;
+                  }
+
+                  let tx = sx + sw / 2;
+                  if (adj.textOverlay.align === "left") tx = sx + fontSz * 1.2;
+                  else if (adj.textOverlay.align === "right") tx = sx + sw - fontSz * 1.2;
+
+                  let ty = sy + sh - fontSz * 1.6;
+                  if (adj.textOverlay.position === "top") ty = sy + fontSz * 1.6;
+                  else if (adj.textOverlay.position === "center") ty = sy + sh / 2;
+
+                  ctx.fillText(adj.textOverlay.text, tx, ty, sw - fontSz * 1.5);
+                  ctx.restore();
+                }
+
+                ctx.restore(); // Restore outer clip
                 slotResolve();
               };
 
@@ -176,16 +292,17 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
           }
         }
 
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
         canvas.toBlob((blob) => {
-          resolve(blob);
+          resolve({ blob, dataUrl });
         }, "image/jpeg", 0.92);
       } catch (err) {
         console.error("Composite creation error:", err);
-        resolve(null);
+        resolve({ blob: null, dataUrl: null });
       }
     };
 
-    frameImg.onerror = () => resolve(null);
+    frameImg.onerror = () => resolve({ blob: null, dataUrl: null });
   });
 };
 
@@ -243,6 +360,52 @@ const AddProducts = () => {
   const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
   const photoInputRefs = useRef({});
   const [saving, setSaving] = useState(false);
+
+  // Pre-save preview states
+  const [viewMode, setViewMode] = useState("editor"); // "editor" | "preview"
+  const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+
+  const invalidateMergedPreview = () => {
+    setMergedPreviewUrl(null);
+  };
+
+  const handleGeneratePreview = async () => {
+    if (!selectedFrame || !selectedFrame.frame_image) {
+      toast.error("Please select a frame first.");
+      return;
+    }
+    if (!Object.keys(slotPhotos).length) {
+      toast.error("Please upload at least one photo before previewing.");
+      return;
+    }
+
+    setGeneratingPreview(true);
+    const toastId = toast.loading("Generating full merged frame preview...");
+    try {
+      const { dataUrl } = await createCompositeFrameImage(
+        selectedFrame.frame_image,
+        selectedFrame.photo_slots || [],
+        slotPhotos,
+        slotAdjustments
+      );
+      if (dataUrl) {
+        setMergedPreviewUrl(dataUrl);
+        setViewMode("preview");
+        toast.dismiss(toastId);
+        toast.success("Live merged frame preview ready!");
+      } else {
+        toast.dismiss(toastId);
+        toast.error("Could not generate frame preview.");
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error("Preview generation error:", err);
+      toast.error("Failed to generate preview.");
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
 
   // ==========================================
   // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES & LOAD IN EDIT MODE
@@ -434,9 +597,11 @@ const AddProducts = () => {
       ...prev,
       [slotId]: { file, preview, url: "" },
     }));
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const defaultFit = targetSlot?.objectFit || "cover";
     setSlotAdjustments((prev) => ({
       ...prev,
-      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: defaultFit },
     }));
 
     // Upload to server
@@ -458,6 +623,7 @@ const AddProducts = () => {
   };
 
   const removeSlotPhoto = (slotId) => {
+    invalidateMergedPreview();
     setSlotPhotos((prev) => {
       const updated = { ...prev };
       if (updated[slotId]?.preview) {
@@ -480,7 +646,8 @@ const AddProducts = () => {
 
     e.stopPropagation();
     setActiveDraggingSlot(slotId);
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: targetSlot?.objectFit || "cover" };
     dragSlotStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -505,14 +672,31 @@ const AddProducts = () => {
       dragSlotStartRef.current.hasMoved = true;
     }
 
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
-    const maxPan = Math.max(40, ((curr.scale || 1.0) - 1) * 60 + 40);
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: targetSlot?.objectFit || "cover" };
+    invalidateMergedPreview();
+    const slotRect = e.currentTarget.getBoundingClientRect();
+    const photoElement = e.currentTarget.querySelector("img");
+    const photoRatio = photoElement?.naturalWidth && photoElement?.naturalHeight
+      ? photoElement.naturalWidth / photoElement.naturalHeight
+      : 1;
+    const fitMode = curr.fitMode || targetSlot?.objectFit || "cover";
+    const baseWidth = fitMode === "contain"
+      ? Math.min(slotRect.width, slotRect.height * photoRatio)
+      : Math.max(slotRect.width, slotRect.height * photoRatio);
+    const baseHeight = fitMode === "contain"
+      ? Math.min(slotRect.height, slotRect.width / photoRatio)
+      : Math.max(slotRect.height, slotRect.width / photoRatio);
+    const renderedWidth = baseWidth * (curr.scale || 1.0);
+    const renderedHeight = baseHeight * (curr.scale || 1.0);
+    const maxPanX = Math.max(0, ((renderedWidth - slotRect.width) / 2 / slotRect.width) * 100);
+    const maxPanY = Math.max(0, ((renderedHeight - slotRect.height) / 2 / slotRect.height) * 100);
 
-    const deltaPercentX = dx * 0.35;
-    const deltaPercentY = dy * 0.35;
+    const deltaPercentX = slotRect.width ? (dx / slotRect.width) * 100 : 0;
+    const deltaPercentY = slotRect.height ? (dy / slotRect.height) * 100 : 0;
 
-    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
-    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+    const newPanX = Math.min(maxPanX, Math.max(-maxPanX, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPanY, Math.max(-maxPanY, dragSlotStartRef.current.startPanY + deltaPercentY));
 
     setSlotAdjustments((prev) => ({
       ...prev,
@@ -579,7 +763,7 @@ const AddProducts = () => {
     try {
       // 1. Generate full composite (Frame + Photos merged on Canvas)
       let finalProductImage = selectedFrame.frame_image;
-      const compositeBlob = await createCompositeFrameImage(
+      const { blob: compositeBlob } = await createCompositeFrameImage(
         selectedFrame.frame_image,
         selectedFrame.photo_slots || [],
         slotPhotos,
@@ -1097,7 +1281,7 @@ const AddProducts = () => {
               {/* SECTION 4: LIVE FRAME PREVIEW & SLOT PHOTO PLACEMENT CANVAS */}
               {selectedFrame && (
                 <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
-                  <div className="mb-4 flex items-center justify-between border-b border-[#f0ebe3] pb-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#f0ebe3] pb-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff0f0] text-[#c93b3b]">
                         <ImagePlus className="h-5 w-5" />
@@ -1107,17 +1291,79 @@ const AddProducts = () => {
                           Demo Photo Placement
                         </h2>
                         <p className="text-xs text-[#8a8a8a]">
-                          Click slots on the frame below to upload preview photos
+                          {viewMode === "editor"
+                            ? "Click slots on the frame below to upload and adjust demo photos"
+                            : "Exact final composite image preview before adding"}
                         </p>
                       </div>
                     </div>
 
-                    <span className="rounded-full bg-[#fff7e8] px-3 py-1 text-xs font-bold text-[#8b6528]">
-                      {Object.keys(slotPhotos).length} / {selectedFrame.photo_slots?.length || 0} Filled
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="hidden sm:inline-block rounded-full bg-[#fff7e8] px-3 py-1 text-xs font-bold text-[#8b6528]">
+                        {Object.keys(slotPhotos).length} / {selectedFrame.photo_slots?.length || 0} Filled
+                      </span>
+
+                      {/* MODE SWITCH TABS: SLOT EDITOR vs PREVIEW */}
+                      <div className="flex items-center rounded-xl border border-[#d8cfc3] bg-[#faf8f5] p-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("editor")}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                            viewMode === "editor"
+                              ? "bg-[#1a3c36] text-white shadow-xs"
+                              : "text-[#555] hover:text-[#1a3c36]"
+                          }`}
+                        >
+                          <Move className="h-3 w-3 text-[#d5a65a]" /> Slot Editor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGeneratePreview}
+                          disabled={generatingPreview || !Object.keys(slotPhotos).length}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                            viewMode === "preview"
+                              ? "bg-[#1a3c36] text-white shadow-xs"
+                              : "text-[#555] hover:text-[#1a3c36]"
+                          }`}
+                          title="Generate and view exact merged frame before adding product"
+                        >
+                          <Eye className="h-3 w-3 text-[#b07838]" />
+                          {generatingPreview ? "Generating..." : "Preview Merged Frame"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* FRAME CANVAS */}
+                  {viewMode === "preview" && mergedPreviewUrl ? (
+                    <div className="relative flex min-h-[380px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5f1eb] p-5">
+                      <div className="mb-3 flex w-full max-w-[480px] items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-800 shadow-2xs">
+                          <Check className="h-3.5 w-3.5" /> Full Merged Frame Preview Ready
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("editor")}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2.5 py-1 text-xs font-bold text-[#1a3c36] shadow-2xs hover:bg-[#faf7f3] cursor-pointer"
+                        >
+                          ← Back to Slot Editor
+                        </button>
+                      </div>
+
+                      <div className="relative mx-auto w-full max-w-[480px] overflow-hidden rounded-xl shadow-2xl">
+                        <img
+                          src={mergedPreviewUrl}
+                          alt="Full Merged Frame Preview"
+                          className="block h-auto w-full select-none"
+                        />
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-center text-xs text-[#666]">
+                        <span>🔍 This is the exact composite photo that will be saved and displayed to customers in the shop.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* FRAME CANVAS */}
                   <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5f1eb] p-4">
                     <div className="relative mx-auto w-full max-w-[460px] overflow-hidden rounded-lg shadow-md">
                       {/* FRAME BACKGROUND */}
@@ -1166,34 +1412,101 @@ const AddProducts = () => {
                                 >
                                   {(() => {
                                     const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    const fitMode = adj.fitMode || slot.objectFit || "cover";
+                                    const isContain = fitMode === "contain";
+                                    const imageScale = adj.scale || 1.0;
+                                    const safePanX = isContain && imageScale <= 1 ? 0 : adj.panX || 0;
+                                    const safePanY = isContain && imageScale <= 1 ? 0 : adj.panY || 0;
+                                    const rot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+
+                                    const filterParts = [];
+                                    if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+                                    else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+                                    else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+                                    else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+                                    else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+                                    else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+                                    else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+                                    else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+                                    if (adj.brightness && adj.brightness !== 100) filterParts.push(`brightness(${adj.brightness}%)`);
+                                    if (adj.contrast && adj.contrast !== 100) filterParts.push(`contrast(${adj.contrast}%)`);
+                                    if (adj.saturation && adj.saturation !== 100) filterParts.push(`saturate(${adj.saturation}%)`);
+                                    if (adj.blur > 0) filterParts.push(`blur(${adj.blur}px)`);
+                                    if (adj.sharpness > 0) filterParts.push(`contrast(${100 + Math.round(adj.sharpness * 0.4)}%)`);
+
                                     return (
-                                      <img
-                                        src={uploaded.preview}
-                                        alt={slot.name}
-                                        draggable={false}
-                                        className="pointer-events-none absolute select-none"
+                                      <div
+                                        className="relative h-full w-full overflow-hidden"
                                         style={{
-                                          top: "50%",
-                                          left: "50%",
-                                          width: "100%",
-                                          height: "100%",
-                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
-                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
-                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                          backgroundColor: adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : "transparent",
+                                          padding: adj.innerBorderWidth ? `${adj.innerBorderWidth}px` : "0px",
+                                          boxShadow: adj.outerBorderWidth && adj.outerBorderColor !== "transparent"
+                                            ? `inset 0 0 0 ${adj.outerBorderWidth}px ${adj.outerBorderColor}`
+                                            : "none",
                                         }}
-                                      />
+                                      >
+                                        <img
+                                          src={uploaded.preview}
+                                          alt={slot.name}
+                                          draggable={false}
+                                          className="pointer-events-none absolute h-full w-full select-none object-center origin-center"
+                                          style={{
+                                            top: `calc(50% + ${safePanY}%)`,
+                                            left: `calc(50% + ${safePanX}%)`,
+                                            objectFit: isContain ? "contain" : "cover",
+                                            transform: `translate(-50%, -50%) scale(${imageScale}) rotate(${rot}deg) scaleX(${ 
+                                              adj.flipH ? -1 : 1
+                                            }) scaleY(${adj.flipV ? -1 : 1})`,
+                                            filter: filterParts.length ? filterParts.join(" ") : "none",
+                                            transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out, filter 0.2s ease",
+                                          }}
+                                        />
+                                        {adj.textOverlay?.text && (
+                                          <div
+                                            className={`pointer-events-none absolute left-1 right-1 flex z-10 ${
+                                              adj.textOverlay.position === "top"
+                                                ? "top-1.5"
+                                                : adj.textOverlay.position === "center"
+                                                ? "top-1/2 -translate-y-1/2"
+                                                : "bottom-1.5"
+                                            } ${
+                                              adj.textOverlay.align === "left"
+                                                ? "justify-start"
+                                                : adj.textOverlay.align === "right"
+                                                ? "justify-end"
+                                                : "justify-center"
+                                            }`}
+                                          >
+                                            <span
+                                              className="px-1.5 py-0.5 truncate text-center max-w-full"
+                                              style={{
+                                                fontFamily: adj.textOverlay.fontFamily || "inherit",
+                                                fontSize: `${Math.max(10, Math.min(18, adj.textOverlay.fontSize || 14))}px`,
+                                                color: adj.textOverlay.color || "#ffffff",
+                                                fontWeight: adj.textOverlay.bold ? "bold" : "normal",
+                                                fontStyle: adj.textOverlay.italic ? "italic" : "normal",
+                                                textShadow: adj.textOverlay.shadow ? "0 1px 3px rgba(0,0,0,0.85)" : "none",
+                                              }}
+                                            >
+                                              {adj.textOverlay.text}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
                                     );
                                   })()}
 
-                                  {/* HOVER OVERLAY: ADJUST & CHANGE */}
-                                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                                  {/* HOVER OVERLAY: ADJUST, FIT/FILL & CHANGE */}
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition group-hover:opacity-100 z-20 p-1">
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setAdjustingSlot(slot);
                                       }}
-                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1"
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
                                       title="Reposition & Zoom demo photo"
                                     >
                                       <Move className="h-3 w-3 text-[#b07838]" /> Adjust
@@ -1201,11 +1514,32 @@ const AddProducts = () => {
 
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                        const nextMode = (curr.fitMode || slot.objectFit || "cover") === "contain" ? "cover" : "contain";
+                                        setSlotAdjustments((prev) => ({
+                                          ...prev,
+                                          [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
+                                        }));
+                                        invalidateMergedPreview();
+                                        toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
+                                      }}
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#333] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
+                                      title="Toggle between showing full image vs filling frame"
+                                    >
+                                      {(slotAdjustments[slot.id]?.fitMode || slot.objectFit || "cover") === "contain" ? "Fill Frame" : "Fit Full"}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         photoInputRefs.current[slot.id]?.click();
                                       }}
-                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1 cursor-pointer"
                                       title="Change photo file"
                                     >
                                       <UploadCloud className="h-3 w-3 text-white" /> Change
@@ -1270,6 +1604,25 @@ const AddProducts = () => {
                                 <Move className="h-3 w-3 text-[#b07838]" /> Adjust
                               </button>
                             )}
+                            {uploaded && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                  const nextMode = (curr.fitMode || slot.objectFit || "cover") === "contain" ? "cover" : "contain";
+                                  setSlotAdjustments((prev) => ({
+                                    ...prev,
+                                    [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
+                                  }));
+                                  invalidateMergedPreview();
+                                  toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2 py-1 text-[11px] font-semibold text-[#555] hover:bg-[#faf7f3]"
+                                title="Toggle fit full image vs fill frame"
+                              >
+                                {(slotAdjustments[slot.id]?.fitMode || slot.objectFit || "cover") === "contain" ? "Fill Frame" : "Fit Full"}
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => photoInputRefs.current[slot.id]?.click()}
@@ -1291,6 +1644,8 @@ const AddProducts = () => {
                       );
                     })}
                   </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1304,6 +1659,17 @@ const AddProducts = () => {
             >
               Cancel
             </Link>
+
+            <button
+              type="button"
+              onClick={handleGeneratePreview}
+              disabled={generatingPreview || !Object.keys(slotPhotos).length}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#1a3c36] bg-white px-6 py-3 text-sm font-bold text-[#1a3c36] shadow-xs transition hover:bg-[#f0f6f4] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              title="Preview the exact combined product image before adding"
+            >
+              <Eye className="h-4 w-4 text-[#b07838]" />
+              {generatingPreview ? "Generating Preview..." : "Preview Merged Frame"}
+            </button>
 
             <button
               type="submit"
@@ -1323,30 +1689,33 @@ const AddProducts = () => {
         </form>
 
         {/* PHOTO ADJUST MODAL FOR ADMIN DEMO PHOTOS */}
-        <PhotoAdjustModal
-          isOpen={Boolean(adjustingSlot)}
-          onClose={() => setAdjustingSlot(null)}
-          photoSrc={
-            adjustingSlot
-              ? slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
-              : null
-          }
-          slot={adjustingSlot}
-          initialAdjustment={
-            adjustingSlot
-              ? slotAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
-              : { panX: 0, panY: 0, scale: 1.0 }
-          }
-          onSave={(adj) => {
-            if (adjustingSlot) {
-              setSlotAdjustments((prev) => ({
-                ...prev,
-                [adjustingSlot.id]: adj,
-              }));
-              toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
+        {Boolean(adjustingSlot) && (
+          <PhotoAdjustModal
+            isOpen={Boolean(adjustingSlot)}
+            onClose={() => setAdjustingSlot(null)}
+            photoSrc={
+              slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
             }
-          }}
-        />
+            slot={adjustingSlot}
+            initialAdjustment={{
+              panX: 0,
+              panY: 0,
+              scale: 1.0,
+              fitMode: adjustingSlot.objectFit || "cover",
+              ...(slotAdjustments[adjustingSlot.id] || {}),
+            }}
+            onSave={(adj) => {
+              if (adjustingSlot) {
+                setSlotAdjustments((prev) => ({
+                  ...prev,
+                  [adjustingSlot.id]: adj,
+                }));
+                invalidateMergedPreview();
+                toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

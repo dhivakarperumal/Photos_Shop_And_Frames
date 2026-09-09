@@ -92,7 +92,7 @@ const ProductCard = ({ product }) => {
             {slotCount > 0 ? "Customize Photos" : "View Product Details"}
           </Link>
 
-          {slotCount > 0 && (
+          {/* {slotCount > 0 && (
             <Link
               to={`/custom-frame?productId=${product.id}`}
               className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border border-[#e2d9cd] bg-[#faf8f5] text-[11px] font-bold text-[#1a3c36] hover:border-[#1a3c36] hover:bg-[#eef6f3] transition"
@@ -100,7 +100,7 @@ const ProductCard = ({ product }) => {
               <Sparkles className="h-3.5 w-3.5 text-[#b07838]" />
               <span>Open in Studio Designer</span>
             </Link>
-          )}
+          )} */}
         </div>
       </div>
     </article>
