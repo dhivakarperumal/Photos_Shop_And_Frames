@@ -98,6 +98,8 @@ const NewBilling = () => {
   const [productOptions, setProductOptions] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState("0");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
   const [selectedCategoryType, setSelectedCategoryType] = useState("Frame");
   const [showProductModal, setShowProductModal] = useState(false);
   const [productSearch, setProductSearch] = useState("");
@@ -183,6 +185,8 @@ const NewBilling = () => {
           category: album.category || "Albums",
           price: Number(album.discount_price || album.selling_price || 0),
           variants: [],
+          size_options: parseVariants(album.size_options),
+          color_options: parseVariants(album.color_options),
           image: getProductImage(album),
           quantity: 1,
           discount: 0,
@@ -334,11 +338,21 @@ const NewBilling = () => {
     );
     if (!product) return;
     const variant = product.variants?.[Number(selectedVariantIndex)];
+
+    // Build detail string for albums (color + size)
+    let albumDetail = product.detail;
+    if (product.categoryType === "Albums") {
+      const parts = [];
+      if (selectedColor) parts.push(selectedColor);
+      if (selectedSize) parts.push(selectedSize);
+      if (parts.length) albumDetail = parts.join(" / ");
+    }
+
     const item = {
       ...product,
-      id: `${product.id}-${selectedVariantIndex}`,
+      id: `${product.id}-${selectedVariantIndex}-${selectedColor || "nc"}-${selectedSize || "ns"}`,
       product_id: product.productId,
-      detail: variant?.size || product.detail,
+      detail: variant?.size || albumDetail,
       image: product.image || "",
       price: Number(
         variant?.offer_price ??
@@ -363,6 +377,8 @@ const NewBilling = () => {
     });
     setSelectedProductId("");
     setSelectedVariantIndex("0");
+    setSelectedColor("");
+    setSelectedSize("");
     setProductSearch("");
     setShowProductModal(false);
   };
@@ -783,7 +799,14 @@ const NewBilling = () => {
                 </h2>
                 <button
                   type="button"
-                  onClick={() => setShowProductModal(false)}
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setSelectedProductId("");
+                    setSelectedVariantIndex("0");
+                    setSelectedColor("");
+                    setSelectedSize("");
+                    setProductSearch("");
+                  }}
                   className="rounded-md bg-[#1a3c36] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#214a42]"
                 >
                   Close
@@ -797,6 +820,8 @@ const NewBilling = () => {
                     setSelectedCategoryType(event.target.value);
                     setSelectedProductId("");
                     setSelectedVariantIndex("0");
+                    setSelectedColor("");
+                    setSelectedSize("");
                     setProductSearch("");
                   }}
                   className={fieldClass}
@@ -823,6 +848,8 @@ const NewBilling = () => {
                     onClick={() => {
                       setSelectedProductId(product.id);
                       setSelectedVariantIndex("0");
+                      setSelectedColor("");
+                      setSelectedSize("");
                     }}
                     className={`flex w-full items-center gap-3 rounded-md border px-2 py-2 text-left text-xs transition ${selectedProductId === product.id ? "border-[#ff8a4c] bg-[#fff7f2]" : "border-[#e5e7eb] bg-white hover:bg-[#fffaf7]"}`}
                   >
@@ -845,6 +872,8 @@ const NewBilling = () => {
                   onChange={(event) => {
                     setSelectedProductId(event.target.value);
                     setSelectedVariantIndex("0");
+                    setSelectedColor("");
+                    setSelectedSize("");
                   }}
                   className={fieldClass}
                 >
@@ -856,7 +885,8 @@ const NewBilling = () => {
                   ))}
                 </select>
               </label>
-              {selectedProduct?.variants?.length > 0 && (
+              {/* Frame size variants */}
+              {selectedProduct?.variants?.length > 0 && selectedCategoryType === "Frame" && (
                 <label className="mt-3 block text-xs font-semibold">
                   Select Frame Size
                   <select
@@ -883,10 +913,59 @@ const NewBilling = () => {
                   </select>
                 </label>
               )}
+              {/* Album: Color selector */}
+              {selectedProduct && selectedCategoryType === "Albums" && selectedProduct.color_options?.length > 0 && (
+                <label className="mt-3 block text-xs font-semibold">
+                  Select Color
+                  <select
+                    value={selectedColor}
+                    onChange={(event) => setSelectedColor(event.target.value)}
+                    className={fieldClass}
+                  >
+                    <option value="">Select color...</option>
+                    {selectedProduct.color_options.map((color, index) => (
+                      <option
+                        key={`color-${index}`}
+                        value={typeof color === "object" ? (color.name || color.value || color) : color}
+                      >
+                        {typeof color === "object" ? (color.name || color.value || color) : color}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {/* Album: Size selector */}
+              {selectedProduct && selectedCategoryType === "Albums" && selectedProduct.size_options?.length > 0 && (
+                <label className="mt-3 block text-xs font-semibold">
+                  Select Size
+                  <select
+                    value={selectedSize}
+                    onChange={(event) => setSelectedSize(event.target.value)}
+                    className={fieldClass}
+                  >
+                    <option value="">Select size...</option>
+                    {selectedProduct.size_options.map((size, index) => (
+                      <option
+                        key={`size-${index}`}
+                        value={typeof size === "object" ? (size.name || size.value || size) : size}
+                      >
+                        {typeof size === "object" ? (size.name || size.value || size) : size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div className="mt-5 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowProductModal(false)}
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setSelectedProductId("");
+                    setSelectedVariantIndex("0");
+                    setSelectedColor("");
+                    setSelectedSize("");
+                    setProductSearch("");
+                  }}
                   className="rounded-md bg-[#1a3c36] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"
                 >
                   Cancel

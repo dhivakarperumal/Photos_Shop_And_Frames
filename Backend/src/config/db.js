@@ -333,6 +333,29 @@ async function ensureDatabaseSchema() {
     }
     await connection.query(createAlbumsTableQuery);
     for (const column of [
+      "minimum_stock INT DEFAULT 0",
+      "short_description TEXT",
+      "meta_title VARCHAR(255)",
+      "meta_description TEXT",
+      "keywords JSON DEFAULT ('[]')",
+      "size_options JSON NULL DEFAULT ('[]')",
+      "color_options JSON NULL DEFAULT ('[]')",
+      "variants JSON NULL DEFAULT ('[]')",
+      "product_images JSON DEFAULT ('[]')",
+    ]) {
+      try {
+        const columnName = String(column).split(' ')[0];
+        await connection.query(`ALTER TABLE albums ADD COLUMN ${column}`);
+        console.log(`✅ Added ${columnName} to albums`);
+      } catch (error) {
+        if (error.code !== "ER_DUP_FIELDNAME") {
+          if (error.code !== "ER_PARSE_ERROR" && error.code !== "ER_BAD_FIELD_ERROR") {
+            throw error;
+          }
+        }
+      }
+    }
+    for (const column of [
       "size_options",
       "color_options",
       "variants",

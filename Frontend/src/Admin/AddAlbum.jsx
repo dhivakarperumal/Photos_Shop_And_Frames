@@ -125,13 +125,23 @@ const AddAlbum = () => {
             ? JSON.parse(album.product_images || '[]')
             : [];
 
-        const colors = Array.isArray(album.colors) ? album.colors : 
-                      (album.color && typeof album.color === 'string' ? 
-                       [{ name: album.color, code: '#000000' }] : 
-                       [{ name: 'Brown', code: '#8B4513' }]);
+        const colorOptions = Array.isArray(album.color_options)
+          ? album.color_options
+          : Array.isArray(album.colors)
+            ? album.colors
+            : typeof album.color_options === 'string'
+              ? JSON.parse(album.color_options || '[]')
+              : (album.color && typeof album.color === 'string'
+                ? [{ name: album.color, code: '#000000' }]
+                : [{ name: 'Brown', code: '#8B4513' }]);
 
-        const sizes = Array.isArray(album.sizes) ? album.sizes :
-                     (album.size ? [album.size] : []);
+        const sizeOptions = Array.isArray(album.size_options)
+          ? album.size_options
+          : Array.isArray(album.sizes)
+            ? album.sizes
+            : typeof album.size_options === 'string'
+              ? JSON.parse(album.size_options || '[]')
+              : (album.size ? [album.size] : []);
 
         const variants = Array.isArray(album.variants) ? album.variants : [];
 
@@ -182,8 +192,8 @@ const AddAlbum = () => {
           metaTitle: album.meta_title || album.metaTitle || '',
           metaDescription: album.meta_description || album.metaDescription || '',
           keywords: Array.isArray(album.keywords) ? album.keywords : [],
-          colors,
-          sizes,
+          colors: Array.isArray(colorOptions) ? colorOptions : [],
+          sizes: Array.isArray(sizeOptions) ? sizeOptions : [],
           variants,
         });
       } catch (error) {
@@ -482,9 +492,7 @@ const AddAlbum = () => {
         offer_price: Number(formData.offerPrice),
         discount_percentage: formData.discountPercentage,
         stock_quantity: Number(formData.stockQuantity),
-        minimum_stock: Number(formData.minimumStock),
         stock_status: formData.stockStatus,
-        short_description: formData.shortDescription,
         description: formData.description,
         customization_available: formData.customizationAvailable,
         customer_name_printing: formData.customerNamePrinting,
@@ -493,11 +501,8 @@ const AddAlbum = () => {
         estimated_delivery_days: Number(formData.estimatedDeliveryDays),
         status: formData.status,
         featured_product: formData.featuredProduct,
-        meta_title: formData.metaTitle,
-        meta_description: formData.metaDescription,
-        keywords: formData.keywords,
-        colors: formData.colors,
-        sizes: formData.sizes,
+        color_options: Array.isArray(formData.colors) ? formData.colors : [],
+        size_options: Array.isArray(formData.sizes) ? formData.sizes : [],
         variants: formData.variants,
         created_by: 'Admin',
         updated_by: 'Admin',
