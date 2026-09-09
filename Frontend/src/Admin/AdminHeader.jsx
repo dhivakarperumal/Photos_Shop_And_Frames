@@ -160,12 +160,34 @@ const Header = ({ onMenuClick }) => {
       }
 
       try {
-        const { data } = await api.get('/products');
-        lowStockAlerts = (data?.data || []).flatMap((product) => {
+        const [productsRes, albumsRes, giftsRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/albums'),
+          api.get('/gift-boxes'),
+        ]);
+
+        const productItems = (productsRes?.data?.data || []).flatMap((product) => {
           const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
-          const stock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+          const stock = variants.reduce((sum, variant) => sum + (Number(variant?.stock) || 0), 0);
           return stock <= 15 ? [{ name: product.product_name || 'Unnamed Product', stock }] : [];
         });
+
+        const albumItems = (albumsRes?.data?.data || []).flatMap((album) => {
+          let variants = [];
+          if (Array.isArray(album.variants)) variants = album.variants;
+          else if (typeof album.variants === 'string') {
+            try { variants = JSON.parse(album.variants); } catch { variants = []; }
+          }
+          const stock = variants.length ? variants.reduce((sum, variant) => sum + (Number(variant?.stock) || 0), 0) : Number(album.stock_quantity || 0);
+          return stock <= 15 ? [{ name: album.product_name || 'Unnamed Album', stock }] : [];
+        });
+
+        const giftItems = (giftsRes?.data?.data || []).flatMap((gift) => {
+          const stock = Number(gift.current_stock ?? gift.stock_quantity ?? 0);
+          return stock <= 15 ? [{ name: gift.name || 'Unnamed Gift Box', stock }] : [];
+        });
+
+        lowStockAlerts = [...productItems, ...albumItems, ...giftItems];
       } catch (e) {
         console.error('[Header] Low stock notification error:', e?.response?.status, e.message);
       }
