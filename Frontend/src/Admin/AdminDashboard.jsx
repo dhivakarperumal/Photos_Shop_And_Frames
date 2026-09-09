@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   ShoppingBag, 
@@ -10,7 +11,10 @@ import {
   ShoppingCart,
   User,
   Image as ImageIcon,
-  Tag
+  Tag,
+  Plus,
+  ArrowRight,
+  CircleAlert
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -25,26 +29,6 @@ import {
   Cell
 } from 'recharts';
 import api from '../api';
-
-const salesData = [
-  { name: '1 May', value: 25000 },
-  { name: '3 May', value: 45000 },
-  { name: '5 May', value: 65000 },
-  { name: '7 May', value: 33000 },
-  { name: '9 May', value: 58000 },
-  { name: '11 May', value: 92000 },
-  { name: '12 May', value: 38000 },
-  { name: '14 May', value: 65000 },
-  { name: '16 May', value: 85000 },
-  { name: '18 May', value: 60000 },
-  { name: '20 May', value: 125430 },
-  { name: '22 May', value: 65000 },
-  { name: '24 May', value: 95000 },
-  { name: '26 May', value: 140000 },
-  { name: '28 May', value: 90000 },
-  { name: '30 May', value: 110000 },
-  { name: '31 May', value: 145000 }
-];
 
 const statusColors = {
   DELIVERED: '#166534',
@@ -80,6 +64,7 @@ const AdminDashboard = () => {
     todayOrders: 0,
     cancelled: 0,
   });
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [catalogItems, setCatalogItems] = useState({ products: [], albums: [], gifts: [] });
   const [dateFilter, setDateFilter] = useState('this-month');
@@ -140,6 +125,35 @@ const AdminDashboard = () => {
     todayOrders: filteredOrders.filter((order) => dateKey(order.order_date || order.created_at) === dateKey(new Date())).length,
     cancelled: filteredOrders.filter((order) => String(order.order_status || '').toLowerCase() === 'cancelled').length,
   }), [filteredOrders]);
+
+  const salesTrendData = useMemo(() => {
+    const revenueByDate = new Map();
+
+    filteredOrders.forEach((order) => {
+      const dayKey = dateKey(order.order_date || order.created_at);
+      if (!dayKey) return;
+      revenueByDate.set(dayKey, (revenueByDate.get(dayKey) || 0) + Number(order.total_amount || 0));
+    });
+
+    const sortedEntries = [...revenueByDate.entries()].sort((a, b) => new Date(a[0]) - new Date(b[0]));
+    if (!sortedEntries.length) {
+      return [{ name: 'No Data', value: 0 }];
+    }
+
+    const recentEntries = sortedEntries.slice(-7);
+    return recentEntries.map(([date, value]) => ({
+      name: new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      value,
+    }));
+  }, [filteredOrders]);
+
+  const quickActions = [
+    { label: 'View Orders', path: '/admin/orders', icon: <ShoppingBag size={16} className="text-emerald-600" />, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    { label: 'Add Product', path: '/admin/products/add', icon: <Plus size={16} className="text-blue-600" />, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+    { label: 'Manage Albums', path: '/admin/albums', icon: <ImageIcon size={16} className="text-violet-600" />, color: 'bg-violet-50 text-violet-700 border-violet-200' },
+    { label: 'Stock Details', path: '/admin/products/stock-details', icon: <CircleAlert size={16} className="text-amber-600" />, color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { label: 'Gift Boxes', path: '/admin/gifts', icon: <Tag size={16} className="text-rose-600" />, color: 'bg-rose-50 text-rose-700 border-rose-200' },
+  ];
 
   const orderStatusData = useMemo(() => {
     const buckets = {
@@ -218,6 +232,74 @@ const AdminDashboard = () => {
           : 'bg-amber-100',
     }));
   }, [catalogItems]);
+
+  const lowStockAlerts = useMemo(() => {
+    const items = [];
+
+    catalogItems.products.forEach((product) => {
+      const variantStock = Array.isArray(product.size_variants)
+        ? product.size_variants.reduce((sum, variant) => sum + Number(variant?.stock || 0), 0)
+        : typeof product.size_variants === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(product.size_variants).reduce((sum, variant) => sum + Number(variant?.stock || 0), 0);
+              } catch {
+                return 0;
+              }
+            })()
+          : 0;
+
+      if (variantStock <= 10) {
+        items.push({ name: product.product_name || 'Product', type: 'Product', stock: variantStock });
+      }
+    });
+
+    catalogItems.albums.forEach((album) => {
+      const variantStock = Array.isArray(album.variants)
+        ? album.variants.reduce((sum, variant) => sum + Number(variant?.stock || 0), 0)
+        : typeof album.variants === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(album.variants).reduce((sum, variant) => sum + Number(variant?.stock || 0), 0);
+              } catch {
+                return Number(album.stock_quantity || 0);
+              }
+            })()
+          : Number(album.stock_quantity || 0);
+
+      if (variantStock <= 10) {
+        items.push({ name: album.product_name || 'Album', type: 'Album', stock: variantStock });
+      }
+    });
+
+    catalogItems.gifts.forEach((gift) => {
+      const stock = Number(gift.current_stock ?? gift.stock_quantity ?? 0);
+      if (stock <= 10) {
+        items.push({ name: gift.name || 'Gift Box', type: 'Gift', stock });
+      }
+    });
+
+    return items.slice(0, 5);
+  }, [catalogItems]);
+
+  const paymentBreakdown = useMemo(() => {
+    const totals = new Map();
+    orders.forEach((order) => {
+      const method = String(order.payment_method || 'COD').trim() || 'COD';
+      totals.set(method, (totals.get(method) || 0) + Number(order.total_amount || 0));
+    });
+
+    const total = [...totals.values()].reduce((sum, value) => sum + value, 0) || 1;
+    return [...totals.entries()]
+      .map(([name, value]) => ({
+        name,
+        value,
+        percent: Math.round((value / total) * 100),
+        color: name.toLowerCase().includes('upi') ? '#22c55e' : name.toLowerCase().includes('card') ? '#3b82f6' : name.toLowerCase().includes('wallet') ? '#a855f7' : '#f59e0b',
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 4);
+  }, [orders]);
 
   useEffect(() => {
     const fetchDashboardCounts = async () => {
@@ -376,7 +458,7 @@ const AdminDashboard = () => {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={salesData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <LineChart data={salesTrendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis 
                   dataKey="name" 
@@ -389,12 +471,12 @@ const AdminDashboard = () => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fontSize: 10, fill: '#6b7280' }}
-                  tickFormatter={(val) => `₹${val/1000}L`}
+                  tickFormatter={(val) => `₹${val/1000}k`}
                   dx={-10}
                 />
                 <Tooltip 
                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                   formatter={(value) => [`₹${value}`, "Revenue"]}
+                   formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, "Revenue"]}
                 />
                 <Line 
                   type="monotone" 
@@ -406,6 +488,31 @@ const AdminDashboard = () => {
                 />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center space-x-2">
+              <TrendingUp size={18} className="text-emerald-600" />
+              <h2 className="font-semibold text-gray-800">Quick Actions</h2>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={() => navigate(action.path)}
+                className={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm ${action.color}`}
+              >
+                <span className="flex items-center gap-2">
+                  {action.icon}
+                  {action.label}
+                </span>
+                <ArrowRight size={14} />
+              </button>
+            ))}
           </div>
         </div>
 
@@ -468,6 +575,51 @@ const AdminDashboard = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Dashboard Panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-semibold text-gray-800">Low Stock Alerts</h2>
+            <span className="text-xs text-gray-500">{lowStockAlerts.length} items</span>
+          </div>
+          <div className="space-y-4">
+            {lowStockAlerts.length ? lowStockAlerts.map((item, index) => (
+              <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                  <p className="text-[11px] text-gray-500">{item.type}</p>
+                </div>
+                <span className="rounded-full bg-orange-100 px-2 py-1 text-xs font-semibold text-orange-700">{item.stock} left</span>
+              </div>
+            )) : (
+              <div className="text-sm text-gray-500">No low-stock items right now.</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-semibold text-gray-800">Payment Breakdown</h2>
+            <span className="text-xs text-gray-500">Live orders</span>
+          </div>
+          <div className="space-y-4">
+            {paymentBreakdown.length ? paymentBreakdown.map((method) => (
+              <div key={method.name}>
+                <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
+                  <span>{method.name}</span>
+                  <span>₹{method.value.toLocaleString('en-IN')} ({method.percent}%)</span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div className="h-full rounded-full" style={{ width: `${method.percent}%`, backgroundColor: method.color }} />
+                </div>
+              </div>
+            )) : (
+              <div className="text-sm text-gray-500">No payment data available yet.</div>
+            )}
           </div>
         </div>
       </div>
@@ -550,13 +702,32 @@ const AdminDashboard = () => {
           </div>
           <div className="space-y-5">
             {[
-              { text: 'New order #PF1250 received', time: '2 minutes ago', icon: <ShoppingCart size={14} className="text-white" />, bg: 'bg-emerald-600' },
-              { text: 'Product "Wooden Frame" updated', time: '25 minutes ago', icon: <Package size={14} className="text-white" />, bg: 'bg-amber-500' },
-              { text: 'Customer Priya Sharma registered', time: '1 hour ago', icon: <User size={14} className="text-white" />, bg: 'bg-blue-500' },
-              { text: 'Banner "Summer Sale" added', time: '2 hours ago', icon: <ImageIcon size={14} className="text-white" />, bg: 'bg-purple-500' },
-              { text: 'Coupon "WELCOME10" created', time: '3 hours ago', icon: <Tag size={14} className="text-white" />, bg: 'bg-emerald-700' },
-            ].map((activity, i) => (
-              <div key={i} className="flex items-start justify-between">
+              ...orders.slice(0, 3).map((order) => ({
+                text: `New order ${order.order_id || '#ORD'} received for ${order.customer_name || 'Customer'}`,
+                time: order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recently',
+                icon: <ShoppingCart size={14} className="text-white" />,
+                bg: 'bg-emerald-600',
+              })),
+              ...catalogItems.products.slice(0, 1).map((product) => ({
+                text: `Product "${product.product_name || 'Product'}" updated`,
+                time: product.updated_at ? new Date(product.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today',
+                icon: <Package size={14} className="text-white" />,
+                bg: 'bg-amber-500',
+              })),
+              ...catalogItems.albums.slice(0, 1).map((album) => ({
+                text: `Album "${album.product_name || 'Album'}" added`,
+                time: album.created_at ? new Date(album.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today',
+                icon: <ImageIcon size={14} className="text-white" />,
+                bg: 'bg-purple-500',
+              })),
+              ...catalogItems.gifts.slice(0, 1).map((gift) => ({
+                text: `Gift box "${gift.name || 'Gift'}" created`,
+                time: gift.created_at ? new Date(gift.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today',
+                icon: <Tag size={14} className="text-white" />,
+                bg: 'bg-emerald-700',
+              })),
+            ].slice(0, 5).map((activity, i) => (
+              <div key={`${activity.text}-${i}`} className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${activity.bg}`}>
                     {activity.icon}
@@ -566,6 +737,9 @@ const AdminDashboard = () => {
                 <span className="text-[10px] text-gray-400 whitespace-nowrap">{activity.time}</span>
               </div>
             ))}
+            {!orders.length && !catalogItems.products.length && !catalogItems.albums.length && !catalogItems.gifts.length && (
+              <div className="text-xs text-gray-500">No recent activity available.</div>
+            )}
           </div>
         </div>
       </div>
