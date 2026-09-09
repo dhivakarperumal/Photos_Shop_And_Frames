@@ -44,7 +44,6 @@ import api from "../../api";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
-import CheckoutModal from "../Checkout/CheckoutModal";
 import PhotoAdjustModal, {
   DEFAULT_ADJUSTMENT,
   FILTER_PRESETS,
@@ -308,7 +307,6 @@ const ProductDetails = () => {
   const [customerPhotos, setCustomerPhotos] = useState({});
   const [uploadingSlot, setUploadingSlot] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [customizationId, setCustomizationId] = useState(null);
@@ -804,11 +802,31 @@ const ProductDetails = () => {
       setSavingCustomization(true);
       try {
         const savedCust = await ensureCustomizationSaved();
-        if (savedCust?.preview_image) {
-          setCompositeServerUrl(savedCust.preview_image);
-        }
         setIsConfirmModalOpen(false);
-        setIsCheckoutOpen(true);
+        navigate("/checkout", {
+          state: {
+            checkoutItems: [
+              {
+                product_id: product.id,
+                product_name: product.product_name,
+                category: product.category,
+                size: selectedVariant.size || "Standard",
+                price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
+                quantity: Number(quantity),
+                customization_id: savedCust?.customization_id || customizationId,
+                slot_photos: customerPhotos,
+                photo_adjustments: photoAdjustments,
+                product_image:
+                  savedCust?.preview_image ||
+                  compositeServerUrl ||
+                  mergedPreviewUrl ||
+                  product.product_images?.[0] ||
+                  frameData.frame_image,
+                frame_image: frameData.frame_image,
+              },
+            ],
+          },
+        });
       } catch (err) {
         console.error("Confirmed buy now error:", err);
         toast.error("Failed to prepare checkout");
@@ -855,23 +873,6 @@ const ProductDetails = () => {
             100
         )
       : 0;
-
-  // Prepare item for CheckoutModal if user clicks Buy Now
-  const checkoutItems = [
-    {
-      product_id: product.id,
-      product_name: product.product_name,
-      category: product.category,
-      size: selectedVariant.size || "Standard",
-      price: Number(selectedVariant.offer_price || selectedVariant.mrp || 0),
-      quantity: Number(quantity),
-      customization_id: customizationId,
-      slot_photos: customerPhotos,
-      photo_adjustments: photoAdjustments,
-      product_image: compositeServerUrl || mergedPreviewUrl || product.product_images?.[0] || frameData.frame_image,
-      frame_image: frameData.frame_image,
-    },
-  ];
 
   return (
     <main className="min-h-screen bg-[#f7f3ed]">
@@ -2544,14 +2545,6 @@ const ProductDetails = () => {
         />
       )}
 
-      {/* CHECKOUT MODAL */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        items={checkoutItems}
-        user={user}
-        clearCartAfterOrder={false}
-      />
     </main>
   );
 };
