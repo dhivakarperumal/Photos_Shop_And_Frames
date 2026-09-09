@@ -1,9 +1,11 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpDown,
   BookOpen,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Filter,
   Gift,
@@ -58,8 +60,18 @@ const SORT_OPTIONS = [
   { label: "Biggest Discount", value: "discount" },
 ];
 
+const ITEMS_PER_PAGE = 12;
+
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const productsTopRef = useRef(null);
+  const isInitialMount = useRef(true);
+
+  // Pagination state
+  const pageParam = parseInt(searchParams.get("page") || "1", 10);
+  const [currentPage, setCurrentPage] = useState(
+    Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1
+  );
 
   // Raw fetched data
   const [frames, setFrames] = useState([]);
@@ -147,6 +159,13 @@ const Shop = () => {
     if (urlCategory !== null) setSelectedCategory(urlCategory);
     const urlSearch = searchParams.get("search");
     if (urlSearch !== null) setSearchQuery(urlSearch);
+
+    const urlPage = parseInt(searchParams.get("page") || "1", 10);
+    if (Number.isInteger(urlPage) && urlPage > 0) {
+      setCurrentPage(urlPage);
+    } else {
+      setCurrentPage(1);
+    }
   }, [searchParams]);
 
   // Fetch all 3 product lines + categories simultaneously
@@ -346,6 +365,7 @@ const Shop = () => {
     setInStockOnly(false);
     setDiscountOnly(false);
     setSortBy("featured");
+    setCurrentPage(1);
     setSearchParams({});
   };
 
@@ -448,6 +468,96 @@ const Shop = () => {
     discountOnly,
     sortBy,
   ]);
+
+  // Reset to page 1 whenever any filter or sort option changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    setCurrentPage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("page");
+      return next;
+    });
+  }, [
+    selectedType,
+    selectedCategory,
+    searchQuery,
+    customPrice.min,
+    customPrice.max,
+    selectedOrientation,
+    selectedSlots,
+    inStockOnly,
+    discountOnly,
+    sortBy,
+    setSearchParams,
+  ]);
+
+  // Total pages based on 8 items per page
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+
+  // Clamp current page if items count shrinks
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  // Paginated items for current page
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (newPage === 1) {
+        next.delete("page");
+      } else {
+        next.set("page", String(newPage));
+      }
+      return next;
+    });
+    if (productsTopRef.current) {
+      productsTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, "...", totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [
+        1,
+        "...",
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+    return [
+      1,
+      "...",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "...",
+      totalPages,
+    ];
+  };
 
   // Active filter count for badge
   const activeFiltersCount = useMemo(() => {
@@ -945,7 +1055,12 @@ const Shop = () => {
               <span>
                 {loading
                   ? "Loading products..."
-                  : `Showing ${filteredItems.length} of ${allItems.length} items`}
+                  : filteredItems.length === 0
+                  ? "0 products"
+                  : `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(
+                      currentPage * ITEMS_PER_PAGE,
+                      filteredItems.length
+                    )} of ${filteredItems.length} products`}
               </span>
             </span>
 
@@ -1166,7 +1281,7 @@ const Shop = () => {
           </aside>
 
           {/* PRODUCT GRID */}
-          <section className="flex-1 w-full min-w-0">
+          <section ref={productsTopRef} className="flex-1 w-full min-w-0 scroll-mt-24">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-28 text-center">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#b87840] border-t-transparent" />
@@ -1196,59 +1311,145 @@ const Shop = () => {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
-                {filteredItems.map((item) => {
-                  // 1. Gift Box Card
-                  if (item.__type === "gift") {
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
+                  {paginatedItems.map((item) => {
+                    // 1. Gift Box Card
+                    if (item.__type === "gift") {
+                      return (
+                        <GiftCard
+                          key={item.__id}
+                          gift={item}
+                          image={item.__image}
+                          price={item.__price}
+                          originalPrice={item.__mrp}
+                          discount={item.__discount}
+                          onOpen={() =>
+                            setQuickViewItem({
+                              item,
+                              type: "gift",
+                              image: item.__image,
+                            })
+                          }
+                        />
+                      );
+                    }
+
+                    // 2. Photo Album Card
+                    if (item.__type === "album") {
+                      return (
+                        <AlbumCard
+                          key={item.__id}
+                          album={item}
+                          image={item.__image}
+                          price={item.__price}
+                          originalPrice={item.__mrp}
+                          discount={item.__discount}
+                          onOpen={() =>
+                            setQuickViewItem({
+                              item,
+                              type: "album",
+                              image: item.__image,
+                            })
+                          }
+                        />
+                      );
+                    }
+
+                    // 3. Photo Frame Product Card
                     return (
-                      <GiftCard
+                      <ProductCard
                         key={item.__id}
-                        gift={item}
-                        image={item.__image}
-                        price={item.__price}
-                        originalPrice={item.__mrp}
-                        discount={item.__discount}
-                        onOpen={() =>
-                          setQuickViewItem({
-                            item,
-                            type: "gift",
-                            image: item.__image,
-                          })
-                        }
+                        product={item}
                       />
                     );
-                  }
+                  })}
+                </div>
 
-                  // 2. Photo Album Card
-                  if (item.__type === "album") {
-                    return (
-                      <AlbumCard
-                        key={item.__id}
-                        album={item}
-                        image={item.__image}
-                        price={item.__price}
-                        originalPrice={item.__mrp}
-                        discount={item.__discount}
-                        onOpen={() =>
-                          setQuickViewItem({
-                            item,
-                            type: "album",
-                            image: item.__image,
-                          })
+                {/* PAGINATION CONTROLS */}
+                {totalPages > 1 && (
+                  <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[#dfd6ca] bg-white px-5 py-4 shadow-2xs sm:flex-row">
+                    <div className="text-xs font-semibold text-[#68736e]">
+                      Showing{" "}
+                      <span className="font-bold text-[#1b2925]">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                      </span>{" "}
+                      to{" "}
+                      <span className="font-bold text-[#1b2925]">
+                        {Math.min(
+                          currentPage * ITEMS_PER_PAGE,
+                          filteredItems.length
+                        )}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-bold text-[#1b2925]">
+                        {filteredItems.length}
+                      </span>{" "}
+                      products (Page {currentPage} of {totalPages})
+                    </div>
+
+                    <nav
+                      aria-label="Shop catalog pagination"
+                      className="flex items-center gap-1 sm:gap-1.5"
+                    >
+                      {/* Previous Page Button */}
+                      <button
+                        type="button"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage <= 1}
+                        aria-label="Previous page"
+                        className="flex h-9 items-center gap-1 rounded-xl border border-[#dfd6ca] bg-white px-3 text-xs font-bold text-[#1b2925] shadow-2xs transition hover:border-[#b87840] hover:text-[#b87840] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#dfd6ca] disabled:hover:text-[#1b2925] cursor-pointer"
+                      >
+                        <ChevronLeft size={16} />
+                        <span className="hidden sm:inline">Previous</span>
+                      </button>
+
+                      {/* Page numbers */}
+                      {getPageNumbers().map((page, idx) => {
+                        if (page === "...") {
+                          return (
+                            <span
+                              key={`ellipsis-${idx}`}
+                              className="flex h-9 w-8 items-center justify-center text-xs font-bold text-[#8c9691]"
+                            >
+                              &hellip;
+                            </span>
+                          );
                         }
-                      />
-                    );
-                  }
 
-                  // 3. Photo Frame Product Card
-                  return (
-                    <ProductCard
-                      key={item.__id}
-                      product={item}
-                    />
-                  );
-                })}
-              </div>
+                        const isCurrent = currentPage === page;
+                        return (
+                          <button
+                            key={`page-${page}`}
+                            type="button"
+                            onClick={() => handlePageChange(page)}
+                            aria-current={isCurrent ? "page" : undefined}
+                            className={`flex h-9 min-w-9 items-center justify-center rounded-xl px-2.5 text-xs font-bold transition cursor-pointer ${
+                              isCurrent
+                                ? "bg-[#1b2925] text-white shadow-xs"
+                                : "border border-[#dfd6ca] bg-white text-[#4a5550] shadow-2xs hover:border-[#b87840] hover:text-[#b87840]"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+
+                      {/* Next Page Button */}
+                      <button
+                        type="button"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= totalPages}
+                        aria-label="Next page"
+                        className="flex h-9 items-center gap-1 rounded-xl border border-[#dfd6ca] bg-white px-3 text-xs font-bold text-[#1b2925] shadow-2xs transition hover:border-[#b87840] hover:text-[#b87840] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#dfd6ca] disabled:hover:text-[#1b2925] cursor-pointer"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
