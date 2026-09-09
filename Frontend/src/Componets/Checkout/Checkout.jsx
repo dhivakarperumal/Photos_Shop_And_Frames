@@ -340,6 +340,7 @@ const Checkout = () => {
           return {
             product_id: item.product_id || item.id,
             gift_box_id: item.gift_box_id || (resolvedType === "gift" ? (item.product_id || item.id) : null),
+            album_id: item.album_id || (resolvedType === "album" ? (item.product_id || item.id) : null),
             item_type: resolvedType,
             product_name: item.product_name || (resolvedType === "gift" ? "Gift Box" : resolvedType === "album" ? "Photo Album" : "Photo Frame"),
             category: item.category || (resolvedType === "gift" ? "Gift Box" : resolvedType === "album" ? "Albums" : "Photo Frames"),

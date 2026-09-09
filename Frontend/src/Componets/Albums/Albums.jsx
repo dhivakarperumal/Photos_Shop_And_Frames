@@ -294,6 +294,7 @@ const Albums = () => {
 
     const checkoutItem = {
       product_id: album.id,
+      item_type: "album",
       product_name: album.product_name,
       category: album.category || "Albums",
       size: album.size || `${album.total_pages || 40} Pages`,

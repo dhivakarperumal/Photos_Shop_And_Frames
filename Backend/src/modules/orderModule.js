@@ -118,6 +118,89 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
         throw new Error(`Invalid quantity for product ${rawProductId}`);
       }
 
+      const isAlbumItem =
+        item.item_type === "album" ||
+        Boolean(item.album_id) ||
+        rawCode.toUpperCase().startsWith("ALB") ||
+        (typeof item.category === "string" && item.category.toLowerCase().includes("album"));
+
+      let processedAsAlbum = false;
+
+      if (isAlbumItem) {
+        const albumQuery = isNumericId
+          ? `SELECT * FROM albums WHERE id = ? OR product_id = ? OR product_code = ? FOR UPDATE`
+          : `SELECT * FROM albums WHERE product_id = ? OR product_code = ? FOR UPDATE`;
+        const albumParams = isNumericId ? [numericProductId, rawCode, rawCode] : [rawCode, rawCode];
+        const [albumRows] = await connection.query(albumQuery, albumParams);
+
+        if (albumRows.length > 0) {
+          const album = albumRows[0];
+          let variants = [];
+          try {
+            variants = Array.isArray(album.variants)
+              ? album.variants
+              : JSON.parse(album.variants || "[]");
+          } catch {
+            variants = [];
+          }
+
+          const availableStock = Number(album.stock_quantity || 0);
+
+          if (album.stock_status === "Out of Stock" || (availableStock > 0 && availableStock < quantity)) {
+            throw new Error(
+              `Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for album "${album.product_name}"`
+            );
+          }
+
+          if (variants.length > 0) {
+            const variantIdx = variants.findIndex(
+              (v) =>
+                (selectedSize && String(v.size || "").trim().toLowerCase() === selectedSize.toLowerCase()) ||
+                (item.color && String(v.color || "").trim().toLowerCase() === String(item.color).trim().toLowerCase())
+            );
+            if (variantIdx >= 0) {
+              const varStock = Number(variants[variantIdx].stock ?? 0);
+              variants[variantIdx].stock = Math.max(0, varStock - quantity);
+            }
+          }
+
+          const nextStock = Math.max(0, availableStock - quantity);
+          const nextStatus = nextStock <= 0 ? "Out of Stock" : nextStock <= Number(album.minimum_stock || 5) ? "Low Stock" : "In Stock";
+          const unitPrice = Number(item.price || item.unit_price || album.discount_price || album.selling_price || 0);
+          const lineTotal = Number(item.total_price || (unitPrice * quantity));
+
+          await connection.query(
+            `UPDATE albums 
+             SET stock_quantity = ?, 
+                 stock_status = ?, 
+                 variants = ?, 
+                 updated_at = NOW() 
+             WHERE id = ?`,
+            [nextStock, nextStatus, JSON.stringify(variants), album.id]
+          );
+
+          const itemValues = [
+            orderId,
+            album.id,
+            item.product_name || album.product_name,
+            item.category || album.sub_category || album.occasion || "Albums",
+            selectedSize || album.size || "12 x 18 Inches",
+            unitPrice,
+            quantity,
+            lineTotal,
+            item.customization_id || null,
+            item.slot_photos ? (typeof item.slot_photos === "string" ? item.slot_photos : JSON.stringify(item.slot_photos)) : null,
+            item.product_image || item.preview_image || album.thumbnail_image || null,
+            null,
+            orderData.created_by || orderData.user_id || null,
+            orderData.updated_by || orderData.user_id || null,
+          ];
+
+          await connection.query(insertItemQuery, itemValues);
+          processedAsAlbum = true;
+        }
+      }
+
       const isGiftItem =
         item.item_type === "gift" ||
         Boolean(item.gift_box_id) ||
@@ -126,7 +209,7 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
 
       let processedAsGift = false;
 
-      if (isGiftItem) {
+      if (!processedAsAlbum && isGiftItem) {
         const giftQuery = isNumericId
           ? `SELECT * FROM gift_boxes WHERE id = ? OR gift_box_id = ? FOR UPDATE`
           : `SELECT * FROM gift_boxes WHERE gift_box_id = ? FOR UPDATE`;
@@ -181,7 +264,7 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
         }
       }
 
-      if (!processedAsGift) {
+      if (!processedAsAlbum && !processedAsGift) {
         const [productRows] = numericProductId
           ? await connection.query(
               `SELECT size_variants FROM products WHERE id = ? FOR UPDATE`,
@@ -190,7 +273,7 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
           : [[]];
 
         if (!productRows.length) {
-          // Fallback: Check if it exists in gift_boxes table before failing
+          // Fallback 1: Check if it exists in gift_boxes table before failing
           const [fallbackGiftRows] = await connection.query(
             isNumericId
               ? `SELECT * FROM gift_boxes WHERE id = ? OR gift_box_id = ? FOR UPDATE`
@@ -237,6 +320,81 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
               item.slot_photos ? (typeof item.slot_photos === "string" ? item.slot_photos : JSON.stringify(item.slot_photos)) : null,
               item.product_image || giftBox.image || null,
               item.frame_image || null,
+              orderData.created_by || orderData.user_id || null,
+              orderData.updated_by || orderData.user_id || null,
+            ];
+
+            await connection.query(insertItemQuery, itemValues);
+            continue;
+          }
+
+          // Fallback 2: Check if it exists in albums table before failing
+          const [fallbackAlbumRows] = await connection.query(
+            isNumericId
+              ? `SELECT * FROM albums WHERE id = ? OR product_id = ? OR product_code = ? FOR UPDATE`
+              : `SELECT * FROM albums WHERE product_id = ? OR product_code = ? FOR UPDATE`,
+            isNumericId ? [numericProductId, rawCode, rawCode] : [rawCode, rawCode],
+          );
+
+          if (fallbackAlbumRows.length > 0) {
+            const album = fallbackAlbumRows[0];
+            let variants = [];
+            try {
+              variants = Array.isArray(album.variants)
+                ? album.variants
+                : JSON.parse(album.variants || "[]");
+            } catch {
+              variants = [];
+            }
+
+            const availableStock = Number(album.stock_quantity || 0);
+
+            if (album.stock_status === "Out of Stock" || (availableStock > 0 && availableStock < quantity)) {
+              throw new Error(
+                `Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for album "${album.product_name}"`
+              );
+            }
+
+            if (variants.length > 0) {
+              const variantIdx = variants.findIndex(
+                (v) =>
+                  (selectedSize && String(v.size || "").trim().toLowerCase() === selectedSize.toLowerCase()) ||
+                  (item.color && String(v.color || "").trim().toLowerCase() === String(item.color).trim().toLowerCase())
+              );
+              if (variantIdx >= 0) {
+                const varStock = Number(variants[variantIdx].stock ?? 0);
+                variants[variantIdx].stock = Math.max(0, varStock - quantity);
+              }
+            }
+
+            const nextStock = Math.max(0, availableStock - quantity);
+            const nextStatus = nextStock <= 0 ? "Out of Stock" : nextStock <= Number(album.minimum_stock || 5) ? "Low Stock" : "In Stock";
+            const unitPrice = Number(item.price || item.unit_price || album.discount_price || album.selling_price || 0);
+            const lineTotal = Number(item.total_price || (unitPrice * quantity));
+
+            await connection.query(
+              `UPDATE albums 
+               SET stock_quantity = ?, 
+                   stock_status = ?, 
+                   variants = ?, 
+                   updated_at = NOW() 
+               WHERE id = ?`,
+              [nextStock, nextStatus, JSON.stringify(variants), album.id]
+            );
+
+            const itemValues = [
+              orderId,
+              album.id,
+              item.product_name || album.product_name,
+              item.category || album.sub_category || album.occasion || "Albums",
+              selectedSize || album.size || "12 x 18 Inches",
+              unitPrice,
+              quantity,
+              lineTotal,
+              item.customization_id || null,
+              item.slot_photos ? (typeof item.slot_photos === "string" ? item.slot_photos : JSON.stringify(item.slot_photos)) : null,
+              item.product_image || item.preview_image || album.thumbnail_image || null,
+              null,
               orderData.created_by || orderData.user_id || null,
               orderData.updated_by || orderData.user_id || null,
             ];
