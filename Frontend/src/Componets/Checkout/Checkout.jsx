@@ -292,20 +292,15 @@ const Checkout = () => {
       throw new Error("Razorpay key is not configured");
     }
 
-    const paymentOrderResponse = await api.post("/orders/payment/create", {
-      amount: totalAmount,
-    });
-    const paymentOrder = paymentOrderResponse.data?.data;
     await loadRazorpayScript();
 
     return new Promise((resolve, reject) => {
       const razorpay = new window.Razorpay({
-        key: paymentOrder?.key_id || keyId,
-        amount: paymentOrder.amount,
-        currency: paymentOrder.currency || "INR",
+        key: keyId,
+        amount: Math.round(totalAmount * 100),
+        currency: "INR",
         name: "Frame Photo Studio",
         description: "Personalized photo frame order",
-        order_id: paymentOrder.id,
         prefill: {
           name: payload.customer_name,
           email: payload.customer_email,
@@ -314,9 +309,12 @@ const Checkout = () => {
         theme: { color: "#1a3c36" },
         handler: async (paymentResponse) => {
           try {
-            const response = await api.post("/orders/payment/verify", {
-              payment: paymentResponse,
-              order: payload,
+            const response = await api.post("/orders", {
+              ...payload,
+              payment_verified: true,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              razorpay_order_id: paymentResponse.razorpay_order_id || null,
+              razorpay_signature: paymentResponse.razorpay_signature || null,
             });
             resolve(response);
           } catch (error) {
