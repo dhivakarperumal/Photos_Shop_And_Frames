@@ -174,7 +174,7 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
                 const slotRatio = psw / psh;
                 let baseW = psw, baseH = psh;
-                const fitMode = adj.fitMode || "contain";
+                const fitMode = adj.fitMode || slot.objectFit || "cover";
 
                 if (fitMode === "contain") {
                   if (imgRatio > slotRatio) {
@@ -597,10 +597,11 @@ const AddProducts = () => {
       ...prev,
       [slotId]: { file, preview, url: "" },
     }));
-    invalidateMergedPreview();
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const defaultFit = targetSlot?.objectFit || "cover";
     setSlotAdjustments((prev) => ({
       ...prev,
-      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" },
+      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: defaultFit },
     }));
 
     // Upload to server
@@ -645,7 +646,8 @@ const AddProducts = () => {
 
     e.stopPropagation();
     setActiveDraggingSlot(slotId);
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" };
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: targetSlot?.objectFit || "cover" };
     dragSlotStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -670,14 +672,15 @@ const AddProducts = () => {
       dragSlotStartRef.current.hasMoved = true;
     }
 
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" };
+    const targetSlot = (selectedFrame?.photo_slots || []).find((s) => s.id === slotId);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: targetSlot?.objectFit || "cover" };
     invalidateMergedPreview();
     const slotRect = e.currentTarget.getBoundingClientRect();
     const photoElement = e.currentTarget.querySelector("img");
     const photoRatio = photoElement?.naturalWidth && photoElement?.naturalHeight
       ? photoElement.naturalWidth / photoElement.naturalHeight
       : 1;
-    const fitMode = curr.fitMode || "contain";
+    const fitMode = curr.fitMode || targetSlot?.objectFit || "cover";
     const baseWidth = fitMode === "contain"
       ? Math.min(slotRect.width, slotRect.height * photoRatio)
       : Math.max(slotRect.width, slotRect.height * photoRatio);
@@ -1409,29 +1412,88 @@ const AddProducts = () => {
                                 >
                                   {(() => {
                                     const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                    const fitMode = adj.fitMode || "contain";
+                                    const fitMode = adj.fitMode || slot.objectFit || "cover";
                                     const isContain = fitMode === "contain";
                                     const imageScale = adj.scale || 1.0;
                                     const safePanX = isContain && imageScale <= 1 ? 0 : adj.panX || 0;
                                     const safePanY = isContain && imageScale <= 1 ? 0 : adj.panY || 0;
                                     const rot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
 
+                                    const filterParts = [];
+                                    if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+                                    else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+                                    else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+                                    else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+                                    else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+                                    else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+                                    else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+                                    else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+                                    if (adj.brightness && adj.brightness !== 100) filterParts.push(`brightness(${adj.brightness}%)`);
+                                    if (adj.contrast && adj.contrast !== 100) filterParts.push(`contrast(${adj.contrast}%)`);
+                                    if (adj.saturation && adj.saturation !== 100) filterParts.push(`saturate(${adj.saturation}%)`);
+                                    if (adj.blur > 0) filterParts.push(`blur(${adj.blur}px)`);
+                                    if (adj.sharpness > 0) filterParts.push(`contrast(${100 + Math.round(adj.sharpness * 0.4)}%)`);
+
                                     return (
-                                      <img
-                                        src={uploaded.preview}
-                                        alt={slot.name}
-                                        draggable={false}
-                                        className="pointer-events-none absolute h-full w-full select-none object-center origin-center"
+                                      <div
+                                        className="relative h-full w-full overflow-hidden"
                                         style={{
-                                          top: `calc(50% + ${safePanY}%)`,
-                                          left: `calc(50% + ${safePanX}%)`,
-                                          objectFit: isContain ? "contain" : "cover",
-                                          transform: `translate(-50%, -50%) scale(${imageScale}) rotate(${rot}deg) scaleX(${ 
-                                            adj.flipH ? -1 : 1
-                                          }) scaleY(${adj.flipV ? -1 : 1})`,
-                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                          backgroundColor: adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : "transparent",
+                                          padding: adj.innerBorderWidth ? `${adj.innerBorderWidth}px` : "0px",
+                                          boxShadow: adj.outerBorderWidth && adj.outerBorderColor !== "transparent"
+                                            ? `inset 0 0 0 ${adj.outerBorderWidth}px ${adj.outerBorderColor}`
+                                            : "none",
                                         }}
-                                      />
+                                      >
+                                        <img
+                                          src={uploaded.preview}
+                                          alt={slot.name}
+                                          draggable={false}
+                                          className="pointer-events-none absolute h-full w-full select-none object-center origin-center"
+                                          style={{
+                                            top: `calc(50% + ${safePanY}%)`,
+                                            left: `calc(50% + ${safePanX}%)`,
+                                            objectFit: isContain ? "contain" : "cover",
+                                            transform: `translate(-50%, -50%) scale(${imageScale}) rotate(${rot}deg) scaleX(${ 
+                                              adj.flipH ? -1 : 1
+                                            }) scaleY(${adj.flipV ? -1 : 1})`,
+                                            filter: filterParts.length ? filterParts.join(" ") : "none",
+                                            transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out, filter 0.2s ease",
+                                          }}
+                                        />
+                                        {adj.textOverlay?.text && (
+                                          <div
+                                            className={`pointer-events-none absolute left-1 right-1 flex z-10 ${
+                                              adj.textOverlay.position === "top"
+                                                ? "top-1.5"
+                                                : adj.textOverlay.position === "center"
+                                                ? "top-1/2 -translate-y-1/2"
+                                                : "bottom-1.5"
+                                            } ${
+                                              adj.textOverlay.align === "left"
+                                                ? "justify-start"
+                                                : adj.textOverlay.align === "right"
+                                                ? "justify-end"
+                                                : "justify-center"
+                                            }`}
+                                          >
+                                            <span
+                                              className="px-1.5 py-0.5 truncate text-center max-w-full"
+                                              style={{
+                                                fontFamily: adj.textOverlay.fontFamily || "inherit",
+                                                fontSize: `${Math.max(10, Math.min(18, adj.textOverlay.fontSize || 14))}px`,
+                                                color: adj.textOverlay.color || "#ffffff",
+                                                fontWeight: adj.textOverlay.bold ? "bold" : "normal",
+                                                fontStyle: adj.textOverlay.italic ? "italic" : "normal",
+                                                textShadow: adj.textOverlay.shadow ? "0 1px 3px rgba(0,0,0,0.85)" : "none",
+                                              }}
+                                            >
+                                              {adj.textOverlay.text}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
                                     );
                                   })()}
 
@@ -1454,7 +1516,7 @@ const AddProducts = () => {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                        const nextMode = (curr.fitMode || "contain") === "contain" ? "cover" : "contain";
+                                        const nextMode = (curr.fitMode || slot.objectFit || "cover") === "contain" ? "cover" : "contain";
                                         setSlotAdjustments((prev) => ({
                                           ...prev,
                                           [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
@@ -1465,7 +1527,7 @@ const AddProducts = () => {
                                       className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#333] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
                                       title="Toggle between showing full image vs filling frame"
                                     >
-                                      {(slotAdjustments[slot.id]?.fitMode || "contain") === "contain" ? "Fill Frame" : "Fit Full"}
+                                      {(slotAdjustments[slot.id]?.fitMode || slot.objectFit || "cover") === "contain" ? "Fill Frame" : "Fit Full"}
                                     </button>
 
                                     <button
@@ -1544,7 +1606,7 @@ const AddProducts = () => {
                                 type="button"
                                 onClick={() => {
                                   const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
-                                  const nextMode = (curr.fitMode || "contain") === "contain" ? "cover" : "contain";
+                                  const nextMode = (curr.fitMode || slot.objectFit || "cover") === "contain" ? "cover" : "contain";
                                   setSlotAdjustments((prev) => ({
                                     ...prev,
                                     [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
@@ -1555,7 +1617,7 @@ const AddProducts = () => {
                                 className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2 py-1 text-[11px] font-semibold text-[#555] hover:bg-[#faf7f3]"
                                 title="Toggle fit full image vs fill frame"
                               >
-                                {(slotAdjustments[slot.id]?.fitMode || "contain") === "contain" ? "Fill Frame" : "Fit Full"}
+                                {(slotAdjustments[slot.id]?.fitMode || slot.objectFit || "cover") === "contain" ? "Fill Frame" : "Fit Full"}
                               </button>
                             )}
                             <button
@@ -1632,9 +1694,13 @@ const AddProducts = () => {
               slotPhotos[adjustingSlot.id]?.preview || slotPhotos[adjustingSlot.id]?.url
             }
             slot={adjustingSlot}
-            initialAdjustment={
-              slotAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
-            }
+            initialAdjustment={{
+              panX: 0,
+              panY: 0,
+              scale: 1.0,
+              fitMode: adjustingSlot.objectFit || "cover",
+              ...(slotAdjustments[adjustingSlot.id] || {}),
+            }}
             onSave={(adj) => {
               if (adjustingSlot) {
                 setSlotAdjustments((prev) => ({

@@ -164,8 +164,10 @@ const generateCompositeFrameBlobAndDataUrl = (
 
               const dw = baseW * scale;
               const dh = baseH * scale;
-              const dx = psx + (psw - dw) / 2 + (panX / 100) * psw;
-              const dy = psy + (psh - dh) / 2 + (panY / 100) * psh;
+              const safePanX = fitMode === "contain" && scale <= 1 ? 0 : panX;
+              const safePanY = fitMode === "contain" && scale <= 1 ? 0 : panY;
+              const dx = psx + (psw - dw) / 2 + (safePanX / 100) * psw;
+              const dy = psy + (psh - dh) / 2 + (safePanY / 100) * psh;
 
               // Apply Filters (Canvas filter)
               const filterParts = [];
@@ -463,13 +465,29 @@ const ProductDetails = () => {
     }
 
     const curr = photoAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
-    const maxPan = Math.max(140, ((curr.scale || 1.0) - 1) * 80 + 140);
+    const slot = photoSlots.find((s) => s.id === slotId);
+    const fitMode = curr.fitMode || slot?.objectFit || "cover";
+    const slotRect = e.currentTarget.getBoundingClientRect();
+    const photoElement = e.currentTarget.querySelector("img");
+    const photoRatio = photoElement?.naturalWidth && photoElement?.naturalHeight
+      ? photoElement.naturalWidth / photoElement.naturalHeight
+      : 1;
+    const baseWidth = fitMode === "contain"
+      ? Math.min(slotRect.width, slotRect.height * photoRatio)
+      : Math.max(slotRect.width, slotRect.height * photoRatio);
+    const baseHeight = fitMode === "contain"
+      ? Math.min(slotRect.height, slotRect.width / photoRatio)
+      : Math.max(slotRect.height, slotRect.width / photoRatio);
+    const renderedWidth = baseWidth * (curr.scale || 1.0);
+    const renderedHeight = baseHeight * (curr.scale || 1.0);
+    const maxPanX = Math.max(0, ((renderedWidth - slotRect.width) / 2 / slotRect.width) * 100);
+    const maxPanY = Math.max(0, ((renderedHeight - slotRect.height) / 2 / slotRect.height) * 100);
 
-    const deltaPercentX = dx * 0.35;
-    const deltaPercentY = dy * 0.35;
+    const deltaPercentX = slotRect.width ? (dx / slotRect.width) * 100 : 0;
+    const deltaPercentY = slotRect.height ? (dy / slotRect.height) * 100 : 0;
 
-    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
-    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+    const newPanX = Math.min(maxPanX, Math.max(-maxPanX, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPanY, Math.max(-maxPanY, dragSlotStartRef.current.startPanY + deltaPercentY));
 
     setPhotoAdjustments((prev) => ({
       ...prev,
@@ -866,6 +884,11 @@ const ProductDetails = () => {
                                   {/* PHOTO WITH STUDIO ADJUSTMENTS */}
                                   {(() => {
                                     const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    const fitMode = adj.fitMode || slot.objectFit || "cover";
+                                    const isContain = fitMode === "contain";
+                                    const imageScale = adj.scale || 1.0;
+                                    const safePanX = isContain && imageScale <= 1 ? 0 : adj.panX || 0;
+                                    const safePanY = isContain && imageScale <= 1 ? 0 : adj.panY || 0;
                                     const filterParts = [];
                                     if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
                                     else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
@@ -901,28 +924,12 @@ const ProductDetails = () => {
                                           src={activePhoto}
                                           alt={slot.name}
                                           draggable={false}
-                                          className={`pointer-events-none absolute select-none origin-center ${!userPhoto ? "opacity-75" : ""}`}
+                                          className={`pointer-events-none absolute h-full w-full select-none object-center origin-center ${!userPhoto ? "opacity-75" : ""}`}
                                           style={{
-                                            top: `calc(50% + ${adj.panY || 0}%)`,
-                                            left: `calc(50% + ${adj.panX || 0}%)`,
-                                            ...((adj.fitMode || slot.objectFit) === "contain"
-                                              ? {
-                                                  maxWidth: "100%",
-                                                  maxHeight: "100%",
-                                                  width: "auto",
-                                                  height: "auto",
-                                                  objectFit: "contain",
-                                                }
-                                              : {
-                                                  minWidth: "100%",
-                                                  minHeight: "100%",
-                                                  width: "auto",
-                                                  height: "auto",
-                                                  maxWidth: "none",
-                                                  maxHeight: "none",
-                                                  objectFit: "cover",
-                                                }),
-                                            transform: `translate(-50%, -50%) scale(${adj.scale || 1.0}) rotate(${totalRot}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})`,
+                                            top: `calc(50% + ${safePanY}%)`,
+                                            left: `calc(50% + ${safePanX}%)`,
+                                            objectFit: isContain ? "contain" : "cover",
+                                            transform: `translate(-50%, -50%) scale(${imageScale}) rotate(${totalRot}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})`,
                                             filter: filterParts.length ? filterParts.join(" ") : "none",
                                             transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out, filter 0.2s ease",
                                           }}
@@ -1619,9 +1626,13 @@ const ProductDetails = () => {
             customerPhotos[adjustingSlot.id] || product?.slot_photos?.[adjustingSlot.id]
           }
           slot={adjustingSlot}
-          initialAdjustment={
-            photoAdjustments[adjustingSlot.id] || { panX: 0, panY: 0, scale: 1.0 }
-          }
+          initialAdjustment={{
+            panX: 0,
+            panY: 0,
+            scale: 1.0,
+            fitMode: adjustingSlot.objectFit || "cover",
+            ...(photoAdjustments[adjustingSlot.id] || {}),
+          }}
           onSave={(adj) => {
             if (adjustingSlot) {
               setPhotoAdjustments((prev) => ({
