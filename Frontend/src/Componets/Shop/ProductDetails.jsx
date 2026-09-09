@@ -1449,7 +1449,7 @@ const ProductDetails = () => {
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative my-8 w-full max-w-2xl rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl md:p-8">
+          <div className="relative my-4 flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl md:my-8 md:p-8">
             {/* MODAL HEADER */}
             <div className="flex items-start justify-between border-b border-[#f0e8dc] pb-4">
               <div className="flex items-center gap-3">
@@ -1476,7 +1476,7 @@ const ProductDetails = () => {
             </div>
 
             {/* MODAL CONTENT */}
-            <div className="mt-5 space-y-5">
+            <div className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
               {/* COMPOSITE MERGED PREVIEW */}
               <div className="rounded-2xl border border-[#e8dfd2] bg-[#f7f2ea] p-4 text-center">
                 <div className="relative mx-auto max-w-[320px] overflow-hidden rounded-xl shadow-lg">
