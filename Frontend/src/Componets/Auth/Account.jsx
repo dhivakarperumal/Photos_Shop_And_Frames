@@ -35,6 +35,15 @@ const emptyAddress = {
   landmark: "",
 };
 
+const normalizeAddress = (value = {}) => ({
+  ...emptyAddress,
+  ...value,
+  address_line1: value.address_line1 || value.door_number || "",
+  address_line2: value.address_line2 || value.street_name || "",
+  country: value.country || "India",
+  state: value.state || "Tamil Nadu",
+});
+
 const statusClass = {
   Delivered: "bg-[#e1f2e8] text-[#28724a] border border-[#c3e6d1]",
   Cancelled: "bg-[#fae5e2] text-[#a43e32] border border-[#f5c6cb]",
@@ -160,7 +169,7 @@ const Account = () => {
           mobile_number:
             nextProfile?.mobile_number || nextProfile?.phone || "",
         });
-        setAddress({ ...emptyAddress, ...(addressResponse.data?.data || {}) });
+        setAddress(normalizeAddress(addressResponse.data?.data || {}));
         setOrders(ordersResponse.data?.data || []);
       })
       .catch(() => toast.error("We could not load your account details"));
@@ -194,7 +203,7 @@ const Account = () => {
     setSaving(true);
     try {
       const response = await api.put(`/users/address/${userId}`, address);
-      setAddress({ ...emptyAddress, ...(response.data?.data || address) });
+      setAddress(normalizeAddress(response.data?.data || address));
       setEditingAddress(false);
       toast.success("Address saved successfully");
     } catch (error) {

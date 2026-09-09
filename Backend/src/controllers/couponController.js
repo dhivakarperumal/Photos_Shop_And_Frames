@@ -77,9 +77,23 @@ const deleteCoupon = async (req, res) => {
   }
 };
 
+const validateCoupon = async (req, res) => {
+  try {
+    const { code, order_total } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, message: "Coupon code is required" });
+    }
+    const result = await couponModule.validateCoupon(code, Number(order_total || 0));
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Invalid coupon" });
+  }
+};
+
 module.exports = {
   getAllCoupons,
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  validateCoupon,
 };

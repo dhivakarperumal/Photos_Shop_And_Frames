@@ -13,6 +13,20 @@ const parseJsonArray = (value) => {
   }
 };
 
+let albumOptionsColumnsReady;
+
+const ensureAlbumOptionsColumns = async () => {
+  if (!albumOptionsColumnsReady) {
+    const pool = getDB();
+    albumOptionsColumnsReady = Promise.all([
+      pool.query("ALTER TABLE albums ADD COLUMN IF NOT EXISTS size_options JSON NULL"),
+      pool.query("ALTER TABLE albums ADD COLUMN IF NOT EXISTS color_options JSON NULL"),
+      pool.query("ALTER TABLE albums ADD COLUMN IF NOT EXISTS variants JSON NULL"),
+    ]);
+  }
+  await albumOptionsColumnsReady;
+};
+
 const getNextAlbumId = async () => {
   const query = `
     SELECT product_id
@@ -63,6 +77,9 @@ const resolveUniqueAlbumId = async (requestedId) => {
 const mapRow = (row) => ({
   ...row,
   product_images: parseJsonArray(row.product_images),
+  size_options: parseJsonArray(row.size_options),
+  color_options: parseJsonArray(row.color_options),
+  variants: parseJsonArray(row.variants),
   keywords: parseJsonArray(row.keywords),
   customization_available: Boolean(row.customization_available),
   customer_name_printing: Boolean(row.customer_name_printing),
@@ -79,6 +96,7 @@ const mapRow = (row) => ({
 });
 
 const createAlbum = async (albumData) => {
+  await ensureAlbumOptionsColumns();
   const {
     product_id,
     product_name,
@@ -90,6 +108,7 @@ const createAlbum = async (albumData) => {
     occasion,
     theme,
     size,
+    size_options,
     width,
     height,
     orientation,
@@ -101,6 +120,8 @@ const createAlbum = async (albumData) => {
     cover_material,
     cover_finish,
     cover_color,
+    color_options,
+    variants,
     printing_type,
     print_quality,
     printing_sides,
@@ -145,6 +166,7 @@ const createAlbum = async (albumData) => {
     "occasion",
     "theme",
     "size",
+    "size_options",
     "width",
     "height",
     "orientation",
@@ -156,6 +178,8 @@ const createAlbum = async (albumData) => {
     "cover_material",
     "cover_finish",
     "cover_color",
+    "color_options",
+    "variants",
     "printing_type",
     "print_quality",
     "printing_sides",
@@ -205,6 +229,7 @@ const createAlbum = async (albumData) => {
     occasion,
     theme,
     size,
+    JSON.stringify(Array.isArray(size_options) ? size_options : []),
     width,
     height,
     orientation,
@@ -216,6 +241,8 @@ const createAlbum = async (albumData) => {
     cover_material,
     cover_finish,
     cover_color,
+    JSON.stringify(Array.isArray(color_options) ? color_options : []),
+    JSON.stringify(Array.isArray(variants) ? variants : []),
     printing_type,
     print_quality,
     printing_sides,
@@ -272,6 +299,7 @@ const createAlbum = async (albumData) => {
 };
 
 const getAllAlbums = async () => {
+  await ensureAlbumOptionsColumns();
   const query = `SELECT * FROM albums ORDER BY created_at DESC`;
 
   const pool = getDB();
@@ -280,6 +308,7 @@ const getAllAlbums = async () => {
 };
 
 const getAlbumById = async (productId) => {
+  await ensureAlbumOptionsColumns();
   const query = `SELECT * FROM albums WHERE product_id = ? LIMIT 1`;
   const pool = getDB();
   const [rows] = await pool.query(query, [productId]);
@@ -289,6 +318,7 @@ const getAlbumById = async (productId) => {
 };
 
 const updateAlbum = async (albumId, updateData) => {
+  await ensureAlbumOptionsColumns();
   const {
     product_name,
     product_code,
@@ -299,6 +329,7 @@ const updateAlbum = async (albumId, updateData) => {
     occasion,
     theme,
     size,
+    size_options,
     width,
     height,
     orientation,
@@ -310,6 +341,8 @@ const updateAlbum = async (albumId, updateData) => {
     cover_material,
     cover_finish,
     cover_color,
+    color_options,
+    variants,
     printing_type,
     print_quality,
     printing_sides,
@@ -350,6 +383,7 @@ const updateAlbum = async (albumId, updateData) => {
         occasion = ?,
         theme = ?,
         size = ?,
+        size_options = ?,
         width = ?,
         height = ?,
         orientation = ?,
@@ -361,6 +395,8 @@ const updateAlbum = async (albumId, updateData) => {
         cover_material = ?,
         cover_finish = ?,
         cover_color = ?,
+        color_options = ?,
+        variants = ?,
         printing_type = ?,
         print_quality = ?,
         printing_sides = ?,
@@ -401,6 +437,7 @@ const updateAlbum = async (albumId, updateData) => {
     occasion,
     theme,
     size,
+    JSON.stringify(Array.isArray(size_options) ? size_options : []),
     width,
     height,
     orientation,
@@ -412,6 +449,8 @@ const updateAlbum = async (albumId, updateData) => {
     cover_material,
     cover_finish,
     cover_color,
+    JSON.stringify(Array.isArray(color_options) ? color_options : []),
+    JSON.stringify(Array.isArray(variants) ? variants : []),
     printing_type,
     print_quality,
     printing_sides,
