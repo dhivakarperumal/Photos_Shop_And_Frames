@@ -26,7 +26,7 @@ const Footer = () => {
     { name: "Home", path: "/", icon: FiHome },
     { name: "Shop", path: "/shop", icon: FiShoppingBag },
     { name: "Frames", path: "/frames", icon: FiImage },
-    { name: "Custom Frame", path: "/custom-frame", icon: FiGrid },
+    // { name: "Custom Frame", path: "/custom-frame", icon: FiGrid },
     { name: "Gifts", path: "/gifts", icon: FiGift },
     { name: "Albums", path: "/albums", icon: FiBookOpen },
     { name: "Gallery", path: "/gallery", icon: FiCamera },

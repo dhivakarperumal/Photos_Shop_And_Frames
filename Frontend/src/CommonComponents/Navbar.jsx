@@ -287,14 +287,7 @@ const Navbar = () => {
                     Frames
                   </NavLink>
                 </div>
-                <NavLink
-                  to="/custom-frame"
-                  className={({ isActive }) =>
-                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
-                  }
-                >
-                  Custom Frame
-                </NavLink>
+                
 
                 <NavLink
                   to="/gifts"
