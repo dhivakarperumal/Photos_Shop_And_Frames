@@ -141,8 +141,9 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
                 const slotRatio = sw / sh;
                 let baseW = sw, baseH = sh;
+                const fitMode = adj.fitMode || slot.objectFit || "cover";
 
-                if (slot.objectFit === "contain") {
+                if (fitMode === "contain") {
                   if (imgRatio > slotRatio) {
                     baseW = sw;
                     baseH = sw / imgRatio;
@@ -506,10 +507,10 @@ const AddProducts = () => {
     }
 
     const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
-    const maxPan = Math.max(40, ((curr.scale || 1.0) - 1) * 60 + 40);
+    const maxPan = Math.max(140, ((curr.scale || 1.0) - 1) * 80 + 140);
 
-    const deltaPercentX = dx * 0.35;
-    const deltaPercentY = dy * 0.35;
+    const deltaPercentX = dx * 0.45;
+    const deltaPercentY = dy * 0.45;
 
     const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
     const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
@@ -1166,34 +1167,54 @@ const AddProducts = () => {
                                 >
                                   {(() => {
                                     const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    const fitMode = adj.fitMode || slot.objectFit || "cover";
+                                    const isContain = fitMode === "contain";
+                                    const rot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+
                                     return (
                                       <img
                                         src={uploaded.preview}
                                         alt={slot.name}
                                         draggable={false}
-                                        className="pointer-events-none absolute select-none"
+                                        className="pointer-events-none absolute select-none origin-center"
                                         style={{
-                                          top: "50%",
-                                          left: "50%",
-                                          width: "100%",
-                                          height: "100%",
-                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
-                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
+                                          top: `calc(50% + ${adj.panY || 0}%)`,
+                                          left: `calc(50% + ${adj.panX || 0}%)`,
+                                          ...(isContain
+                                            ? {
+                                                maxWidth: "100%",
+                                                maxHeight: "100%",
+                                                width: "auto",
+                                                height: "auto",
+                                                objectFit: "contain",
+                                              }
+                                            : {
+                                                minWidth: "100%",
+                                                minHeight: "100%",
+                                                width: "auto",
+                                                height: "auto",
+                                                maxWidth: "none",
+                                                maxHeight: "none",
+                                                objectFit: "cover",
+                                              }),
+                                          transform: `translate(-50%, -50%) scale(${adj.scale || 1.0}) rotate(${rot}deg) scaleX(${
+                                            adj.flipH ? -1 : 1
+                                          }) scaleY(${adj.flipV ? -1 : 1})`,
                                           transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
                                         }}
                                       />
                                     );
                                   })()}
 
-                                  {/* HOVER OVERLAY: ADJUST & CHANGE */}
-                                  <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                                  {/* HOVER OVERLAY: ADJUST, FIT/FILL & CHANGE */}
+                                  <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition group-hover:opacity-100 z-20 p-1">
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setAdjustingSlot(slot);
                                       }}
-                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1"
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#1a3c36] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
                                       title="Reposition & Zoom demo photo"
                                     >
                                       <Move className="h-3 w-3 text-[#b07838]" /> Adjust
@@ -1203,9 +1224,27 @@ const AddProducts = () => {
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                        const nextMode = (curr.fitMode || slot.objectFit) === "contain" ? "cover" : "contain";
+                                        setSlotAdjustments((prev) => ({
+                                          ...prev,
+                                          [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
+                                        }));
+                                        toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
+                                      }}
+                                      className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#333] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
+                                      title="Toggle between showing full image vs filling frame"
+                                    >
+                                      {(slotAdjustments[slot.id]?.fitMode || slot.objectFit) === "contain" ? "Fill Frame" : "Fit Full"}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         photoInputRefs.current[slot.id]?.click();
                                       }}
-                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                      className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1 cursor-pointer"
                                       title="Change photo file"
                                     >
                                       <UploadCloud className="h-3 w-3 text-white" /> Change
@@ -1268,6 +1307,24 @@ const AddProducts = () => {
                                 title="Drag and adjust photo position & zoom"
                               >
                                 <Move className="h-3 w-3 text-[#b07838]" /> Adjust
+                              </button>
+                            )}
+                            {uploaded && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                  const nextMode = (curr.fitMode || slot.objectFit) === "contain" ? "cover" : "contain";
+                                  setSlotAdjustments((prev) => ({
+                                    ...prev,
+                                    [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
+                                  }));
+                                  toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2 py-1 text-[11px] font-semibold text-[#555] hover:bg-[#faf7f3]"
+                                title="Toggle fit full image vs fill frame"
+                              >
+                                {(slotAdjustments[slot.id]?.fitMode || slot.objectFit) === "contain" ? "Fill Frame" : "Fit Full"}
                               </button>
                             )}
                             <button
