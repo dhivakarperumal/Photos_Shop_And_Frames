@@ -110,7 +110,7 @@ async function ensureDatabaseSchema() {
         occasion VARCHAR(255),
         theme VARCHAR(255),
         size VARCHAR(255),
-        size_options JSON NULL,
+        size_options JSON NULL DEFAULT ('[]'),
         width VARCHAR(255),
         height VARCHAR(255),
         orientation VARCHAR(50),
@@ -122,13 +122,13 @@ async function ensureDatabaseSchema() {
         cover_material VARCHAR(255),
         cover_finish VARCHAR(255),
         cover_color VARCHAR(255),
-        color_options JSON NULL,
+        color_options JSON NULL DEFAULT ('[]'),
         printing_type VARCHAR(255),
         print_quality VARCHAR(255),
         printing_sides VARCHAR(255),
         binding_type VARCHAR(255),
         thumbnail_image VARCHAR(255),
-        product_images JSON,
+        product_images JSON DEFAULT ('[]'),
         cost_price DECIMAL(10,2) DEFAULT 0,
         selling_price DECIMAL(10,2) DEFAULT 0,
         discount_price DECIMAL(10,2) DEFAULT 0,
@@ -147,7 +147,7 @@ async function ensureDatabaseSchema() {
         featured_product BOOLEAN DEFAULT FALSE,
         meta_title VARCHAR(255),
         meta_description TEXT,
-        keywords JSON,
+        keywords JSON DEFAULT ('[]'),
         created_by VARCHAR(255),
         updated_by VARCHAR(255),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -332,6 +332,28 @@ async function ensureDatabaseSchema() {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
     }
     await connection.query(createAlbumsTableQuery);
+    for (const column of [
+      "size_options",
+      "color_options",
+      "variants",
+      "keywords",
+      "product_images",
+    ]) {
+      try {
+        await connection.query(
+          `ALTER TABLE albums MODIFY COLUMN ${column} JSON NULL DEFAULT ('[]')`
+        );
+      } catch (error) {
+        if (error.code !== "ER_PARSE_ERROR" && error.code !== "ER_BAD_FIELD_ERROR") {
+          throw error;
+        }
+      }
+    }
+    await connection.query(`UPDATE albums SET size_options = '[]' WHERE size_options IS NULL`);
+    await connection.query(`UPDATE albums SET color_options = '[]' WHERE color_options IS NULL`);
+    await connection.query(`UPDATE albums SET variants = '[]' WHERE variants IS NULL`);
+    await connection.query(`UPDATE albums SET keywords = '[]' WHERE keywords IS NULL`);
+    await connection.query(`UPDATE albums SET product_images = '[]' WHERE product_images IS NULL`);
     await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);

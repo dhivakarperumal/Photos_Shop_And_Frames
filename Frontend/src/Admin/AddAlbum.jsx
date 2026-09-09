@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ImagePlus, Plus, Trash2 } from 'lucide-react';
+import { ImagePlus, Plus, Trash2, X, ChevronDown } from 'lucide-react';
 import api from '../api';
 
 const albumProduct = {
@@ -14,7 +14,6 @@ const albumProduct = {
   occasion: 'Wedding',
   theme: 'Classic',
   size: '12 x 18 Inches',
-  sizeOptions: ['12 x 18 Inches'],
   width: '12 Inches',
   height: '18 Inches',
   orientation: 'Landscape',
@@ -25,19 +24,17 @@ const albumProduct = {
   coverType: 'Hard Cover',
   coverMaterial: 'Leatherette',
   coverFinish: 'Matte',
-  coverColor: 'Brown',
-  colorOptions: ['Brown'],
   printingType: 'Digital Printing',
   printQuality: 'High Definition',
   printingSides: 'Both Sides',
   bindingType: 'Lay Flat Binding',
   thumbnailImage: '',
-  productImages: ['', '', ''],
+  productImages: [],
+  mrp: 1200,
+  offerPrice: 999,
   costPrice: 800,
-  sellingPrice: 1200,
-  discountPrice: 999,
   discountPercentage: 17,
-  stockQuantity: 25,
+  stockQuantity: 0,
   minimumStock: 5,
   stockStatus: 'In Stock',
   shortDescription: 'Premium quality customizable photo album.',
@@ -52,6 +49,9 @@ const albumProduct = {
   metaTitle: '',
   metaDescription: '',
   keywords: [],
+  colors: [{ name: 'Brown', code: '#8B4513' }],
+  sizes: ['12 x 18 Inches'],
+  variants: [],
   createdBy: 'Admin',
   createdAt: '',
   updatedBy: 'Admin',
@@ -60,15 +60,42 @@ const albumProduct = {
 
 const fieldStyle = 'w-full rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm text-[#1f1f1f] outline-none focus:border-[#1a3c36]';
 
-const parseOptionList = (value) => {
-  if (Array.isArray(value)) return value;
-  if (typeof value !== 'string' || !value.trim()) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+const calculateDiscount = (mrp, offerPrice) => {
+  if (!mrp || !offerPrice) return 0;
+  return Math.round(((mrp - offerPrice) / mrp) * 100);
+};
+
+const getVariantStockTotal = (variants = []) => (
+  variants.reduce((total, variant) => total + (Number(variant.stock) || 0), 0)
+);
+
+const colorPalette = [
+  ['Black', '#000000'],
+  ['White', '#ffffff'],
+  ['Red', '#ff0000'],
+  ['Orange', '#ffa500'],
+  ['Yellow', '#ffff00'],
+  ['Green', '#008000'],
+  ['Blue', '#0000ff'],
+  ['Purple', '#800080'],
+  ['Pink', '#ffc0cb'],
+  ['Brown', '#8b4513'],
+  ['Gray', '#808080'],
+];
+
+const getColorName = (hexCode) => {
+  const red = Number.parseInt(hexCode.slice(1, 3), 16);
+  const green = Number.parseInt(hexCode.slice(3, 5), 16);
+  const blue = Number.parseInt(hexCode.slice(5, 7), 16);
+
+  return colorPalette.reduce((closest, [name, hex]) => {
+    const paletteRed = Number.parseInt(hex.slice(1, 3), 16);
+    const paletteGreen = Number.parseInt(hex.slice(3, 5), 16);
+    const paletteBlue = Number.parseInt(hex.slice(5, 7), 16);
+    const distance = (red - paletteRed) ** 2 + (green - paletteGreen) ** 2 + (blue - paletteBlue) ** 2;
+
+    return distance < closest.distance ? { name, distance } : closest;
+  }, { name: 'Custom', distance: Number.POSITIVE_INFINITY }).name;
 };
 
 const AddAlbum = () => {
@@ -82,7 +109,9 @@ const AddAlbum = () => {
   const [categories, setCategories] = useState([]);
   const [saving, setSaving] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
-  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [expandedVariant, setExpandedVariant] = useState(null);
+  const [newColor, setNewColor] = useState({ name: '', code: '#000000' });
+  const [newSize, setNewSize] = useState('');
 
   useEffect(() => {
     const fetchAlbumForEdit = async (albumId) => {
@@ -96,6 +125,16 @@ const AddAlbum = () => {
             ? JSON.parse(album.product_images || '[]')
             : [];
 
+        const colors = Array.isArray(album.colors) ? album.colors : 
+                      (album.color && typeof album.color === 'string' ? 
+                       [{ name: album.color, code: '#000000' }] : 
+                       [{ name: 'Brown', code: '#8B4513' }]);
+
+        const sizes = Array.isArray(album.sizes) ? album.sizes :
+                     (album.size ? [album.size] : []);
+
+        const variants = Array.isArray(album.variants) ? album.variants : [];
+
         setFormData({
           ...albumProduct,
           productId: album.product_id || album.productId || 'ALB001',
@@ -108,7 +147,6 @@ const AddAlbum = () => {
           occasion: album.occasion || '',
           theme: album.theme || '',
           size: album.size || '',
-          sizeOptions: parseOptionList(album.size_options),
           width: album.width || '',
           height: album.height || '',
           orientation: album.orientation || 'Landscape',
@@ -119,8 +157,6 @@ const AddAlbum = () => {
           coverType: album.cover_type || album.coverType || '',
           coverMaterial: album.cover_material || album.coverMaterial || '',
           coverFinish: album.cover_finish || album.coverFinish || '',
-          coverColor: album.cover_color || album.coverColor || '',
-          colorOptions: parseOptionList(album.color_options),
           printingType: album.printing_type || album.printingType || '',
           printQuality: album.print_quality || album.printQuality || '',
           printingSides: album.printing_sides || album.printingSides || '',
@@ -128,8 +164,8 @@ const AddAlbum = () => {
           thumbnailImage: album.thumbnail_image || album.thumbnailImage || '',
           productImages: Array.isArray(productImages) ? productImages : [],
           costPrice: album.cost_price ?? album.costPrice ?? 0,
-          sellingPrice: album.selling_price ?? album.sellingPrice ?? 0,
-          discountPrice: album.discount_price ?? album.discountPrice ?? 0,
+          mrp: album.mrp ?? album.selling_price ?? album.sellingPrice ?? 0,
+          offerPrice: album.offer_price ?? album.discount_price ?? album.discountPrice ?? 0,
           discountPercentage: album.discount_percentage ?? album.discountPercentage ?? 0,
           stockQuantity: album.stock_quantity ?? album.stockQuantity ?? 0,
           minimumStock: album.minimum_stock ?? album.minimumStock ?? 0,
@@ -146,6 +182,9 @@ const AddAlbum = () => {
           metaTitle: album.meta_title || album.metaTitle || '',
           metaDescription: album.meta_description || album.metaDescription || '',
           keywords: Array.isArray(album.keywords) ? album.keywords : [],
+          colors,
+          sizes,
+          variants,
         });
       } catch (error) {
         console.error('Failed to load album for edit:', error);
@@ -203,31 +242,10 @@ const AddAlbum = () => {
     }
 
     fetchCategories();
-  }, [editAlbumId, viewAlbumId, mode]);
+  }, [editAlbumId, viewAlbumId, mode, formData.category]);
 
   const selectedCategory = categories.find((category) => category.category_name === formData.category) || categories[0] || null;
   const subCategoryOptions = Array.isArray(selectedCategory?.sub_categories) ? selectedCategory.sub_categories : [];
-
-  const addOption = (field) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: [...(Array.isArray(prev[field]) ? prev[field] : []), ''],
-    }));
-  };
-
-  const updateOption = (field, index, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: prev[field].map((option, optionIndex) => optionIndex === index ? value : option),
-    }));
-  };
-
-  const removeOption = (field, index) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: prev[field].filter((_, optionIndex) => optionIndex !== index),
-    }));
-  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -244,6 +262,19 @@ const AddAlbum = () => {
       return;
     }
 
+    if (name === 'mrp' || name === 'offerPrice') {
+      const newMrp = name === 'mrp' ? Number(value) : formData.mrp;
+      const newOffer = name === 'offerPrice' ? Number(value) : formData.offerPrice;
+      const discount = calculateDiscount(newMrp, newOffer);
+
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+        discountPercentage: discount,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -256,8 +287,6 @@ const AddAlbum = () => {
 
     if (type === 'thumbnail') {
       setUploadingThumb(true);
-    } else {
-      setUploadingGallery(true);
     }
 
     try {
@@ -290,21 +319,18 @@ const AddAlbum = () => {
             productImages: prev.productImages.map((image, index) => index === replaceIndex ? firstUrl : image),
           }));
         }
-      } else {
-        setFormData((prev) => {
-          const productImages = Array.isArray(prev.productImages) ? [...prev.productImages] : [];
-
-          uploadedUrls.forEach((url) => {
-            const index = productImages.findIndex((image) => !image);
-            if (index >= 0) {
-              productImages[index] = url;
-            } else {
-              productImages.push(url);
-            }
-          });
-
-          return { ...prev, productImages: productImages.slice(0, 6) };
-        });
+      } else if (typeof type === 'string' && type.startsWith('variant-')) {
+        const variantIndex = Number(type.replace('variant-', ''));
+        if (uploadedUrls.length > 0 && Number.isInteger(variantIndex)) {
+          setFormData((prev) => ({
+            ...prev,
+            variants: prev.variants.map((v, idx) => 
+              idx === variantIndex 
+                ? { ...v, images: [...(v.images || (v.image ? [v.image] : [])), ...uploadedUrls], image: v.image || uploadedUrls[0] } 
+                : v
+            ),
+          }));
+        }
       }
     } catch (error) {
       console.error(error);
@@ -312,7 +338,6 @@ const AddAlbum = () => {
     } finally {
       event.target.value = '';
       if (type === 'thumbnail') setUploadingThumb(false);
-      else setUploadingGallery(false);
     }
   };
 
@@ -320,10 +345,103 @@ const AddAlbum = () => {
     setFormData((prev) => ({ ...prev, thumbnailImage: '' }));
   };
 
-  const removeGalleryImage = (index) => {
+  const addColor = () => {
+    if (!newColor.name.trim()) {
+      alert('Please enter a color name');
+      return;
+    }
+    const color = { ...newColor, name: newColor.name.trim() };
     setFormData((prev) => ({
       ...prev,
-      productImages: prev.productImages.filter((_, imageIndex) => imageIndex !== index),
+      colors: [...(prev.colors || []), color],
+    }));
+    const latestSize = formData.sizes?.[formData.sizes.length - 1];
+    if (latestSize) addVariant(color.name, latestSize);
+    setNewColor({ name: '', code: '#000000' });
+  };
+
+  const removeColor = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      colors: prev.colors.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addSize = () => {
+    if (!newSize.trim()) {
+      alert('Please enter a size');
+      return;
+    }
+    const size = newSize.trim();
+    setFormData((prev) => ({
+      ...prev,
+      sizes: [...(prev.sizes || []), size],
+    }));
+    const latestColor = formData.colors?.[formData.colors.length - 1];
+    if (latestColor) addVariant(latestColor.name, size);
+    setNewSize('');
+  };
+
+  const removeSize = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      sizes: prev.sizes.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addVariant = (color = '', size = '') => {
+    const newVariant = {
+      id: Date.now(),
+      color,
+      size,
+      mrp: 0,
+      offer: 0,
+      offerPrice: 0,
+      stock: 0,
+      image: '',
+      images: [],
+    };
+    setExpandedVariant((formData.variants || []).length);
+    setFormData((prev) => ({
+      ...prev,
+      variants: [...(prev.variants || []), newVariant],
+    }));
+  };
+
+  const removeVariant = (index) => {
+    setFormData((prev) => {
+      const variants = prev.variants.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        variants,
+        stockQuantity: getVariantStockTotal(variants),
+      };
+    });
+  };
+
+  const updateVariant = (index, field, value) => {
+    setFormData((prev) => {
+      const variants = prev.variants.map((variant, variantIndex) => (
+        variantIndex === index ? { ...variant, [field]: value } : variant
+      ));
+      return {
+        ...prev,
+        variants,
+        ...(field === 'stock' ? { stockQuantity: getVariantStockTotal(variants) } : {}),
+      };
+    });
+  };
+
+  const removeVariantImage = (variantIndex, imageIndex) => {
+    setFormData((prev) => ({
+      ...prev,
+      variants: prev.variants.map((v, i) => {
+        if (i === variantIndex) {
+          const newImages = (v.images || (v.image ? [v.image] : [])).filter((_, imgIdx) => imgIdx !== imageIndex);
+          return { ...v, images: newImages, image: newImages[0] || '' };
+        }
+        return v;
+      }),
     }));
   };
 
@@ -343,7 +461,6 @@ const AddAlbum = () => {
         occasion: formData.occasion,
         theme: formData.theme,
         size: formData.size,
-        size_options: formData.sizeOptions.filter(Boolean),
         width: formData.width,
         height: formData.height,
         orientation: formData.orientation,
@@ -354,8 +471,6 @@ const AddAlbum = () => {
         cover_type: formData.coverType,
         cover_material: formData.coverMaterial,
         cover_finish: formData.coverFinish,
-        cover_color: formData.coverColor,
-        color_options: formData.colorOptions.filter(Boolean),
         printing_type: formData.printingType,
         print_quality: formData.printQuality,
         printing_sides: formData.printingSides,
@@ -363,9 +478,9 @@ const AddAlbum = () => {
         thumbnail_image: formData.thumbnailImage,
         product_images: formData.productImages,
         cost_price: Number(formData.costPrice),
-        selling_price: Number(formData.sellingPrice),
-        discount_price: Number(formData.discountPrice),
-        discount_percentage: Number(formData.discountPercentage),
+        mrp: Number(formData.mrp),
+        offer_price: Number(formData.offerPrice),
+        discount_percentage: formData.discountPercentage,
         stock_quantity: Number(formData.stockQuantity),
         minimum_stock: Number(formData.minimumStock),
         stock_status: formData.stockStatus,
@@ -381,6 +496,9 @@ const AddAlbum = () => {
         meta_title: formData.metaTitle,
         meta_description: formData.metaDescription,
         keywords: formData.keywords,
+        colors: formData.colors,
+        sizes: formData.sizes,
+        variants: formData.variants,
         created_by: 'Admin',
         updated_by: 'Admin',
       };
@@ -402,73 +520,413 @@ const AddAlbum = () => {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] p-4 md:p-6">
-      <div className="mx-auto max-w-[1500px]">
+      <div className="mx-auto max-w-6xl">
+        {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-[2.1rem] font-bold tracking-[-0.05em] text-[#1f1d1b]">
+            <h1 className="text-[2.1rem] font-bold tracking-tighter text-[#1f1d1b]">
               {mode === 'view' ? 'View Album' : mode === 'edit' ? 'Edit Album' : 'Add New Album'}
             </h1>
             <p className="mt-2 text-[13px] text-[#646464]">
-              Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">Albums</span> <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">Add New Album</span>
+              Dashboard <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">Albums</span> <span className="mx-2 text-[#9a9a9a]">&gt;</span> <span className="font-medium text-[#2a2a2a]">{mode === 'view' ? 'View' : mode === 'edit' ? 'Edit' : 'Add New'}</span>
             </p>
           </div>
-
           <button
             type="button"
             onClick={() => navigate('/admin/albums')}
-            className="rounded-xl border border-[#dfe2e5] bg-white px-4 py-2.5 text-sm font-medium text-[#2d2d2d] shadow-sm"
+            className="rounded-xl border border-[#dfe2e5] bg-white px-4 py-2.5 text-sm font-medium text-[#2d2d2d] shadow-sm hover:bg-[#f9f9f9]"
           >
             ← Back to Albums
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 rounded-[20px] border border-[#e7e0d8] bg-white p-5 shadow-sm">
+          {/* Basic Info */}
+          <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
+            <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Basic Information</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2 md:col-span-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Product Name *</span>
+                <input name="productName" value={formData.productName} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Product Code *</span>
+                <input name="productCode" value={formData.productCode} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Category *</span>
+                <select name="category" value={formData.category} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle}>
+                  {categories.length ? (
+                    categories.map((category) => (
+                      <option key={category.category_id || category.category_name} value={category.category_name}>
+                        {category.category_name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="Albums">Albums</option>
+                  )}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Sub Category</span>
+                <select name="subCategory" value={formData.subCategory} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle}>
+                  {subCategoryOptions.length ? (
+                    subCategoryOptions.map((subCategory) => (
+                      <option key={subCategory} value={subCategory}>{subCategory}</option>
+                    ))
+                  ) : (
+                    <option value="">No sub category</option>
+                  )}
+                </select>
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Brand</span>
+                <input name="brand" value={formData.brand} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Album Type</span>
+                <input name="albumType" value={formData.albumType} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-[#2d2d2d]">Description</span>
+                <textarea name="description" value={formData.description} onChange={handleChange} disabled={mode === 'view'} rows={6} className={`${fieldStyle} resize-none`} />
+              </label>
+            </div>
+          </div>
+
+          {/* Colors & Sizes Section */}
+          <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Colors Subsection */}
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-[#1f1d1b]">Product Colors</h2>
+                  {mode !== 'view' && (
+                    <button
+                      type="button"
+                      onClick={addColor}
+                      className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </button>
+                  )}
+                </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {(formData.colors || []).map((color, index) => (
+                    <div key={`color-${index}`} className="flex items-center gap-2 rounded-lg bg-white p-2 border border-[#dfe2e5]">
+                      <div
+                        className="h-6 w-6 rounded border border-[#dfe2e5]"
+                        style={{ backgroundColor: color.code }}
+                        title={color.code}
+                      />
+                      <span className="text-sm font-medium text-[#2d2d2d]">{color.name}</span>
+                      <span className="text-xs text-[#777]">({color.code})</span>
+                      {mode !== 'view' && (
+                        <button
+                          type="button"
+                          onClick={() => removeColor(index)}
+                          className="ml-1 text-[#b42318] hover:text-[#8e1c14]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {mode !== 'view' && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Color name"
+                      value={newColor.name}
+                      onChange={(e) => setNewColor({ ...newColor, name: e.target.value })}
+                      className={fieldStyle}
+                    />
+                    <input
+                      type="color"
+                      value={newColor.code}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        setNewColor({ ...newColor, code, name: getColorName(code) });
+                      }}
+                      className="w-20 h-10 rounded-xl border border-[#dfe2e5] cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Sizes Subsection */}
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-[#1f1d1b]">Product Sizes</h2>
+                  {mode !== 'view' && (
+                    <button
+                      type="button"
+                      onClick={addSize}
+                      className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </button>
+                  )}
+                </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {(formData.sizes || []).map((size, index) => (
+                    <div key={`size-${index}`} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 border border-[#dfe2e5]">
+                      <span className="text-sm font-semibold text-[#2d2d2d]">{size}</span>
+                      {mode !== 'view' && (
+                        <button
+                          type="button"
+                          onClick={() => removeSize(index)}
+                          className="text-[#b42318] hover:text-[#8e1c14]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {mode !== 'view' && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Size (e.g., 12 x 18)"
+                      value={newSize}
+                      onChange={(e) => setNewSize(e.target.value)}
+                      className={fieldStyle}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Product Variants */}
+          <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#1f1d1b]">Product Variants</h2>
+              {mode !== 'view' && (
+                <button
+                  type="button"
+                  onClick={addVariant}
+                  className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Variant
+                </button>
+              )}
+            </div>
+
+            {(formData.variants || []).length === 0 ? (
+              <p className="text-sm text-[#777]">No variants added yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {formData.variants.map((variant, idx) => (
+                  <div
+                    key={variant.id || idx}
+                    className="rounded-lg border border-[#dfe2e5] bg-white p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedVariant(expandedVariant === idx ? null : idx)}
+                        className="flex min-w-0 flex-1 items-center justify-between text-left"
+                      >
+                        <div>
+                          <p className="font-semibold text-[#2d2d2d]">
+                            Variant {idx + 1}: {variant.color} - {variant.size}
+                          </p>
+                          <p className="text-xs text-[#777]">₹{variant.mrp} → ₹{variant.offer} → ₹{variant.offerPrice} | Stock: {variant.stock}</p>
+                        </div>
+                        <ChevronDown
+                          className={`h-5 w-5 transition-transform ${expandedVariant === idx ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                      {mode !== 'view' && (
+                        <button
+                          type="button"
+                          aria-label={`Delete variant ${idx + 1}`}
+                          onClick={() => removeVariant(idx)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#b42318] hover:bg-[#fff5f5]"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {expandedVariant === idx && (
+                      <div className="mt-4 border-t border-[#dfe2e5] pt-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Color</span>
+                            <select
+                              value={variant.color}
+                              onChange={(e) => updateVariant(idx, 'color', e.target.value)}
+                              disabled={mode === 'view'}
+                              className={fieldStyle}
+                            >
+                              <option value="">Select color</option>
+                              {(formData.colors || []).map((color, i) => (
+                                <option key={i} value={color.name}>{color.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Size</span>
+                            <select
+                              value={variant.size}
+                              onChange={(e) => updateVariant(idx, 'size', e.target.value)}
+                              disabled={mode === 'view'}
+                              className={fieldStyle}
+                            >
+                              <option value="">Select size</option>
+                              {(formData.sizes || []).map((size, i) => (
+                                <option key={i} value={size}>{size}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">MRP (₹)</span>
+                            <input
+                              type="number"
+                              value={variant.mrp}
+                              onChange={(e) => {
+                                const newMrp = Number(e.target.value);
+                                const newSellingPrice = newMrp - variant.offer;
+                                updateVariant(idx, 'mrp', newMrp);
+                                updateVariant(idx, 'offerPrice', newSellingPrice);
+                              }}
+                              disabled={mode === 'view'}
+                              className={fieldStyle}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Offer Price (₹)</span>
+                            <input
+                              type="number"
+                              value={variant.offer}
+                              onChange={(e) => {
+                                const newOffer = Number(e.target.value);
+                                const newSellingPrice = variant.mrp - newOffer;
+                                updateVariant(idx, 'offer', newOffer);
+                                updateVariant(idx, 'offerPrice', newSellingPrice);
+                              }}
+                              disabled={mode === 'view'}
+                              className={fieldStyle}
+                            />
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Selling Price (₹)</span>
+                            <div className="rounded-xl border border-[#dfe2e5] bg-[#faf9f8] px-3 py-2.5 text-sm font-semibold text-[#1a3c36]">
+                              {variant.mrp - variant.offer}
+                            </div>
+                          </label>
+                          <label className="space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Stock Quantity</span>
+                            <input
+                              type="number"
+                              value={variant.stock}
+                              onChange={(e) => updateVariant(idx, 'stock', Number(e.target.value))}
+                              disabled={mode === 'view'}
+                              className={fieldStyle}
+                            />
+                          </label>
+                        </div>
+
+                        {/* Variant Image */}
+                        <div className="mt-4 border-t border-[#dfe2e5] pt-4">
+                          <label className="block space-y-2">
+                            <span className="text-sm font-medium text-[#2d2d2d]">Variant Image</span>
+                            <input
+                              id={`variant-upload-${idx}`}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => handleImageUpload(e, `variant-${idx}`)}
+                              className="sr-only"
+                              disabled={mode === 'view'}
+                            />
+                            <div className="flex flex-wrap gap-3">
+                              {(variant.images || (variant.image ? [variant.image] : [])).map((image, imageIndex) => (
+                                <div key={`${image}-${imageIndex}`} className="relative h-24 w-24">
+                                  <img
+                                    src={image}
+                                    alt={`Variant ${idx + 1} image ${imageIndex + 1}`}
+                                    className="h-full w-full rounded-lg border border-[#dfe2e5] object-cover"
+                                  />
+                                  {mode !== 'view' && (
+                                    <button
+                                      type="button"
+                                      aria-label={`Remove variant image ${imageIndex + 1}`}
+                                      onClick={() => removeVariantImage(idx, imageIndex)}
+                                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#b42318] text-white shadow-md hover:bg-[#8e1c14]"
+                                    >
+                                      <Trash2 className="h-2.5 w-2.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              {mode !== 'view' && (
+                                <label
+                                  htmlFor={`variant-upload-${idx}`}
+                                  className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-[#cbd4d0] bg-white text-[#6e8379] hover:border-[#1a3c36] hover:text-[#1a3c36]"
+                                >
+                                  <ImagePlus className="h-4 w-4" />
+                                  <span className="text-xs font-semibold">Add</span>
+                                </label>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+
+                        {mode !== 'view' && (
+                          <button
+                            type="button"
+                            onClick={() => removeVariant(idx)}
+                            className="mt-4 inline-flex items-center gap-1 rounded-lg border border-[#f1d8d8] bg-[#fff5f5] px-3 py-2 text-xs font-semibold text-[#b42318] hover:bg-[#ffe5e5]"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Remove Variant
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Album Details, Stock, Description, etc. */}
           <div className="grid gap-6 xl:grid-cols-2">
             <div className="space-y-6">
               <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Basic Information</h2>
+                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Album Details</h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2 md:col-span-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Product Name *</span>
-                    <input name="productName" value={formData.productName} onChange={handleChange} className={fieldStyle} />
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-[#2d2d2d]">Occasion</span>
+                    <input name="occasion" value={formData.occasion} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Product Code *</span>
-                    <input name="productCode" value={formData.productCode} onChange={handleChange} className={fieldStyle} />
+                    <span className="text-sm font-medium text-[#2d2d2d]">Theme</span>
+                    <input name="theme" value={formData.theme} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Category *</span>
-                    <select name="category" value={formData.category} onChange={handleChange} className={fieldStyle}>
-                      {categories.length ? (
-                        categories.map((category) => (
-                          <option key={category.category_id || category.category_name} value={category.category_name}>
-                            {category.category_name}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="Albums">Albums</option>
-                      )}
-                    </select>
+                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Type</span>
+                    <input name="coverType" value={formData.coverType} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Sub Category</span>
-                    <select name="subCategory" value={formData.subCategory} onChange={handleChange} className={fieldStyle}>
-                      {subCategoryOptions.length ? (
-                        subCategoryOptions.map((subCategory) => (
-                          <option key={subCategory} value={subCategory}>{subCategory}</option>
-                        ))
-                      ) : (
-                        <option value="">No sub category</option>
-                      )}
-                    </select>
+                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Material</span>
+                    <input name="coverMaterial" value={formData.coverMaterial} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Brand</span>
-                    <input name="brand" value={formData.brand} onChange={handleChange} className={fieldStyle} />
+                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Finish</span>
+                    <input name="coverFinish" value={formData.coverFinish} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Album Type</span>
-                    <input name="albumType" value={formData.albumType} onChange={handleChange} className={fieldStyle} />
+                    <span className="text-sm font-medium text-[#2d2d2d]">Printing Type</span>
+                    <input name="printingType" value={formData.printingType} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                 </div>
               </div>
@@ -478,97 +936,20 @@ const AddAlbum = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Total Pages</span>
-                    <input name="totalPages" type="number" value={formData.totalPages} onChange={handleChange} className={fieldStyle} />
+                    <input name="totalPages" type="number" value={formData.totalPages} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Sheet Count</span>
-                    <input name="sheetCount" type="number" value={formData.sheetCount} onChange={handleChange} className={fieldStyle} />
+                    <input name="sheetCount" type="number" value={formData.sheetCount} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Page Material</span>
-                    <input name="pageMaterial" value={formData.pageMaterial} onChange={handleChange} className={fieldStyle} />
+                    <input name="pageMaterial" value={formData.pageMaterial} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Page Thickness</span>
-                    <input name="pageThickness" value={formData.pageThickness} onChange={handleChange} className={fieldStyle} />
+                    <input name="pageThickness" value={formData.pageThickness} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Product Images</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Thumbnail Image</span>
-                    <input id="album-thumbnail-upload" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'thumbnail')} className="sr-only" />
-                    {uploadingThumb && <span className="text-xs text-[#1a3c36]">Uploading...</span>}
-                    <div className="relative mt-2 h-28 w-28">
-                      {formData.thumbnailImage ? (
-                        <img src={formData.thumbnailImage} alt="thumb" className="h-full w-full rounded-xl border border-[#dfe2e5] object-cover" />
-                      ) : (
-                        <label htmlFor="album-thumbnail-upload" className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#cbd4d0] bg-white text-[#6e8379] hover:border-[#1a3c36] hover:text-[#1a3c36]"><ImagePlus className="h-5 w-5" /><span className="text-[10px] font-semibold">Add image</span></label>
-                      )}
-                      {formData.thumbnailImage && <div className="absolute right-1 top-1 flex gap-1"><label htmlFor="album-thumbnail-upload" title="Replace thumbnail" className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-[#1a3c36] text-white shadow-md hover:bg-[#28574e]"><ImagePlus className="h-3.5 w-3.5" /></label><button type="button" onClick={removeThumbnail} title="Delete thumbnail" className="flex h-7 w-7 items-center justify-center rounded-full bg-[#b42318] text-white shadow-md hover:bg-[#8e1c14]"><Trash2 className="h-3.5 w-3.5" /></button></div>}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Product Images</span>
-                    <input id="album-gallery-upload" type="file" accept="image/*" multiple onChange={(e) => handleImageUpload(e, 'gallery')} className="sr-only" />
-                    {uploadingGallery && <span className="text-xs text-[#1a3c36]">Uploading...</span>}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {formData.productImages.map((img, idx) => (img ? <div key={`${img}-${idx}`} className="relative h-20 w-20"><input id={`album-gallery-replace-${idx}`} type="file" accept="image/*" onChange={(e) => handleImageUpload(e, `gallery-replace-${idx}`)} className="sr-only" /><img src={img} alt={`gallery-${idx}`} className="h-full w-full rounded-xl border border-[#dfe2e5] object-cover" /><div className="absolute right-1 top-1 flex gap-1"><label htmlFor={`album-gallery-replace-${idx}`} title="Replace image" className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-[#1a3c36] text-white shadow-md hover:bg-[#28574e]"><ImagePlus className="h-3 w-3" /></label><button type="button" onClick={() => removeGalleryImage(idx)} title="Delete image" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#b42318] text-white shadow-md hover:bg-[#8e1c14]"><Trash2 className="h-3 w-3" /></button></div></div> : null))}
-                      <label htmlFor="album-gallery-upload" title="Add gallery images" className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#cbd4d0] bg-white text-[#6e8379] hover:border-[#1a3c36] hover:text-[#1a3c36]"><ImagePlus className="h-4 w-4" /><span className="text-[10px] font-semibold">Add</span></label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Album Details</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Occasion</span>
-                    <input name="occasion" value={formData.occasion} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Theme</span>
-                    <input name="theme" value={formData.theme} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Type</span>
-                    <input name="coverType" value={formData.coverType} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Material</span>
-                    <input name="coverMaterial" value={formData.coverMaterial} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Finish</span>
-                    <input name="coverFinish" value={formData.coverFinish} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Cover Color</span>
-                    <input name="coverColor" value={formData.coverColor} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                </div>
-                <div className="mt-5 border-t border-[#e7e0d8] pt-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[#2d2d2d]">Available Colours</p>
-                      <p className="mt-1 text-xs text-[#777]">Add the cover colours customers can choose.</p>
-                    </div>
-                    <button type="button" onClick={() => addOption('colorOptions')} className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"><Plus className="h-3.5 w-3.5" /> Add colour</button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {(formData.colorOptions || []).map((option, index) => (
-                      <div key={`colour-${index}`} className="flex items-center gap-2">
-                        <input value={option} onChange={(event) => updateOption('colorOptions', index, event.target.value)} placeholder="e.g. Brown" className={fieldStyle} />
-                        <button type="button" onClick={() => removeOption('colorOptions', index)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#b42318]" aria-label="Remove colour"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
 
@@ -577,182 +958,97 @@ const AddAlbum = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Size</span>
-                    <input name="size" value={formData.size} onChange={handleChange} className={fieldStyle} />
+                    <input name="size" value={formData.size} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Orientation</span>
-                    <select name="orientation" value={formData.orientation} onChange={handleChange} className={fieldStyle}>
+                    <select name="orientation" value={formData.orientation} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle}>
                       <option>Landscape</option>
                       <option>Portrait</option>
                     </select>
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Width</span>
-                    <input name="width" value={formData.width} onChange={handleChange} className={fieldStyle} />
+                    <input name="width" value={formData.width} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Height</span>
-                    <input name="height" value={formData.height} onChange={handleChange} className={fieldStyle} />
+                    <input name="height" value={formData.height} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
                 </div>
-                <div className="mt-5 border-t border-[#e7e0d8] pt-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[#2d2d2d]">Available Sizes</p>
-                      <p className="mt-1 text-xs text-[#777]">Add every size customers can choose.</p>
-                    </div>
-                    <button type="button" onClick={() => addOption('sizeOptions')} className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white hover:bg-[#214a42]"><Plus className="h-3.5 w-3.5" /> Add size</button>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {(formData.sizeOptions || []).map((option, index) => (
-                      <div key={`size-${index}`} className="flex items-center gap-2">
-                        <input value={option} onChange={(event) => updateOption('sizeOptions', index, event.target.value)} placeholder="e.g. 12 x 18 Inches" className={fieldStyle} />
-                        <button type="button" onClick={() => removeOption('sizeOptions', index)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#f1d8d8] bg-[#fff5f5] text-[#b42318]" aria-label="Remove size"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    ))}
-                  </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
+                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Stock Information</h2>
+                <div className="space-y-4">
+                  <label className="space-y-2 block">
+                    <span className="text-sm font-medium text-[#2d2d2d]">Stock Quantity</span>
+                    <input name="stockQuantity" type="number" value={formData.stockQuantity} readOnly disabled={mode === 'view'} className={fieldStyle} />
+                  </label>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Printing & Binding</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Printing Type</span>
-                    <input name="printingType" value={formData.printingType} onChange={handleChange} className={fieldStyle} />
+                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Customization Options</h2>
+                <div className="space-y-3">
+                  {[
+                    ['customizationAvailable', 'Customization Available'],
+                    ['customerNamePrinting', 'Customer Name Printing'],
+                    ['photoUploadRequired', 'Photo Upload Required'],
+                    ['customCoverDesign', 'Custom Cover Design'],
+                    ['featuredProduct', 'Featured Product'],
+                  ].map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-3 rounded-lg border border-[#dfe2e5] bg-white px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        name={key}
+                        checked={formData[key]}
+                        onChange={handleChange}
+                        disabled={mode === 'view'}
+                        className="h-4 w-4 rounded border-[#dfe2e5] text-[#1a3c36] focus:ring-[#1a3c36]"
+                      />
+                      <span className="text-sm font-medium text-[#2d2d2d]">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
+                <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Delivery & Status</h2>
+                <div className="space-y-4">
+                  <label className="space-y-2 block">
+                    <span className="text-sm font-medium text-[#2d2d2d]">Estimated Delivery Days</span>
+                    <input name="estimatedDeliveryDays" type="number" value={formData.estimatedDeliveryDays} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
                   </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Print Quality</span>
-                    <input name="printQuality" value={formData.printQuality} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Printing Sides</span>
-                    <input name="printingSides" value={formData.printingSides} onChange={handleChange} className={fieldStyle} />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Binding Type</span>
-                    <input name="bindingType" value={formData.bindingType} onChange={handleChange} className={fieldStyle} />
+                  <label className="space-y-2 block">
+                    <span className="text-sm font-medium text-[#2d2d2d]">Status</span>
+                    <select name="status" value={formData.status} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle}>
+                      <option>Active</option>
+                      <option>Inactive</option>
+                    </select>
                   </label>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5 xl:col-span-2">
-              <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Description</h2>
-              <label className="space-y-2 block">
-                <span className="text-sm font-medium text-[#2d2d2d]">Short Description</span>
-                <input name="shortDescription" value={formData.shortDescription} onChange={handleChange} className={fieldStyle} />
-              </label>
-              <label className="mt-4 block space-y-2">
-                <span className="text-sm font-medium text-[#2d2d2d]">Description</span>
-                <textarea name="description" value={formData.description} onChange={handleChange} rows={6} className={`${fieldStyle} resize-none`} />
-              </label>
-            </div>
-
-            <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-              <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Pricing</h2>
-              <div className="space-y-4">
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Cost Price</span>
-                  <input name="costPrice" type="number" value={formData.costPrice} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Selling Price</span>
-                  <input name="sellingPrice" type="number" value={formData.sellingPrice} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Discount Price</span>
-                  <input name="discountPrice" type="number" value={formData.discountPrice} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Discount Percentage</span>
-                  <input name="discountPercentage" type="number" value={formData.discountPercentage} onChange={handleChange} className={fieldStyle} />
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-              <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Stock Information</h2>
-              <div className="space-y-4">
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Stock Quantity</span>
-                  <input name="stockQuantity" type="number" value={formData.stockQuantity} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Minimum Stock</span>
-                  <input name="minimumStock" type="number" value={formData.minimumStock} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Stock Status</span>
-                  <select name="stockStatus" value={formData.stockStatus} onChange={handleChange} className={fieldStyle}>
-                    <option>In Stock</option>
-                    <option>Low Stock</option>
-                    <option>Out of Stock</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-              <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Customization Options</h2>
-              <div className="space-y-3">
-                {[
-                  ['customizationAvailable', 'Customization Available'],
-                  ['customerNamePrinting', 'Customer Name Printing'],
-                  ['photoUploadRequired', 'Photo Upload Required'],
-                  ['customCoverDesign', 'Custom Cover Design'],
-                  ['featuredProduct', 'Featured Product'],
-                ].map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-3 rounded-lg border border-[#dfe2e5] bg-white px-3 py-2.5">
-                    <input
-                      type="checkbox"
-                      name={key}
-                      checked={formData[key]}
-                      onChange={handleChange}
-                      className="h-4 w-4 rounded border-[#dfe2e5] text-[#1a3c36] focus:ring-[#1a3c36]"
-                    />
-                    <span className="text-sm font-medium text-[#2d2d2d]">{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-[#e7e0d8] bg-[#faf9f8] p-5">
-              <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Delivery & SEO</h2>
-              <div className="space-y-4">
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Estimated Delivery Days</span>
-                  <input name="estimatedDeliveryDays" type="number" value={formData.estimatedDeliveryDays} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Status</span>
-                  <select name="status" value={formData.status} onChange={handleChange} className={fieldStyle}>
-                    <option>Active</option>
-                    <option>Inactive</option>
-                  </select>
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Meta Title</span>
-                  <input name="metaTitle" value={formData.metaTitle} onChange={handleChange} className={fieldStyle} />
-                </label>
-                <label className="space-y-2 block">
-                  <span className="text-sm font-medium text-[#2d2d2d]">Meta Description</span>
-                  <textarea name="metaDescription" value={formData.metaDescription} onChange={handleChange} rows={3} className={`${fieldStyle} resize-none`} />
-                </label>
-              </div>
-            </div>
-          </div>
-
+          {/* Form Actions */}
           <div className="flex justify-end gap-3 border-t border-[#ece9e5] pt-5">
-            <button type="button" onClick={() => navigate('/admin/albums')} className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium text-[#2d2d2d]">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/albums')}
+              className="rounded-xl border border-[#dfe2e5] bg-white px-5 py-2.5 text-sm font-medium text-[#2d2d2d] hover:bg-[#f9f9f9]"
+            >
               Cancel
             </button>
             {mode !== 'view' && (
-              <button type="submit" disabled={saving} className="rounded-xl bg-[#1a3c36] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] disabled:opacity-70">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl bg-[#1a3c36] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_6px_14px_rgba(26,60,54,0.18)] disabled:opacity-70 hover:bg-[#214a42]"
+              >
                 {saving ? 'Saving...' : mode === 'edit' ? 'Update Album' : 'Save Album'}
               </button>
             )}
