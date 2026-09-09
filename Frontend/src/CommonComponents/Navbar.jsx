@@ -366,13 +366,13 @@ const Navbar = () => {
                   onClick={() =>
                     navigate(isLoggedIn ? "/account?tab=orders" : "/login")
                   }
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
                   aria-label="My Orders"
                   title="My Orders"
                 >
-                  <FiPackage className="text-lg" />
+                  <FiPackage className="text-base sm:text-lg" />
                   {undeliveredOrdersCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111] shadow-xs">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] shadow-xs sm:h-5 sm:w-5 sm:text-[10px]">
                       {undeliveredOrdersCount}
                     </span>
                   )}
@@ -383,12 +383,12 @@ const Navbar = () => {
                   onClick={() =>
                     openFavorites ? openFavorites() : navigate("/account")
                   }
-                  className="relative hidden h-10 w-10 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:flex sm:h-11 sm:w-11"
+                  className="relative hidden h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:flex sm:h-11 sm:w-11"
                   aria-label="Open favorites"
                 >
-                  <FiHeart className="text-lg" />
+                  <FiHeart className="text-base sm:text-lg" />
                   {wishlist.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] sm:h-5 sm:w-5 sm:text-[10px]">
                       {wishlist.length}
                     </span>
                   )}
@@ -397,12 +397,12 @@ const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => (openCart ? openCart() : navigate("/cart"))}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
                   aria-label="Cart"
                 >
-                  <FiShoppingCart className="text-lg" />
+                  <FiShoppingCart className="text-base sm:text-lg" />
                   {cart.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] sm:h-5 sm:w-5 sm:text-[10px]">
                       {cart.length}
                     </span>
                   )}
@@ -413,7 +413,7 @@ const Navbar = () => {
                     <button
                       type="button"
                       onClick={() => setProfileDropdown((prev) => !prev)}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1b1a18] text-sm font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623] sm:h-11 sm:w-11"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1b1a18] text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623] sm:h-11 sm:w-11 sm:text-sm"
                       aria-label="Open profile menu"
                     >
                       {userInitial}
@@ -516,11 +516,11 @@ const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => setMobileMenu((current) => !current)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] xl:hidden sm:h-11 sm:w-11"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] xl:hidden sm:h-11 sm:w-11"
                   aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
                   aria-expanded={mobileMenu}
                 >
-                  {mobileMenu ? <FiX className="text-lg" /> : <HiOutlineMenuAlt3 className="text-xl" />}
+                  {mobileMenu ? <FiX className="text-base sm:text-lg" /> : <HiOutlineMenuAlt3 className="text-lg sm:text-xl" />}
                 </button>
               </div>
             </div>
@@ -587,6 +587,15 @@ const Navbar = () => {
                   <button type="button" onClick={() => { setMobileMenu(false); openCart ? openCart() : navigate("/cart"); }} className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-[#d79d4a] px-3 py-3 text-xs font-bold text-[#1b1a18] transition hover:bg-[#e4b568] sm:col-span-1">
                     <FiShoppingCart /> Cart {cart.length > 0 ? `(${cart.length})` : ""}
                   </button>
+                  {!isLoggedIn && (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenu(false)}
+                      className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-[#d79d4a] px-3 py-3 text-xs font-bold text-[#f2d19b] transition hover:bg-white/10 sm:col-span-3"
+                    >
+                      <FiUser /> Login
+                    </Link>
+                  )}
                 </div>
               </nav>
             </PageContainer>
