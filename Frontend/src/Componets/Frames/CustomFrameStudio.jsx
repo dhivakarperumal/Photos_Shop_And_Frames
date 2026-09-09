@@ -109,6 +109,7 @@ const CustomFrameStudio = () => {
 
   // Drag interaction
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0 });
   const fileInputRefs = useRef({});
 
@@ -309,16 +310,35 @@ const CustomFrameStudio = () => {
         ...prev,
         [slotId]: url,
       }));
-      // Reset pan/zoom for freshly uploaded photo
-      updateActiveAdjustment({ panX: 0, panY: 0, scale: 1.0 });
+      // Reset pan/zoom and activate freshly uploaded photo
+      setActiveSlotId(slotId);
+      setPhotoAdjustments((prev) => ({
+        ...prev,
+        [slotId]: {
+          ...(prev[slotId] || {}),
+          panX: 0,
+          panY: 0,
+          scale: 1.0,
+        },
+      }));
       toast.success(`Photo uploaded to ${photoSlots.find((s) => s.id === slotId)?.name || "slot"}!`);
     } catch (err) {
       console.error("Photo upload error:", err);
       toast.error("Upload failed, using local preview.");
       const localUrl = URL.createObjectURL(file);
+      setActiveSlotId(slotId);
       setCustomerPhotos((prev) => ({
         ...prev,
         [slotId]: localUrl,
+      }));
+      setPhotoAdjustments((prev) => ({
+        ...prev,
+        [slotId]: {
+          ...(prev[slotId] || {}),
+          panX: 0,
+          panY: 0,
+          scale: 1.0,
+        },
       }));
     } finally {
       setUploadingSlotId(null);
@@ -326,12 +346,14 @@ const CustomFrameStudio = () => {
     }
   };
 
-  // Drag-to-pan handlers on active slot photo
-  const handlePointerDown = (e) => {
-    if (!activeSlotId) return;
-    e.preventDefault();
+  // Drag-to-pan handlers on slot photo (mouse cursor & touch drag)
+  const handlePointerDown = (slotId, e) => {
+    // Only accept left mouse click (0) or touch/pen
+    if (e.button !== undefined && e.button !== 0) return;
+    setActiveSlotId(slotId);
+    isDraggingRef.current = true;
     setIsDragging(true);
-    const curr = activeAdjustment;
+    const curr = photoAdjustments[slotId] || {};
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -343,8 +365,8 @@ const CustomFrameStudio = () => {
     } catch (err) {}
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDragging || !activeSlotId) return;
+  const handlePointerMove = (slotId, e) => {
+    if (!isDraggingRef.current) return;
     e.preventDefault();
 
     const dx = e.clientX - dragStartRef.current.x;
@@ -353,7 +375,8 @@ const CustomFrameStudio = () => {
     const deltaPercentX = (dx / 240) * 100;
     const deltaPercentY = (dy / 240) * 100;
 
-    const maxPan = Math.max(50, ((activeAdjustment.scale || 1.0) - 1) * 70 + 50);
+    const curr = photoAdjustments[slotId] || {};
+    const maxPan = Math.max(50, ((curr.scale || 1.0) - 1) * 70 + 50);
 
     const newPanX = Math.min(
       maxPan,
@@ -364,16 +387,21 @@ const CustomFrameStudio = () => {
       Math.max(-maxPan, dragStartRef.current.startPanY + deltaPercentY)
     );
 
-    updateActiveAdjustment({
-      panX: Math.round(newPanX * 10) / 10,
-      panY: Math.round(newPanY * 10) / 10,
-    });
+    setPhotoAdjustments((prev) => ({
+      ...prev,
+      [slotId]: {
+        ...(prev[slotId] || {}),
+        panX: Math.round(newPanX * 10) / 10,
+        panY: Math.round(newPanY * 10) / 10,
+      },
+    }));
   };
 
   const handlePointerUp = (e) => {
+    isDraggingRef.current = false;
     setIsDragging(false);
     try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      if (e.currentTarget?.hasPointerCapture?.(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId);
       }
     } catch (err) {}
@@ -881,12 +909,12 @@ const CustomFrameStudio = () => {
                       >
                         {photo ? (
                           <div
-                            onPointerDown={isActive ? handlePointerDown : undefined}
-                            onPointerMove={isActive ? handlePointerMove : undefined}
-                            onPointerUp={isActive ? handlePointerUp : undefined}
-                            onPointerCancel={isActive ? handlePointerUp : undefined}
+                            onPointerDown={(e) => handlePointerDown(slot.id, e)}
+                            onPointerMove={(e) => handlePointerMove(slot.id, e)}
+                            onPointerUp={handlePointerUp}
+                            onPointerCancel={handlePointerUp}
                             onWheel={isActive ? handleWheel : undefined}
-                            className={`relative h-full w-full overflow-hidden ${
+                            className={`relative h-full w-full overflow-hidden touch-none select-none ${
                               isActive && isDragging ? "cursor-grabbing" : "cursor-grab"
                             }`}
                           >
@@ -961,17 +989,37 @@ const CustomFrameStudio = () => {
                               {isActive && <span className="text-[8px] text-[#4ade80]">• Editing</span>}
                             </div>
 
-                            {/* Slot Hover Overlay for Change */}
-                            <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
+                            {/* Top-Right Quick Change Photo button */}
+                            <button
+                              type="button"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveSlotId(slot.id);
+                                fileInputRefs.current[slot.id]?.click();
+                              }}
+                              className="pointer-events-auto absolute top-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 hover:bg-[#1a3c36] text-white/90 hover:text-[#d5a65a] shadow transition cursor-pointer"
+                              title="Change Photo"
+                            >
+                              <UploadCloud className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Slot Change Photo Action (Non-blocking: pointer-events-none wrapper, pointer-events-auto button) */}
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 z-20">
                               <button
                                 type="button"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setActiveSlotId(slot.id);
                                   fileInputRefs.current[slot.id]?.click();
                                 }}
-                                className="rounded-lg bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1"
+                                className="pointer-events-auto rounded-lg bg-[#1a3c36] hover:bg-[#235048] px-3 py-1.5 text-[11px] font-bold text-white shadow-xl flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105 active:scale-95"
                               >
-                                <UploadCloud className="h-3 w-3" /> Change Photo
+                                <UploadCloud className="h-3.5 w-3.5 text-[#d5a65a]" />
+                                <span>Change Photo</span>
                               </button>
                             </div>
                           </div>
@@ -983,7 +1031,7 @@ const CustomFrameStudio = () => {
                               setActiveSlotId(slot.id);
                               fileInputRefs.current[slot.id]?.click();
                             }}
-                            className="flex h-full w-full flex-col items-center justify-center p-2 text-center hover:bg-white/90 transition"
+                            className="flex h-full w-full flex-col items-center justify-center p-2 text-center hover:bg-white/90 transition cursor-pointer"
                           >
                             <UploadCloud className="h-6 w-6 text-[#b07838]" />
                             <span className="mt-1 text-[10px] font-bold text-[#1a3c36]">
