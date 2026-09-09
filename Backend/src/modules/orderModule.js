@@ -26,6 +26,110 @@ const parseSizeVariants = (value) => {
   }
 };
 
+const resolveOrderItemInventory = async (connection, item) => {
+  const rawId = item.product_id ?? item.id ?? item.productId ?? null;
+  const normalizedId = rawId === null || rawId === undefined ? null : String(rawId).trim();
+  const selectedSize = String(item.size || item.variant_size || item.selected_size || "Standard").trim();
+  const quantity = Number(item.quantity || 1);
+
+  if (!normalizedId || normalizedId === "null" || normalizedId === "undefined") {
+    throw new Error("Missing product id for order item");
+  }
+
+  const [productRows] = await connection.query(
+    `SELECT id, product_name, category, size_variants
+     FROM products WHERE id = ? OR CAST(id AS CHAR) = ? LIMIT 1`,
+    [Number(rawId) || 0, normalizedId],
+  );
+
+  if (productRows.length) {
+    const product = productRows[0];
+    const variants = parseSizeVariants(product.size_variants);
+    const variantIndex = variants.findIndex(
+      (variant) => String(variant.size || "").trim().toLowerCase() === selectedSize.toLowerCase(),
+    );
+
+    if (variantIndex < 0) {
+      throw new Error(`Selected size "${selectedSize}" is not available for product ${rawId}`);
+    }
+
+    const availableStock = Number(variants[variantIndex].stock ?? 0);
+    if (availableStock < quantity) {
+      throw new Error(`Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for size "${selectedSize}"`);
+    }
+
+    const updatedVariants = [...variants];
+    updatedVariants[variantIndex] = { ...updatedVariants[variantIndex], stock: availableStock - quantity };
+
+    return {
+      kind: "product",
+      record: product,
+      variants: updatedVariants,
+      selectedSize,
+      quantity,
+      productName: item.product_name || product.product_name || "Product",
+      category: item.category || product.category || "Photo Frames",
+      productId: rawId,
+    };
+  }
+
+  const [albumRows] = await connection.query(
+    `SELECT id, product_id, product_name, category, stock_quantity, size, size_options, variants
+     FROM albums WHERE id = ? OR product_id = ? LIMIT 1`,
+    [rawId, normalizedId],
+  );
+
+  if (albumRows.length) {
+    const album = albumRows[0];
+    const sizeOptions = parseSizeVariants(album.size_options);
+    const albumSize = String(album.size || "").trim();
+    const variantSizes = sizeOptions.length ? sizeOptions.map((entry) => String(entry.size || entry || "")) : [];
+    const resolvedSize = selectedSize || albumSize || (variantSizes[0] || "Standard");
+    const availableStock = Number(album.stock_quantity || 0);
+
+    if (availableStock < quantity) {
+      throw new Error(`Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for album "${album.product_name || album.product_id}"`);
+    }
+
+    return {
+      kind: "album",
+      record: album,
+      selectedSize: resolvedSize,
+      quantity,
+      productName: item.product_name || album.product_name || "Album",
+      category: item.category || album.category || "Albums",
+      productId: rawId,
+    };
+  }
+
+  const [giftRows] = await connection.query(
+    `SELECT id, gift_box_id, name, category, current_stock, box_size
+     FROM gift_boxes WHERE id = ? OR gift_box_id = ? LIMIT 1`,
+    [rawId, normalizedId],
+  );
+
+  if (giftRows.length) {
+    const gift = giftRows[0];
+    const availableStock = Number(gift.current_stock || 0);
+
+    if (availableStock < quantity) {
+      throw new Error(`Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for gift "${gift.name || gift.gift_box_id}"`);
+    }
+
+    return {
+      kind: "gift",
+      record: gift,
+      selectedSize: String(item.size || gift.box_size || "Standard").trim(),
+      quantity,
+      productName: item.product_name || gift.name || "Gift Box",
+      category: item.category || gift.category || "Gift Box",
+      productId: rawId,
+    };
+  }
+
+  throw new Error(`Product ${rawId} was not found`);
+};
+
 const createOrder = async ({ orderData, items = [], address = null }) => {
   const pool = getDB();
   const connection = await pool.getConnection();
@@ -102,56 +206,48 @@ const createOrder = async ({ orderData, items = [], address = null }) => {
     `;
 
     for (const item of items) {
-      const productId = Number.parseInt(item.product_id ?? item.id, 10) || 0;
-      const selectedSize = String(item.size || item.variant_size || "Standard").trim();
+      const rawId = item.product_id ?? item.id ?? item.productId ?? null;
+      const productId = Number.parseInt(String(rawId), 10) || 0;
+      const selectedSize = String(item.size || item.variant_size || item.selected_size || "Standard").trim();
       const quantity = Number(item.quantity || 1);
 
       if (!Number.isInteger(quantity) || quantity < 1) {
-        throw new Error(`Invalid quantity for product ${productId}`);
+        throw new Error(`Invalid quantity for product ${rawId}`);
       }
 
-      const [productRows] = await connection.query(
-        `SELECT size_variants FROM products WHERE id = ? FOR UPDATE`,
-        [productId],
-      );
+      const inventory = await resolveOrderItemInventory(connection, item);
 
-      if (!productRows.length) {
-        throw new Error(`Product ${productId} was not found`);
-      }
+      if (inventory.kind === "product") {
+        const variants = parseSizeVariants(inventory.record.size_variants);
+        const variantIndex = variants.findIndex(
+          (variant) =>
+            String(variant.size || "").trim().toLowerCase() === inventory.selectedSize.toLowerCase(),
+        );
 
-      const variants = parseSizeVariants(productRows[0].size_variants);
-      const variantIndex = variants.findIndex(
-        (variant) =>
-          String(variant.size || "").trim().toLowerCase() === selectedSize.toLowerCase(),
-      );
-
-      if (variantIndex < 0) {
-        throw new Error(`Selected size "${selectedSize}" is not available for product ${productId}`);
-      }
-
-      const availableStock = Number(variants[variantIndex].stock ?? 0);
-      if (availableStock < quantity) {
-        throw new Error(
-          `Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for size "${selectedSize}"`,
+        if (variantIndex >= 0) {
+          await connection.query(
+            `UPDATE products SET size_variants = ?, updated_at = NOW() WHERE id = ?`,
+            [JSON.stringify(inventory.variants), inventory.record.id],
+          );
+        }
+      } else if (inventory.kind === "album") {
+        await connection.query(
+          `UPDATE albums SET stock_quantity = GREATEST(stock_quantity - ?, 0), updated_at = NOW() WHERE id = ? OR product_id = ?`,
+          [quantity, rawId, String(rawId)],
+        );
+      } else if (inventory.kind === "gift") {
+        await connection.query(
+          `UPDATE gift_boxes SET current_stock = GREATEST(current_stock - ?, 0), updated_at = NOW() WHERE id = ? OR gift_box_id = ?`,
+          [quantity, rawId, String(rawId)],
         );
       }
 
-      variants[variantIndex] = {
-        ...variants[variantIndex],
-        stock: availableStock - quantity,
-      };
-
-      await connection.query(
-        `UPDATE products SET size_variants = ?, updated_at = NOW() WHERE id = ?`,
-        [JSON.stringify(variants), productId],
-      );
-
       const itemValues = [
         orderId,
-        productId,
-        item.product_name || "Custom Frame",
-        item.category || "Photo Frames",
-        selectedSize,
+        productId || rawId,
+        inventory.productName || item.product_name || "Custom Frame",
+        inventory.category || item.category || "Photo Frames",
+        inventory.selectedSize || selectedSize || "Standard",
         Number(item.price || item.unit_price || 0),
         quantity,
         Number(item.total_price || (Number(item.price || item.unit_price || 0) * quantity)),
@@ -415,6 +511,7 @@ const deleteOrder = async (orderId) => {
 
 module.exports = {
   createOrder,
+  resolveOrderItemInventory,
   getAllOrders,
   getOrders: getAllOrders,
   getOrderById,

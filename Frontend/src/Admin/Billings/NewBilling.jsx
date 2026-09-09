@@ -57,7 +57,14 @@ const getArrayValue = (value) => {
 };
 
 const getProductImage = (product) => {
+  // Try to get image from first variant (albums store images inside variants)
+  const firstVariant = (() => {
+    const vars = getArrayValue(product?.variants);
+    return vars.length ? vars[0] : null;
+  })();
+
   const candidates = [
+    product?.thumbnail_image,
     product?.product_images,
     product?.images,
     product?.image,
@@ -65,6 +72,8 @@ const getProductImage = (product) => {
     product?.frame_data?.images,
     product?.image_url,
     product?.thumbnail,
+    firstVariant?.images,
+    firstVariant?.image,
   ];
 
   for (const candidate of candidates) {
@@ -175,22 +184,54 @@ const NewBilling = () => {
           quantity: 1,
           discount: 0,
         }));
-        const albumCatalog = albums.map((album, index) => ({
-          id: `album-${album.id || album.product_id || index}`,
-          productId: album.id || album.product_id,
-          categoryType: "Albums",
-          name: album.product_name || "Unnamed Album",
-          productCode: album.product_code || album.product_id || "",
-          detail: album.size || `${album.total_pages || 40} Pages`,
-          category: album.category || "Albums",
-          price: Number(album.discount_price || album.selling_price || 0),
-          variants: [],
-          size_options: parseVariants(album.size_options),
-          color_options: parseVariants(album.color_options),
-          image: getProductImage(album),
-          quantity: 1,
-          discount: 0,
-        }));
+        const albumCatalog = albums.map((album, index) => {
+          const rawVariants = parseVariants(album.variants);
+
+          // Derive color options: from color_options field, or extract unique colors from variants
+          const rawColorOptions = parseVariants(album.color_options);
+          const derivedColors = rawColorOptions.length
+            ? rawColorOptions
+            : [...new Map(
+                rawVariants
+                  .filter((v) => v.color)
+                  .map((v) => [v.color, typeof v.color === "object" ? v.color : { name: v.color }])
+              ).values()];
+
+          // Derive size options: from size_options field, or extract unique sizes from variants
+          const rawSizeOptions = parseVariants(album.size_options);
+          const derivedSizes = rawSizeOptions.length
+            ? rawSizeOptions
+            : [...new Set(rawVariants.filter((v) => v.size).map((v) => v.size))];
+
+          // Base price: from root fields or first variant
+          const firstVariant = rawVariants[0];
+          const basePrice = Number(
+            album.discount_price ||
+            album.selling_price ||
+            firstVariant?.offerPrice ||
+            firstVariant?.offer_price ||
+            firstVariant?.mrp ||
+            0,
+          );
+
+          return {
+            id: `album-${album.id || album.product_id || index}`,
+            productId: album.id || album.product_id,
+            categoryType: "Albums",
+            name: album.product_name || "Unnamed Album",
+            productCode: album.product_code || album.product_id || "",
+            detail: album.size || `${album.total_pages || 40} Pages`,
+            category: album.category || "Albums",
+            price: basePrice,
+            variants: [],           // keep empty so frame-size selector stays hidden
+            albumVariants: rawVariants, // raw variants for price & image lookup
+            size_options: derivedSizes,
+            color_options: derivedColors,
+            image: getProductImage(album),
+            quantity: 1,
+            discount: 0,
+          };
+        });
         const giftCatalog = gifts.map((gift, index) => ({
           id: `gift-${gift.id || gift.gift_box_id || index}`,
           productId: gift.id || gift.gift_box_id,
@@ -337,7 +378,19 @@ const NewBilling = () => {
       (option) => String(option.id) === selectedProductId,
     );
     if (!product) return;
-    const variant = product.variants?.[Number(selectedVariantIndex)];
+
+    // Frame: use size_variant for price
+    const frameVariant = product.variants?.[Number(selectedVariantIndex)];
+
+    // Albums: find matching variant by color + size for correct price & image
+    let albumVariant = null;
+    if (product.categoryType === "Albums" && product.albumVariants?.length) {
+      albumVariant = product.albumVariants.find((v) => {
+        const colorMatch = !selectedColor || String(v.color || "").toLowerCase() === String(selectedColor).toLowerCase();
+        const sizeMatch = !selectedSize || String(v.size || "").toLowerCase() === String(selectedSize).toLowerCase();
+        return colorMatch && sizeMatch;
+      }) || product.albumVariants[0];
+    }
 
     // Build detail string for albums (color + size)
     let albumDetail = product.detail;
@@ -348,18 +401,32 @@ const NewBilling = () => {
       if (parts.length) albumDetail = parts.join(" / ");
     }
 
+    // Resolve image: prefer variant image for albums
+    const albumImage =
+      albumVariant?.images?.[0]
+        ? normalizeImageUrl(albumVariant.images[0])
+        : albumVariant?.image
+          ? normalizeImageUrl(albumVariant.image)
+          : product.image;
+
+    // Resolve price
+    const resolvedPrice = Number(
+      frameVariant?.offer_price ??
+      frameVariant?.selling_price ??
+      frameVariant?.mrp ??
+      albumVariant?.offerPrice ??
+      albumVariant?.offer_price ??
+      albumVariant?.mrp ??
+      product.price,
+    );
+
     const item = {
       ...product,
       id: `${product.id}-${selectedVariantIndex}-${selectedColor || "nc"}-${selectedSize || "ns"}`,
       product_id: product.productId,
-      detail: variant?.size || albumDetail,
-      image: product.image || "",
-      price: Number(
-        variant?.offer_price ??
-          variant?.selling_price ??
-          variant?.mrp ??
-          product.price,
-      ),
+      detail: frameVariant?.size || albumDetail,
+      image: product.categoryType === "Albums" ? albumImage : (product.image || ""),
+      price: resolvedPrice,
     };
 
     setItems((current) => {
@@ -923,14 +990,23 @@ const NewBilling = () => {
                     className={fieldClass}
                   >
                     <option value="">Select color...</option>
-                    {selectedProduct.color_options.map((color, index) => (
-                      <option
-                        key={`color-${index}`}
-                        value={typeof color === "object" ? (color.name || color.value || color) : color}
-                      >
-                        {typeof color === "object" ? (color.name || color.value || color) : color}
-                      </option>
-                    ))}
+                    {selectedProduct.color_options.map((color, index) => {
+                      const colorName = typeof color === "object" ? (color.name || color.value || String(color)) : color;
+                      // Find a variant matching this color (and current size if set)
+                      const matchedVariant = selectedProduct.albumVariants?.find((v) => {
+                        const cm = String(v.color || "").toLowerCase() === String(colorName).toLowerCase();
+                        const sm = !selectedSize || String(v.size || "").toLowerCase() === String(selectedSize).toLowerCase();
+                        return cm && sm;
+                      });
+                      const variantPrice = matchedVariant
+                        ? Number(matchedVariant.offerPrice ?? matchedVariant.offer_price ?? matchedVariant.mrp ?? 0)
+                        : null;
+                      return (
+                        <option key={`color-${index}`} value={colorName}>
+                          {colorName}{variantPrice ? ` — ${money(variantPrice)}` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
               )}
@@ -944,14 +1020,23 @@ const NewBilling = () => {
                     className={fieldClass}
                   >
                     <option value="">Select size...</option>
-                    {selectedProduct.size_options.map((size, index) => (
-                      <option
-                        key={`size-${index}`}
-                        value={typeof size === "object" ? (size.name || size.value || size) : size}
-                      >
-                        {typeof size === "object" ? (size.name || size.value || size) : size}
-                      </option>
-                    ))}
+                    {selectedProduct.size_options.map((size, index) => {
+                      const sizeName = typeof size === "object" ? (size.name || size.value || String(size)) : size;
+                      // Find a variant matching this size (and current color if set)
+                      const matchedVariant = selectedProduct.albumVariants?.find((v) => {
+                        const sm = String(v.size || "").toLowerCase() === String(sizeName).toLowerCase();
+                        const cm = !selectedColor || String(v.color || "").toLowerCase() === String(selectedColor).toLowerCase();
+                        return sm && cm;
+                      });
+                      const variantPrice = matchedVariant
+                        ? Number(matchedVariant.offerPrice ?? matchedVariant.offer_price ?? matchedVariant.mrp ?? 0)
+                        : null;
+                      return (
+                        <option key={`size-${index}`} value={sizeName}>
+                          {sizeName}{variantPrice ? ` — ${money(variantPrice)}` : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
               )}
