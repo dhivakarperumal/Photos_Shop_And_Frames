@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   Archive,
@@ -252,6 +253,7 @@ const inputClass =
   "w-full rounded-lg border border-[#dedfd9] bg-white px-3 py-2.5 text-sm text-[#23312e] outline-none transition placeholder:text-[#abb0aa] focus:border-[#2d7560] focus:ring-2 focus:ring-[#2d7560]/10";
 
 const GiftBoxManagement = () => {
+  const navigate = useNavigate();
   const [boxes, setBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -263,7 +265,6 @@ const GiftBoxManagement = () => {
   const [page, setPage] = useState(1);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [viewingBox, setViewingBox] = useState(null);
   const [form, setForm] = useState(blankForm);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [giftCategories, setGiftCategories] = useState([]);
@@ -814,16 +815,16 @@ const GiftBoxManagement = () => {
             <table className="w-full min-w-[1260px] text-left text-sm">
               <thead>
                 <tr className="rounded-md bg-[#f0e6d2] text-left text-sm font-semibold text-[#3d3d3d]">
-                  <th className="px-5 py-3 font-bold">S.No</th>
+                  <th className="px-3 py-3 font-bold">S.No</th>
                   <th className="px-3 py-3 font-bold">Gift Box Name</th>
                   <th className="px-5 py-3 font-bold">Image</th>
                   <th className="px-3 py-3 font-bold">Category</th>
                   <th className="px-3 py-3 font-bold">Included Items</th>
-                  <th className="px-3 py-3 font-bold">MRP</th>
-                  <th className="px-3 py-3 font-bold">Selling Price</th>
+                  
+                  <th className="px-3 py-3 font-bold">Price</th>
                   <th className="px-3 py-3 font-bold">Stock</th>
-                  <th className="px-3 py-3 font-bold">Status</th>
-                  <th className="px-5 py-3 text-right font-bold">Actions</th>
+                  
+                  <th className="px-3 py-3 text-right font-bold">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf0eb]">
@@ -873,27 +874,19 @@ const GiftBoxManagement = () => {
                         {box.items.length} item
                         {box.items.length === 1 ? "" : "s"}
                       </td>
-                      <td className="px-3 py-3 text-[#87928c] line-through">
-                        {money(box.mrp)}
-                      </td>
+                     
                       <td className="px-3 py-3 font-semibold text-[#4e6259]">
                         {money(box.sellingPrice)}
                       </td>
                       <td className="px-3 py-3 font-bold text-[#344c42]">
                         {box.currentStock}
                       </td>
-                      <td className="px-3 py-3">
-                        <span
-                          className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}
-                        >
-                          {box.stockStatus}
-                        </span>
-                      </td>
+                     
                       <td className="px-5 py-3">
                         <div className="flex justify-end gap-1">
                           <button
                             type="button"
-                            onClick={() => setViewingBox(box)}
+                            onClick={() => navigate(`/admin/gifts/${box.id}`)}
                             title="View gift box"
                             className="rounded-md p-2 text-[#688279] transition hover:bg-[#eaf3ed] hover:text-[#1f5d4d]"
                           >
@@ -936,7 +929,7 @@ const GiftBoxManagement = () => {
             {pageBoxes.map((box) => (
               <article key={box.id} className="overflow-hidden rounded-xl border border-[#e1e6df] bg-[#fbfcfa] transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="flex h-40 items-center justify-center bg-[#eef4ee]">{box.image ? <img src={box.image} alt="" className="h-full w-full object-cover" /> : <Gift className="h-10 w-10 text-[#9aaa9f]" />}</div>
-                <div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[10px] font-bold text-[#588070]">{box.id}</p><h3 className="mt-1 font-bold text-[#263a34]">{box.name}</h3></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}>{box.stockStatus}</span></div><p className="text-xs text-[#77847c]">{box.category} <span className="mx-1">·</span> {box.subCategory || "-"}</p><div className="flex items-center justify-between border-t border-[#e7ece6] pt-3"><div><p className="text-[10px] uppercase tracking-wide text-[#919d95]">Selling Price</p><p className="font-bold text-[#bd713a]">{money(box.sellingPrice)}</p></div><p className="text-xs font-semibold text-[#68776f]">{box.currentStock} in stock</p><button type="button" onClick={() => openEdit(box)} title="Edit gift box" className="rounded-md p-2 text-[#688279] hover:bg-[#eaf3ed]"><Edit3 className="h-4 w-4" /></button></div></div>
+                <div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[10px] font-bold text-[#588070]">{box.id}</p><h3 className="mt-1 font-bold text-[#263a34]">{box.name}</h3></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}>{box.stockStatus}</span></div><p className="text-xs text-[#77847c]">{box.category} <span className="mx-1">·</span> {box.subCategory || "-"}</p><div className="flex items-center justify-between border-t border-[#e7ece6] pt-3"><div><p className="text-[10px] uppercase tracking-wide text-[#919d95]">Selling Price</p><p className="font-bold text-[#bd713a]">{money(box.sellingPrice)}</p></div><p className="text-xs font-semibold text-[#68776f]">{box.currentStock} in stock</p><button type="button" onClick={() => navigate(`/admin/gifts/${box.id}`)} title="View gift box" className="rounded-md p-2 text-[#688279] hover:bg-[#eaf3ed]"><ClipboardList className="h-4 w-4" /></button></div></div>
               </article>
             ))}
           </div>
@@ -1371,86 +1364,6 @@ const GiftBoxManagement = () => {
         </div>
       )}
 
-      {viewingBox && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#17251f]/40 p-4 backdrop-blur-[2px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setViewingBox(null);
-          }}
-        >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-mono text-xs font-bold text-[#bd713a]">
-                  {viewingBox.id}
-                </p>
-                <h2 className="mt-1 text-2xl font-bold text-[#20362e]">
-                  {viewingBox.name}
-                </h2>
-                <p className="mt-1 text-sm text-[#7b8981]">
-                  {viewingBox.category}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingBox(null)}
-                className="rounded-lg p-2 text-[#718079] hover:bg-[#f0f4ef]"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-[#f4f8f3] p-3">
-                <p className="text-[10px] uppercase tracking-wide text-[#829087]">
-                  Stock
-                </p>
-                <p className="mt-1 font-bold text-[#315b4c]">
-                  {viewingBox.currentStock} units
-                </p>
-              </div>
-              <div className="rounded-lg bg-[#fff7e8] p-3">
-                <p className="text-[10px] uppercase tracking-wide text-[#a78959]">
-                  Offer Price
-                </p>
-                <p className="mt-1 font-bold text-[#a5682e]">
-                  {money(viewingBox.offerPrice)}
-                </p>
-              </div>
-            </div>
-            <p className="mt-5 text-sm leading-6 text-[#65756c]">
-              {viewingBox.description || "No description added yet."}
-            </p>
-            <h3 className="mt-5 border-b border-[#edf0eb] pb-2 text-sm font-bold text-[#294339]">
-              Included Items
-            </h3>
-            <div className="mt-2 divide-y divide-[#edf0eb]">
-              {viewingBox.items.map((item, index) => (
-                <div
-                  key={`${item.name}-${index}`}
-                  className="flex items-center justify-between py-3 text-sm"
-                >
-                  <span className="font-semibold text-[#52675e]">
-                    {item.name}
-                  </span>
-                  <span className="text-xs text-[#87948b]">
-                    Qty {item.quantity}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setViewingBox(null);
-                openEdit(viewingBox);
-              }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#1f5d4d] px-4 py-3 text-sm font-bold text-white hover:bg-[#174b3e]"
-            >
-              <Edit3 className="h-4 w-4" /> Edit Gift Box
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

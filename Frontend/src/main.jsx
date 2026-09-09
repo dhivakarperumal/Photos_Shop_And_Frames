@@ -30,6 +30,7 @@ import AdminReviews from './Admin/AdminReviews/AdminReviews.jsx'
 import AdminCategories from './Admin/AdminProducts/Categories.jsx'
 import AddCategory from './Admin/AdminProducts/AddCategory.jsx'
 import StockDetails from './Admin/AdminProducts/StockDetails.jsx'
+import GiftDetails from './Admin/GiftDetails.jsx'
 import AdminAlbums from './Admin/AdminAlbums.jsx'
 import AddAlbum from './Admin/AddAlbum.jsx'
 import AlbumDetails from './Admin/AlbumDetails.jsx'
@@ -143,6 +144,10 @@ const router = createHashRouter([
           {
             path: 'gifts',
             element: <GiftBoxManagement />,
+          },
+          {
+            path: 'gifts/:giftId',
+            element: <GiftDetails />,
           },
           {
             path: 'products/add',
