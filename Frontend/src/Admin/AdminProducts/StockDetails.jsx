@@ -260,6 +260,10 @@ const StockDetails = () => {
     )));
   };
 
+  const totalCurrentStock = stockValues.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+  const totalAddedStock = stockValues.reduce((sum, variant) => sum + Number(variant.add || 0), 0);
+  const totalProjectedStock = totalCurrentStock + totalAddedStock;
+
   const saveStock = async (event) => {
     event.preventDefault();
     if (!editingProduct) return;
@@ -554,6 +558,24 @@ const StockDetails = () => {
               <p className="rounded-xl bg-[#faf9f8] p-4 text-sm text-[#666]">No size variants are available for this product.</p>
             ) : (
               <div className="space-y-3">
+                <div className="mb-3 flex items-center justify-between rounded-xl border border-[#e7e0d8] bg-[#faf9f8] px-4 py-3 text-sm">
+                  <span className="text-[#666] font-semibold">Total Stock</span>
+                  <span className="font-bold text-[#1a3c36]">{totalProjectedStock}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 rounded-xl border border-[#e7e0d8] bg-[#faf9f8] p-3 text-xs">
+                  <div>
+                    <span className="block text-[#777]">Current</span>
+                    <span className="block font-bold text-[#222]">{totalCurrentStock}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[#777]">Add</span>
+                    <span className="block font-bold text-[#222]">{totalAddedStock}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[#777]">Updated</span>
+                    <span className="block font-bold text-[#1a3c36]">{totalProjectedStock}</span>
+                  </div>
+                </div>
                 {stockValues.map((variant, index) => (
                   <label key={index} className="flex items-center justify-between gap-4 rounded-xl border border-[#e7e0d8] bg-[#faf9f8] p-3">
                     <span>
