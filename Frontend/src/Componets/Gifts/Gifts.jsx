@@ -18,9 +18,12 @@ import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import { notifyLoginRequired } from "../../PrivateRouter/StoreContext";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 
 const Gifts = () => {
+  const { user } = useAuth();
   const legacyModalEnabled = () => false;
   const [gifts, setGifts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -159,6 +162,10 @@ const Gifts = () => {
 
   // Buy now direct checkout
   const handleBuyNow = (gift, quantity = 1) => {
+    if (!user?.user_id) {
+      notifyLoginRequired("Please login before buying this gift");
+      return;
+    }
     const price = Number(gift.selling_price || gift.mrp || 0);
     const checkoutItem = {
       product_id: gift.id,

@@ -190,16 +190,16 @@ const Navbar = () => {
     <>
       <header
         className={`fixed left-0 top-0 z-50 w-full transition-transform duration-300 ease-in-out ${
-          isScrolled ? "-translate-y-[42px]" : "translate-y-0"
+          isScrolled ? "md:-translate-y-[42px]" : "translate-y-0"
         }`}
       >
-        <div className="bg-[#0d0d0d] text-white">
+        <div className="hidden bg-[#0d0d0d] text-white md:block">
           <PageContainer>
-            <div className="flex h-[42px] items-center justify-between text-[11px] font-medium tracking-wide text-[#f3f3f3]">
-              <div className="flex items-center gap-5">
+            <div className="flex h-[42px] items-center justify-between gap-4 text-[11px] font-medium tracking-wide text-[#f3f3f3]">
+              <div className="flex min-w-0 items-center gap-5">
                 <span className="flex items-center gap-2">
                   <FiMapPin className="text-[#d79d4a]" />
-                  123, MG Road, Coimbatore, Tamil Nadu
+                  <span className="truncate">123, MG Road, Coimbatore, Tamil Nadu</span>
                 </span>
                 <span className="hidden items-center gap-2 sm:flex">
                   <FiClock className="text-[#d79d4a]" />
@@ -207,7 +207,7 @@ const Navbar = () => {
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 <span className="flex items-center gap-2">
                   <FiPhone className="text-[#d79d4a]" />
                   +91 98765 43210
@@ -241,20 +241,20 @@ const Navbar = () => {
           }`}
         >
           <PageContainer>
-            <div className="flex h-[88px] items-center justify-between gap-4 bg-white">
-              <Link to="/" className="flex items-center gap-3">
-                <div className="flex h-14 w-14 bg-white items-center justify-center overflow-hidden rounded-xl border border-[#d79d4a]/50  shadow-inner">
+            <div className="flex h-[72px] items-center justify-between gap-2 bg-white sm:gap-4 lg:h-[88px]">
+              <Link to="/" className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#d79d4a]/50 bg-white shadow-inner sm:h-14 sm:w-14">
                   <img
                     src="/images/logo.png"
                     alt="Q Frame logo"
                     className="h-full bg-white w-full object-contain"
                   />
                 </div>
-                <div className="leading-none">
-                  <div className="text-[26px] font-black tracking-[-0.06em] text-[#1c1c1c]">
+                <div className="min-w-0 leading-none">
+                  <div className="text-[22px] font-black tracking-[-0.06em] text-[#1c1c1c] sm:text-[26px]">
                     Frame
                   </div>
-                  <div className="mt-1 text-[9px] font-semibold tracking-[0.28em] text-[#6a5a49]">
+                  <div className="mt-1 hidden text-[9px] font-semibold tracking-[0.28em] text-[#6a5a49] sm:block">
                     PHOTO STUDIO &amp; FRAME SHOP
                   </div>
                 </div>
@@ -287,14 +287,7 @@ const Navbar = () => {
                     Frames
                   </NavLink>
                 </div>
-                <NavLink
-                  to="/custom-frame"
-                  className={({ isActive }) =>
-                    `text-sm font-semibold transition ${isActive ? "text-[#d79d4a]" : "text-[#1d1d1d] hover:text-[#d79d4a]"}`
-                  }
-                >
-                  Custom Frame
-                </NavLink>
+                
 
                 <NavLink
                   to="/gifts"
@@ -367,19 +360,19 @@ const Navbar = () => {
                 </div>
               </nav>
 
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5 lg:gap-3">
                 <button
                   type="button"
                   onClick={() =>
                     navigate(isLoggedIn ? "/account?tab=orders" : "/login")
                   }
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
                   aria-label="My Orders"
                   title="My Orders"
                 >
-                  <FiPackage className="text-lg" />
+                  <FiPackage className="text-base sm:text-lg" />
                   {undeliveredOrdersCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111] shadow-xs">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] shadow-xs sm:h-5 sm:w-5 sm:text-[10px]">
                       {undeliveredOrdersCount}
                     </span>
                   )}
@@ -390,12 +383,12 @@ const Navbar = () => {
                   onClick={() =>
                     openFavorites ? openFavorites() : navigate("/account")
                   }
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  className="relative hidden h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:flex sm:h-11 sm:w-11"
                   aria-label="Open favorites"
                 >
-                  <FiHeart className="text-lg" />
+                  <FiHeart className="text-base sm:text-lg" />
                   {wishlist.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] sm:h-5 sm:w-5 sm:text-[10px]">
                       {wishlist.length}
                     </span>
                   )}
@@ -404,12 +397,12 @@ const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => (openCart ? openCart() : navigate("/cart"))}
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] sm:h-11 sm:w-11"
                   aria-label="Cart"
                 >
-                  <FiShoppingCart className="text-lg" />
+                  <FiShoppingCart className="text-base sm:text-lg" />
                   {cart.length > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111]">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#d79d4a] text-[9px] font-bold text-[#111] sm:h-5 sm:w-5 sm:text-[10px]">
                       {cart.length}
                     </span>
                   )}
@@ -420,7 +413,7 @@ const Navbar = () => {
                     <button
                       type="button"
                       onClick={() => setProfileDropdown((prev) => !prev)}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-[#1b1a18] text-sm font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1b1a18] text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623] sm:h-11 sm:w-11 sm:text-sm"
                       aria-label="Open profile menu"
                     >
                       {userInitial}
@@ -514,18 +507,103 @@ const Navbar = () => {
                 ) : (
                   <Link
                     to="/login"
-                    className="rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623]"
+                    className="hidden rounded-xl bg-[#1b1a18] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.12)] transition hover:bg-[#2a2623] sm:block"
                   >
                     Login
                   </Link>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setMobileMenu((current) => !current)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6] xl:hidden sm:h-11 sm:w-11"
+                  aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
+                  aria-expanded={mobileMenu}
+                >
+                  {mobileMenu ? <FiX className="text-base sm:text-lg" /> : <HiOutlineMenuAlt3 className="text-lg sm:text-xl" />}
+                </button>
               </div>
             </div>
           </PageContainer>
         </div>
+
+        {mobileMenu && (
+          <div className="border-t border-[#eee5d9] bg-[#1b1a18] shadow-[0_18px_35px_rgba(0,0,0,0.22)] xl:hidden">
+            <PageContainer>
+              <nav className="max-h-[calc(100vh-72px)] overflow-y-auto py-3 sm:max-h-[calc(100vh-130px)]" aria-label="Mobile navigation">
+                <NavLink to="/" end onClick={() => setMobileMenu(false)} className={mobileLinkClass}>
+                  Home
+                </NavLink>
+                <NavLink to="/shop" onClick={() => setMobileMenu(false)} className={() => mobileLinkClass({ isActive: isShopPage })}>
+                  Shop
+                </NavLink>
+                <NavLink to="/frames" onClick={() => setMobileMenu(false)} className={mobileLinkClass}>
+                  Frames
+                </NavLink>
+                <NavLink to="/gifts" onClick={() => setMobileMenu(false)} className={mobileLinkClass}>
+                  Gifts
+                </NavLink>
+                <NavLink to="/albums" onClick={() => setMobileMenu(false)} className={() => mobileLinkClass({ isActive: isAlbumPage })}>
+                  Albums
+                </NavLink>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileSubMenu((current) => (current === "pages" ? null : "pages"))}
+                  className={`${mobileLinkClass({ isActive: isPagesRoute })} w-full`}
+                  aria-expanded={mobileSubMenu === "pages"}
+                >
+                  <span>Pages</span>
+                  <FiChevronDown className={`transition-transform ${mobileSubMenu === "pages" ? "rotate-180" : ""}`} />
+                </button>
+
+                {mobileSubMenu === "pages" && (
+                  <div className="ml-3 space-y-1 border-l border-white/15 pl-3">
+                    {[
+                      ["Gallery", "/gallery"],
+                      ["About Us", "/about"],
+                      ["Contact Us", "/contact"],
+                      ["Privacy Policy", "/privacy-policy"],
+                    ].map(([label, path]) => (
+                      <NavLink
+                        key={path}
+                        to={path}
+                        onClick={() => setMobileMenu(false)}
+                        className={mobileLinkClass}
+                      >
+                        {label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3 sm:grid-cols-3">
+                  <button type="button" onClick={() => { setMobileMenu(false); navigate(isLoggedIn ? "/account?tab=orders" : "/login"); }} className="flex items-center justify-center gap-2 rounded-xl bg-white/8 px-3 py-3 text-xs font-semibold text-white transition hover:bg-white/15">
+                    <FiPackage /> Orders
+                  </button>
+                  <button type="button" onClick={() => { setMobileMenu(false); openFavorites ? openFavorites() : navigate("/account"); }} className="flex items-center justify-center gap-2 rounded-xl bg-white/8 px-3 py-3 text-xs font-semibold text-white transition hover:bg-white/15">
+                    <FiHeart /> Favorites
+                  </button>
+                  <button type="button" onClick={() => { setMobileMenu(false); openCart ? openCart() : navigate("/cart"); }} className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-[#d79d4a] px-3 py-3 text-xs font-bold text-[#1b1a18] transition hover:bg-[#e4b568] sm:col-span-1">
+                    <FiShoppingCart /> Cart {cart.length > 0 ? `(${cart.length})` : ""}
+                  </button>
+                  {!isLoggedIn && (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenu(false)}
+                      className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-[#d79d4a] px-3 py-3 text-xs font-bold text-[#f2d19b] transition hover:bg-white/10 sm:col-span-3"
+                    >
+                      <FiUser /> Login
+                    </Link>
+                  )}
+                </div>
+              </nav>
+            </PageContainer>
+          </div>
+        )}
       </header>
 
-      <div className="h-[130px]" />
+      <div className="h-[72px] md:h-[130px]" />
     </>
   );
 };

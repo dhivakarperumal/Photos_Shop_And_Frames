@@ -176,8 +176,19 @@ const CheckoutModal = ({
             <div className="flex justify-center gap-3">
               <button
                 type="button"
-                onClick={handleFinish}
+                onClick={() => {
+                  onClose();
+                  setOrderSuccess(null);
+                  navigate(`/account?tab=orders&orderId=${encodeURIComponent(orderSuccess.order_id)}`);
+                }}
                 className="rounded-xl bg-[#1a3c36] px-6 py-3 text-xs font-bold text-white shadow-md transition hover:bg-[#235048]"
+              >
+                View Order Details
+              </button>
+              <button
+                type="button"
+                onClick={handleFinish}
+                className="rounded-xl border border-[#1a3c36] px-6 py-3 text-xs font-bold text-[#1a3c36] shadow-sm transition hover:bg-[#f5efe6]"
               >
                 Continue Shopping
               </button>

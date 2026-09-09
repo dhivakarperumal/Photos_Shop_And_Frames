@@ -16,6 +16,8 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api, { API_URL } from "../api";
 import { StoreContext } from "../PrivateRouter/StoreContext";
+import { notifyLoginRequired } from "../PrivateRouter/StoreContext";
+import { useAuth } from "../PrivateRouter/AuthContext";
 
 const parseJsonArray = (value) => {
   if (!value) return [];
@@ -66,6 +68,7 @@ const resolveImageUrl = (value) => {
 const ProductQuickView = ({ item, type, image, onClose }) => {
   const isAlbum = type === "album";
   const { addToCart, wishlist = [], toggleWishlist } = useContext(StoreContext) || {};
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [imageIndex, setImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -165,6 +168,10 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
   };
 
   const buyNow = () => {
+    if (!user?.user_id) {
+      notifyLoginRequired("Please login before buying this item");
+      return;
+    }
     navigate("/checkout", {
       state: {
         checkoutItems: [{

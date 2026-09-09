@@ -66,6 +66,19 @@ const uniqueAddresses = (addresses) => {
   });
 };
 
+const loadRazorpayScript = () => new Promise((resolve, reject) => {
+  if (window.Razorpay) {
+    resolve(true);
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = "https://checkout.razorpay.com/v1/checkout.js";
+  script.onload = () => resolve(true);
+  script.onerror = () => reject(new Error("Razorpay checkout could not be loaded"));
+  document.body.appendChild(script);
+});
+
 const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -273,6 +286,53 @@ const Checkout = () => {
       .includes(addressSearch.trim().toLowerCase()),
   );
 
+  const startOnlinePayment = async (payload) => {
+    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    if (!keyId) {
+      throw new Error("Razorpay key is not configured");
+    }
+
+    await loadRazorpayScript();
+
+    return new Promise((resolve, reject) => {
+      const razorpay = new window.Razorpay({
+        key: keyId,
+        amount: Math.round(totalAmount * 100),
+        currency: "INR",
+        name: "Frame Photo Studio",
+        description: "Personalized photo frame order",
+        prefill: {
+          name: payload.customer_name,
+          email: payload.customer_email,
+          contact: payload.customer_phone,
+        },
+        theme: { color: "#1a3c36" },
+        handler: async (paymentResponse) => {
+          try {
+            const response = await api.post("/orders", {
+              ...payload,
+              payment_verified: true,
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              razorpay_order_id: paymentResponse.razorpay_order_id || null,
+              razorpay_signature: paymentResponse.razorpay_signature || null,
+            });
+            resolve(response);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        modal: {
+          ondismiss: () => reject(new Error("Payment was cancelled")),
+        },
+      });
+
+      razorpay.on("payment.failed", (event) => {
+        reject(new Error(event.error?.description || "Payment failed"));
+      });
+      razorpay.open();
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -358,7 +418,9 @@ const Checkout = () => {
       }),
     };
 
-      const response = await api.post("/orders", payload);
+      const response = formData.payment_method === "Online Payment / UPI"
+        ? await startOnlinePayment(payload)
+        : await api.post("/orders", payload);
 
       if (response.data?.success) {
         setOrderSuccess(response.data.data);
@@ -434,9 +496,16 @@ const Checkout = () => {
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/account?tab=orders&orderId=${encodeURIComponent(orderSuccess.order_id)}`)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
+                >
+                  View Order Details
+                </button>
                 <Link
                   to="/shop"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1a3c36] px-8 py-3 text-xs font-bold text-white shadow transition hover:bg-[#235048]"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#1a3c36] px-8 py-3 text-xs font-bold text-[#1a3c36] shadow-sm transition hover:bg-[#f5efe6]"
                 >
                   Continue Shopping
                 </Link>

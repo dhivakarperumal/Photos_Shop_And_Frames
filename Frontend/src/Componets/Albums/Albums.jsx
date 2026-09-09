@@ -18,6 +18,8 @@ import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import { notifyLoginRequired } from "../../PrivateRouter/StoreContext";
+import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 
 const resolveImageUrl = (value) => {
@@ -146,6 +148,7 @@ const normalizeAlbum = (album) => {
 };
 
 const Albums = () => {
+  const { user } = useAuth();
   const legacyModalEnabled = () => false;
   const [albums, setAlbums] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -289,6 +292,10 @@ const Albums = () => {
 
   // Buy now direct checkout
   const handleBuyNow = (album, quantity = 1) => {
+    if (!user?.user_id) {
+      notifyLoginRequired("Please login before buying this album");
+      return;
+    }
     const price = Number(album.displayPrice || album.discount_price || album.selling_price || 0);
     const mainImg = album.displayImage || album.thumbnail_image || album.product_images?.[0] || "";
 
