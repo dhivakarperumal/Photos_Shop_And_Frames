@@ -197,8 +197,10 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
 
                 const dw = baseW * scale;
                 const dh = baseH * scale;
-                const dx = psx + (psw - dw) / 2 + (panX / 100) * psw;
-                const dy = psy + (psh - dh) / 2 + (panY / 100) * psh;
+                const safePanX = fitMode === "contain" && scale <= 1 ? 0 : panX;
+                const safePanY = fitMode === "contain" && scale <= 1 ? 0 : panY;
+                const dx = psx + (psw - dw) / 2 + (safePanX / 100) * psw;
+                const dy = psy + (psh - dh) / 2 + (safePanY / 100) * psh;
 
                 // Apply Filters
                 const filterParts = [];
@@ -363,6 +365,10 @@ const AddProducts = () => {
   const [viewMode, setViewMode] = useState("editor"); // "editor" | "preview"
   const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+
+  const invalidateMergedPreview = () => {
+    setMergedPreviewUrl(null);
+  };
 
   const handleGeneratePreview = async () => {
     if (!selectedFrame || !selectedFrame.frame_image) {
@@ -591,9 +597,10 @@ const AddProducts = () => {
       ...prev,
       [slotId]: { file, preview, url: "" },
     }));
+    invalidateMergedPreview();
     setSlotAdjustments((prev) => ({
       ...prev,
-      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0 },
+      [slotId]: prev[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" },
     }));
 
     // Upload to server
@@ -615,6 +622,7 @@ const AddProducts = () => {
   };
 
   const removeSlotPhoto = (slotId) => {
+    invalidateMergedPreview();
     setSlotPhotos((prev) => {
       const updated = { ...prev };
       if (updated[slotId]?.preview) {
@@ -663,6 +671,7 @@ const AddProducts = () => {
     }
 
     const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" };
+    invalidateMergedPreview();
     const slotRect = e.currentTarget.getBoundingClientRect();
     const photoElement = e.currentTarget.querySelector("img");
     const photoRatio = photoElement?.naturalWidth && photoElement?.naturalHeight
@@ -1402,6 +1411,9 @@ const AddProducts = () => {
                                     const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
                                     const fitMode = adj.fitMode || "contain";
                                     const isContain = fitMode === "contain";
+                                    const imageScale = adj.scale || 1.0;
+                                    const safePanX = isContain && imageScale <= 1 ? 0 : adj.panX || 0;
+                                    const safePanY = isContain && imageScale <= 1 ? 0 : adj.panY || 0;
                                     const rot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
 
                                     return (
@@ -1411,10 +1423,10 @@ const AddProducts = () => {
                                         draggable={false}
                                         className="pointer-events-none absolute h-full w-full select-none object-center origin-center"
                                         style={{
-                                          top: `calc(50% + ${adj.panY || 0}%)`,
-                                          left: `calc(50% + ${adj.panX || 0}%)`,
+                                          top: `calc(50% + ${safePanY}%)`,
+                                          left: `calc(50% + ${safePanX}%)`,
                                           objectFit: isContain ? "contain" : "cover",
-                                          transform: `translate(-50%, -50%) scale(${adj.scale || 1.0}) rotate(${rot}deg) scaleX(${
+                                          transform: `translate(-50%, -50%) scale(${imageScale}) rotate(${rot}deg) scaleX(${ 
                                             adj.flipH ? -1 : 1
                                           }) scaleY(${adj.flipV ? -1 : 1})`,
                                           transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
@@ -1447,6 +1459,7 @@ const AddProducts = () => {
                                           ...prev,
                                           [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
                                         }));
+                                        invalidateMergedPreview();
                                         toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
                                       }}
                                       className="rounded-md bg-white/95 px-2 py-1 text-[10px] font-bold text-[#333] shadow hover:bg-white flex items-center gap-1 cursor-pointer"
@@ -1536,6 +1549,7 @@ const AddProducts = () => {
                                     ...prev,
                                     [slot.id]: { ...curr, fitMode: nextMode, panX: 0, panY: 0, scale: 1.0 },
                                   }));
+                                  invalidateMergedPreview();
                                   toast.success(nextMode === "contain" ? "Fit Full Image mode" : "Fill Frame mode");
                                 }}
                                 className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2 py-1 text-[11px] font-semibold text-[#555] hover:bg-[#faf7f3]"
@@ -1627,6 +1641,7 @@ const AddProducts = () => {
                   ...prev,
                   [adjustingSlot.id]: adj,
                 }));
+                invalidateMergedPreview();
                 toast.success(`Position updated for ${adjustingSlot.name || "slot"}!`);
               }
             }}
