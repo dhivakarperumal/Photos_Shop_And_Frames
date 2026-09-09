@@ -21,6 +21,13 @@ export const StoreProvider = ({ children }) => {
     const [budgetMode, setBudgetMode] = useState(user?.budget_mode || false);
     const [budgetAmount, setBudgetAmount] = useState(user?.budget_amount || 0);
 
+    const requireLogin = useCallback((message) => {
+        toast.error(message);
+        if (window.location.pathname !== "/login") {
+            window.location.assign("/login");
+        }
+    }, []);
+
     // Global Cart Sidebar Drawer state
     const [isCartOpen, setIsCartOpen] = useState(false);
     const openCart = useCallback(() => setIsCartOpen(true), []);
@@ -154,6 +161,11 @@ export const StoreProvider = ({ children }) => {
     // ─── CART ACTIONS ────────────────────────────────────────────
 
     const addToCart = async (product, variantOrOptions = null, sizeParam = null, qtyParam = 1) => {
+        if (!user?.user_id) {
+            requireLogin("Please login before adding items to your cart");
+            return false;
+        }
+
         const activeUserId = getActiveUserId();
 
         // Support both old signature (product, variant, size, qty) and new options object
@@ -320,7 +332,7 @@ export const StoreProvider = ({ children }) => {
 
     const toggleWishlist = async (product, variant = null, size = null) => {
         if (!user?.user_id) {
-            toast.error("Please login to manage wishlist");
+            requireLogin("Please login before adding favorites");
             return;
         }
 
