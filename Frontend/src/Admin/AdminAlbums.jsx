@@ -52,32 +52,42 @@ const getImageUrl = (imagePath) => {
 };
 
 const normalizeAlbum = (album) => {
-  const productImages = (() => {
-    if (Array.isArray(album.product_images)) return album.product_images;
-    if (typeof album.product_images === 'string') {
+  const parseJsonArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
       try {
-        const parsed = JSON.parse(album.product_images);
+        const parsed = JSON.parse(value);
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
         return [];
       }
     }
     return [];
-  })();
+  };
 
-  const firstGalleryImage = Array.isArray(productImages) && productImages.length > 0 ? productImages[0] : '';
-  const thumbnail = getImageUrl(firstGalleryImage || album.thumbnail_image || '');
-  const stock = Number(album.stock_quantity || 0);
+  const variants = parseJsonArray(album.variants);
+  const firstVariant = variants.find((variant) => variant && typeof variant === 'object') || variants[0] || {};
+  const variantImages = parseJsonArray(firstVariant.images || firstVariant.image ? [firstVariant.image].filter(Boolean).concat(parseJsonArray(firstVariant.images)) : []);
+  const productImages = parseJsonArray(album.product_images);
+  const firstGalleryImage = variantImages[0] || productImages[0] || album.thumbnail_image || '';
+  const thumbnail = getImageUrl(firstGalleryImage);
+
+  const variantOfferPrice = Number(firstVariant.offerPrice ?? firstVariant.offer_price ?? firstVariant.price ?? firstVariant.offer ?? 0);
+  const variantMrp = Number(firstVariant.mrp ?? firstVariant.price ?? firstVariant.sell_price ?? firstVariant.selling_price ?? 0);
+  const variantStock = Number(firstVariant.stock ?? firstVariant.stock_quantity ?? 0);
+  const stock = variants.length > 0 ? variants.reduce((sum, variant) => sum + (Number(variant.stock ?? variant.stock_quantity ?? 0) || 0), 0) : Number(album.stock_quantity || 0);
   const stockLabel = stock <= 0 ? 'Out of Stock' : stock <= Number(album.minimum_stock || 5) ? 'Low Stock' : 'In Stock';
+  const displayPrice = variantOfferPrice > 0 ? variantOfferPrice : Number(album.selling_price ?? album.price ?? 0);
+  const displayOldPrice = variantMrp > 0 ? variantMrp : Number(album.discount_price ?? album.selling_price ?? 0);
 
   return {
     id: album.product_id || album.id,
     name: album.product_name || 'Untitled Album',
     code: album.product_code || album.product_id || 'N/A',
     category: album.category || album.sub_category || 'General',
-    size: album.size || 'N/A',
-    price: formatCurrency(album.selling_price ?? album.price ?? 0),
-    oldPrice: formatCurrency(album.discount_price ?? album.selling_price ?? 0),
+    size: firstVariant.size || album.size || 'N/A',
+    price: formatCurrency(displayPrice),
+    oldPrice: formatCurrency(displayOldPrice),
     stock,
     stockLabel,
     status: album.status || 'Active',

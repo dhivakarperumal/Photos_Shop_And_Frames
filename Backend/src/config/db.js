@@ -336,7 +336,6 @@ async function ensureDatabaseSchema() {
       "size_options",
       "color_options",
       "variants",
-      "keywords",
       "product_images",
     ]) {
       try {
@@ -352,7 +351,6 @@ async function ensureDatabaseSchema() {
     await connection.query(`UPDATE albums SET size_options = '[]' WHERE size_options IS NULL`);
     await connection.query(`UPDATE albums SET color_options = '[]' WHERE color_options IS NULL`);
     await connection.query(`UPDATE albums SET variants = '[]' WHERE variants IS NULL`);
-    await connection.query(`UPDATE albums SET keywords = '[]' WHERE keywords IS NULL`);
     await connection.query(`UPDATE albums SET product_images = '[]' WHERE product_images IS NULL`);
     await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
