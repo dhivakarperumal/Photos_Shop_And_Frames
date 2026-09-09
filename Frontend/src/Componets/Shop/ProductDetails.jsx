@@ -986,6 +986,7 @@ const ProductDetails = () => {
                                   <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/45 opacity-0 transition group-hover:opacity-100 z-20">
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setAdjustingSlot(slot);
@@ -998,6 +999,7 @@ const ProductDetails = () => {
 
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         const curr = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
@@ -1016,6 +1018,7 @@ const ProductDetails = () => {
 
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         fileInputRefs.current[slot.id]?.click();
