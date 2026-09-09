@@ -1394,30 +1394,14 @@ const AddProducts = () => {
                                         src={uploaded.preview}
                                         alt={slot.name}
                                         draggable={false}
-                                        className="pointer-events-none absolute select-none origin-center"
+                                        className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full select-none object-center origin-center"
                                         style={{
-                                          top: `calc(50% + ${adj.panY || 0}%)`,
-                                          left: `calc(50% + ${adj.panX || 0}%)`,
-                                          ...(isContain
-                                            ? {
-                                                maxWidth: "100%",
-                                                maxHeight: "100%",
-                                                width: "auto",
-                                                height: "auto",
-                                                objectFit: "contain",
-                                              }
-                                            : {
-                                                minWidth: "100%",
-                                                minHeight: "100%",
-                                                width: "auto",
-                                                height: "auto",
-                                                maxWidth: "none",
-                                                maxHeight: "none",
-                                                objectFit: "cover",
-                                              }),
+                                          objectFit: isContain ? "contain" : "cover",
                                           transform: `translate(-50%, -50%) scale(${adj.scale || 1.0}) rotate(${rot}deg) scaleX(${
                                             adj.flipH ? -1 : 1
                                           }) scaleY(${adj.flipV ? -1 : 1})`,
+                                          marginLeft: `${adj.panX || 0}%`,
+                                          marginTop: `${adj.panY || 0}%`,
                                           transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
                                         }}
                                       />
