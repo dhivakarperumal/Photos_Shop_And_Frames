@@ -59,6 +59,7 @@ const statusAliases = {
   "OUT FOR DELIVERY": "OUT_FOR_DELIVERY",
   OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
   DELIVERED: "DELIVERED",
+  COMPLETED: "DELIVERED",
   CANCELLED: "CANCELLED",
   "ON HOLD": "ON_HOLD",
   ON_HOLD: "ON_HOLD",
@@ -204,22 +205,23 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       }
       if (todayOnly) {
         params.today = "1";
-      } else {
+      } else if (!allowedStatuses) {
         params.billing_type = "Online Order";
       }
 
       const res = await api.get("/orders", { params });
       if (res.data?.success && Array.isArray(res.data.data)) {
         const nextOrders = res.data.data.filter((order) => {
-          const normalizedStatus = String(order.order_status || "").toLowerCase();
-          if (todayOnly && ["completed", "delivered", "cancelled"].includes(normalizedStatus)) return false;
+          const normalizedStatus = normalizeStatus(order.order_status);
+          const rawStatus = String(order.order_status || "").trim().toLowerCase();
+          if (todayOnly && ["completed", "delivered", "cancelled"].includes(rawStatus)) return false;
           if (
             allowedStatuses &&
             !allowedStatuses.some(
-              (status) => status.toLowerCase() === normalizedStatus
+              (status) => normalizeStatus(status) === normalizedStatus
             )
           ) return false;
-          return activeStatus === "All" || normalizeStatus(order.order_status) === normalizeStatus(activeStatus);
+          return activeStatus === "All" || normalizedStatus === normalizeStatus(activeStatus);
         });
         setOrders(nextOrders);
         setCurrentPage(1);
@@ -557,8 +559,9 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const totalOrdersCount = orders.length;
   const pendingCount = orders.filter((o) => o.order_status === "Pending").length;
   const processingCount = orders.filter((o) => o.order_status === "Processing").length;
-  const deliveredCount = orders.filter((o) => o.order_status === "Delivered").length;
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const deliveredOrders = orders.filter((o) => normalizeStatus(o.order_status) === "DELIVERED");
+  const deliveredCount = deliveredOrders.length;
+  const totalRevenue = deliveredOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const metricCards = [
     {
       title: "Total Orders",

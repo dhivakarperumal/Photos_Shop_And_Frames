@@ -26,6 +26,36 @@ const parseSizeVariants = (value) => {
   }
 };
 
+const normalizeComparableText = (value) => {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\binches?\b/g, "inch")
+    .replace(/\bcm\b/g, "cm")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const findMatchingVariantIndex = (variants, size, color = null) => {
+  if (!Array.isArray(variants)) return -1;
+
+  const normalizedSize = normalizeComparableText(size);
+  const normalizedColor = normalizeComparableText(color);
+
+  return variants.findIndex((variant) => {
+    const variantSize = normalizeComparableText(variant?.size || variant?.size_name || variant?.label || variant?.name || "");
+    const variantColor = normalizeComparableText(variant?.color || variant?.colour || variant?.variant_color || "");
+
+    const sizeMatches = !normalizedSize || !variantSize || variantSize === normalizedSize;
+    const colorMatches = !normalizedColor || !variantColor || variantColor === normalizedColor;
+    return sizeMatches && colorMatches;
+  });
+};
+
 const resolveOrderItemInventory = async (connection, item) => {
   const rawId = item.product_id ?? item.id ?? item.productId ?? null;
   const normalizedId = rawId === null || rawId === undefined ? null : String(rawId).trim();
@@ -45,9 +75,7 @@ const resolveOrderItemInventory = async (connection, item) => {
   if (productRows.length) {
     const product = productRows[0];
     const variants = parseSizeVariants(product.size_variants);
-    const variantIndex = variants.findIndex(
-      (variant) => String(variant.size || "").trim().toLowerCase() === selectedSize.toLowerCase(),
-    );
+    const variantIndex = findMatchingVariantIndex(variants, selectedSize);
 
     if (variantIndex < 0) {
       throw new Error(`Selected size "${selectedSize}" is not available for product ${rawId}`);
@@ -75,26 +103,60 @@ const resolveOrderItemInventory = async (connection, item) => {
 
   const [albumRows] = await connection.query(
     `SELECT id, product_id, product_name, category, stock_quantity, size, size_options, variants
-     FROM albums WHERE id = ? OR product_id = ? LIMIT 1`,
-    [rawId, normalizedId],
+     FROM albums
+     WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ?
+     LIMIT 1`,
+    [
+      Number(rawId) || 0,
+      normalizedId,
+      normalizedId,
+      normalizedId.toLowerCase(),
+    ],
   );
 
   if (albumRows.length) {
     const album = albumRows[0];
+    const albumVariants = parseSizeVariants(album.variants);
     const sizeOptions = parseSizeVariants(album.size_options);
     const albumSize = String(album.size || "").trim();
     const variantSizes = sizeOptions.length ? sizeOptions.map((entry) => String(entry.size || entry || "")) : [];
     const resolvedSize = selectedSize || albumSize || (variantSizes[0] || "Standard");
-    const availableStock = Number(album.stock_quantity || 0);
+    const resolvedColor = String(item.color || item.variant_color || item.selected_color || "").trim();
+    const variantIndex = findMatchingVariantIndex(albumVariants, resolvedSize, resolvedColor);
+    const availableStock = variantIndex >= 0
+      ? Number(albumVariants[variantIndex].stock ?? albumVariants[variantIndex].quantity ?? 0)
+      : Number(album.stock_quantity || 0);
 
     if (availableStock < quantity) {
       throw new Error(`Only ${availableStock} item${availableStock === 1 ? "" : "s"} available for album "${album.product_name || album.product_id}"`);
     }
 
+    if (variantIndex >= 0) {
+      const updatedVariants = [...albumVariants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        stock: Number(updatedVariants[variantIndex].stock ?? 0) - quantity,
+      };
+
+      return {
+        kind: "album",
+        record: album,
+        variants: updatedVariants,
+        selectedSize: resolvedSize,
+        selectedColor: resolvedColor,
+        quantity,
+        productName: item.product_name || album.product_name || "Album",
+        category: item.category || album.category || "Albums",
+        productId: rawId,
+      };
+    }
+
     return {
       kind: "album",
       record: album,
+      variants: albumVariants,
       selectedSize: resolvedSize,
+      selectedColor: resolvedColor,
       quantity,
       productName: item.product_name || album.product_name || "Album",
       category: item.category || album.category || "Albums",
@@ -102,10 +164,32 @@ const resolveOrderItemInventory = async (connection, item) => {
     };
   }
 
+  const lookupCandidates = Array.from(
+    new Set(
+      [
+        rawId,
+        normalizedId,
+        Number(rawId) || null,
+        String(rawId || "").replace(/^gift[-_\s]*/i, ""),
+        String(rawId || "").replace(/^giftbox[-_\s]*/i, ""),
+        String(rawId || "").replace(/^gift[-_\s]*/i, ""),
+      ].filter((value) => value !== null && value !== undefined && value !== "" && value !== "null" && value !== "undefined")
+    )
+  );
+
   const [giftRows] = await connection.query(
-    `SELECT id, gift_box_id, name, category, current_stock, box_size
-     FROM gift_boxes WHERE id = ? OR gift_box_id = ? LIMIT 1`,
-    [rawId, normalizedId],
+    `SELECT id, gift_box_id, name, category, current_stock, box_size, stock_status
+     FROM gift_boxes
+     WHERE id = ? OR CAST(id AS CHAR) = ? OR gift_box_id = ? OR LOWER(gift_box_id) = ? OR CONCAT('gift-', id) = ? OR CONCAT('gift-', gift_box_id) = ?
+     LIMIT 1`,
+    [
+      Number(rawId) || 0,
+      normalizedId,
+      normalizedId,
+      normalizedId.toLowerCase(),
+      normalizedId,
+      normalizedId,
+    ].concat(lookupCandidates.slice(0, 3).map((value) => String(value))),
   );
 
   if (giftRows.length) {
@@ -219,10 +303,7 @@ const createOrder = async ({ orderData, items = [], address = null }) => {
 
       if (inventory.kind === "product") {
         const variants = parseSizeVariants(inventory.record.size_variants);
-        const variantIndex = variants.findIndex(
-          (variant) =>
-            String(variant.size || "").trim().toLowerCase() === inventory.selectedSize.toLowerCase(),
-        );
+        const variantIndex = findMatchingVariantIndex(variants, inventory.selectedSize);
 
         if (variantIndex >= 0) {
           await connection.query(
@@ -231,15 +312,49 @@ const createOrder = async ({ orderData, items = [], address = null }) => {
           );
         }
       } else if (inventory.kind === "album") {
+        const albumVariantPayload = Array.isArray(inventory.variants) ? inventory.variants : parseSizeVariants(inventory.record.variants);
+        const albumKey = String(rawId || "").trim();
+        const albumRow = await connection.query(
+          `SELECT id, product_id FROM albums WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ? LIMIT 1`,
+          [Number(rawId) || 0, albumKey, albumKey, albumKey.toLowerCase()],
+        );
+        const albumMatch = albumRow?.[0]?.[0] || null;
+        const albumIdValue = albumMatch?.id ?? (Number(rawId) || 0);
+        const albumProductIdValue = albumMatch?.product_id ?? albumKey;
+
         await connection.query(
-          `UPDATE albums SET stock_quantity = GREATEST(stock_quantity - ?, 0), updated_at = NOW() WHERE id = ? OR product_id = ?`,
-          [quantity, rawId, String(rawId)],
+          `UPDATE albums
+           SET variants = ?,
+               stock_quantity = GREATEST(stock_quantity - ?, 0),
+               updated_at = NOW()
+           WHERE id = ? OR CAST(id AS CHAR) = ? OR product_id = ? OR LOWER(product_id) = ?`,
+          [
+            JSON.stringify(albumVariantPayload),
+            quantity,
+            albumIdValue,
+            albumIdValue ? String(albumIdValue) : albumKey,
+            albumProductIdValue,
+            albumProductIdValue.toLowerCase(),
+          ],
         );
       } else if (inventory.kind === "gift") {
-        await connection.query(
-          `UPDATE gift_boxes SET current_stock = GREATEST(current_stock - ?, 0), updated_at = NOW() WHERE id = ? OR gift_box_id = ?`,
-          [quantity, rawId, String(rawId)],
-        );
+        const normalizedRawId = String(rawId || "").trim();
+        const strippedRawId = normalizedRawId.replace(/^gift[-_\s]*/i, "");
+        const giftUpdates = [
+          `UPDATE gift_boxes
+           SET current_stock = GREATEST(current_stock - ?, 0),
+               stock_status = CASE WHEN GREATEST(current_stock - ?, 0) <= 0 THEN 'Out of Stock' ELSE 'Available' END,
+               updated_at = NOW()
+           WHERE id = ? OR CAST(id AS CHAR) = ? OR gift_box_id = ? OR LOWER(gift_box_id) = ?`,
+          [quantity, quantity, Number(rawId) || 0, String(rawId), normalizedRawId, normalizedRawId.toLowerCase()],
+        ];
+
+        if (strippedRawId && strippedRawId !== normalizedRawId) {
+          giftUpdates[0] += ` OR gift_box_id = ? OR LOWER(gift_box_id) = ?`;
+          giftUpdates[1].push(strippedRawId, strippedRawId.toLowerCase());
+        }
+
+        await connection.query(giftUpdates[0], giftUpdates[1]);
       }
 
       const itemValues = [
