@@ -187,6 +187,7 @@ const PhotoAdjustModal = ({
   const [fitMode, setFitMode] = useState(
     initialAdjustment?.fitMode || slot?.objectFit || "cover"
   );
+  const [naturalSize, setNaturalSize] = useState({ w: 800, h: 600 });
 
   const [innerBorderColor, setInnerBorderColor] = useState("transparent");
   const [innerBorderWidth, setInnerBorderWidth] = useState(0);
@@ -221,9 +222,13 @@ const PhotoAdjustModal = ({
   useEffect(() => {
     if (isOpen) {
       const init = { ...DEFAULT_ADJUSTMENT, ...initialAdjustment };
+      const currentFit = init.fitMode || slot?.objectFit || "cover";
+      setFitMode(currentFit);
       setPanX(init.panX || 0);
       setPanY(init.panY || 0);
-      setScale(init.scale || 1.0);
+      // In cover mode, photo must always cover slot edge-to-edge (min scale 1.0)
+      const safeScale = currentFit === "cover" ? Math.max(1.0, init.scale || 1.0) : Math.max(0.4, init.scale || 1.0);
+      setScale(safeScale);
       setRotate(init.rotate || 0);
       setAngle(init.angle || 0);
       setFlipH(Boolean(init.flipH));
@@ -299,6 +304,40 @@ const PhotoAdjustModal = ({
     boxW = Math.max(160, Math.round(320 * slotRatio));
   }
 
+  // Exact image dimensions matching canvas composite calculations
+  const imgRatio = (naturalSize.w || 1) / (naturalSize.h || 1);
+  const containerRatio = boxW / boxH;
+  let baseW = boxW;
+  let baseH = boxH;
+
+  if (fitMode === "contain") {
+    if (imgRatio > containerRatio) {
+      baseW = boxW;
+      baseH = boxW / imgRatio;
+    } else {
+      baseH = boxH;
+      baseW = boxH * imgRatio;
+    }
+  } else {
+    // cover
+    if (imgRatio > containerRatio) {
+      baseH = boxH;
+      baseW = boxH * imgRatio;
+    } else {
+      baseW = boxW;
+      baseH = boxW / imgRatio;
+    }
+  }
+
+  const dw = baseW * scale;
+  const dh = baseH * scale;
+
+  // Maximum safe panning limits so photo covers slot completely with no empty gaps
+  const maxPanX = fitMode === "cover" ? Math.max(0, ((dw - boxW) / (2 * boxW)) * 100) : 40;
+  const maxPanY = fitMode === "cover" ? Math.max(0, ((dh - boxH) / (2 * boxH)) * 100) : 40;
+  const maxSafeX = Math.max(maxPanX, 10);
+  const maxSafeY = Math.max(maxPanY, 10);
+
   const isCircle = slot?.shape === "circle";
 
   // Drag handlers
@@ -326,15 +365,13 @@ const PhotoAdjustModal = ({
     const deltaPercentX = (dx / (boxW || 1)) * 100;
     const deltaPercentY = (dy / (boxH || 1)) * 100;
 
-    const maxPan = Math.max(140, (scale - 1) * 80 + 140);
-
     const newPanX = Math.min(
-      maxPan,
-      Math.max(-maxPan, dragStartRef.current.startPanX + deltaPercentX)
+      maxSafeX,
+      Math.max(-maxSafeX, dragStartRef.current.startPanX + deltaPercentX)
     );
     const newPanY = Math.min(
-      maxPan,
-      Math.max(-maxPan, dragStartRef.current.startPanY + deltaPercentY)
+      maxSafeY,
+      Math.max(-maxSafeY, dragStartRef.current.startPanY + deltaPercentY)
     );
 
     setPanX(Math.round(newPanX * 10) / 10);
@@ -351,10 +388,12 @@ const PhotoAdjustModal = ({
   };
 
   const handleWheel = (e) => {
+    if (!e.ctrlKey && !e.metaKey) return; // Only zoom on Ctrl+wheel or pinch, allow normal scrolling
     e.preventDefault();
     const zoomStep = 0.08;
+    const minScale = fitMode === "cover" ? 1.0 : 0.4;
     const newScale =
-      e.deltaY < 0 ? Math.min(3.0, scale + zoomStep) : Math.max(0.3, scale - zoomStep);
+      e.deltaY < 0 ? Math.min(3.0, scale + zoomStep) : Math.max(minScale, scale - zoomStep);
     setScale(Math.round(newScale * 100) / 100);
   };
 
@@ -542,28 +581,22 @@ const PhotoAdjustModal = ({
                   <img
                     src={photoSrc}
                     alt="Adjust preview"
+                    onLoad={(e) => {
+                      setNaturalSize({
+                        w: e.target.naturalWidth || 800,
+                        h: e.target.naturalHeight || 600,
+                      });
+                    }}
                     draggable={false}
                     className="pointer-events-none absolute select-none origin-center"
                     style={{
                       top: `calc(50% + ${panY}%)`,
                       left: `calc(50% + ${panX}%)`,
-                      ...(fitMode === "contain"
-                        ? {
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                            width: "auto",
-                            height: "auto",
-                            objectFit: "contain",
-                          }
-                        : {
-                            minWidth: "100%",
-                            minHeight: "100%",
-                            width: "auto",
-                            height: "auto",
-                            maxWidth: "none",
-                            maxHeight: "none",
-                            objectFit: "cover",
-                          }),
+                      width: `${baseW}px`,
+                      height: `${baseH}px`,
+                      maxWidth: "none",
+                      maxHeight: "none",
+                      objectFit: fitMode === "contain" ? "contain" : "cover",
                       transform: transformCss,
                       filter: combinedFilterCss,
                       transition: isDragging ? "none" : "transform 0.05s ease-out, filter 0.2s ease",
@@ -667,7 +700,10 @@ const PhotoAdjustModal = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFitMode("cover")}
+                      onClick={() => {
+                        setFitMode("cover");
+                        if (scale < 1.0) setScale(1.0);
+                      }}
                       className={`flex items-center justify-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition cursor-pointer ${
                         fitMode === "cover"
                           ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
@@ -688,7 +724,7 @@ const PhotoAdjustModal = ({
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => setPanY(45)}
+                      onClick={() => setPanY(Math.round(maxSafeY * 10) / 10)}
                       className="flex items-center justify-center gap-1 rounded-xl border border-[#e2d9cd] bg-white py-2 text-xs font-bold text-[#1a3c36] hover:border-[#1a3c36] hover:bg-[#f0f6f4] transition shadow-2xs cursor-pointer"
                       title="Focus on top of photo (shows head and face)"
                     >
@@ -707,7 +743,7 @@ const PhotoAdjustModal = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPanY(-45)}
+                      onClick={() => setPanY(-Math.round(maxSafeY * 10) / 10)}
                       className="flex items-center justify-center gap-1 rounded-xl border border-[#e2d9cd] bg-white py-2 text-xs font-bold text-[#444] hover:border-[#1a3c36] hover:bg-[#f0f6f4] transition shadow-2xs cursor-pointer"
                       title="Focus on bottom of photo"
                     >
@@ -748,7 +784,7 @@ const PhotoAdjustModal = ({
                   <div className="mt-2.5 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setScale((s) => Math.max(0.3, Math.round((s - 0.1) * 10) / 10))}
+                      onClick={() => setScale((s) => Math.max(fitMode === "cover" ? 1.0 : 0.4, Math.round((s - 0.1) * 10) / 10))}
                       className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d8cfc3] bg-white text-[#555] hover:bg-[#f0ebe3] cursor-pointer"
                       title="Zoom out"
                     >
@@ -756,7 +792,7 @@ const PhotoAdjustModal = ({
                     </button>
                     <input
                       type="range"
-                      min="0.3"
+                      min={fitMode === "cover" ? "1.0" : "0.4"}
                       max="3.0"
                       step="0.05"
                       value={scale}

@@ -71,9 +71,14 @@ const colorOptions = [
  * Generate a composite image containing the frame background
  * and all uploaded slot photos properly positioned & clipped
  */
+/**
+ * Generate a composite image containing the frame background
+ * and all uploaded slot photos properly positioned & clipped with full studio adjustments.
+ * Returns both { blob, dataUrl } for live preview and upload saving.
+ */
 const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotAdjustments = {}) => {
   return new Promise((resolve) => {
-    if (!frameImageUrl) return resolve(null);
+    if (!frameImageUrl) return resolve({ blob: null, dataUrl: null });
 
     const frameImg = new Image();
     frameImg.crossOrigin = "anonymous";
@@ -98,10 +103,10 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
           return parseFloat(val) || 0;
         };
 
-        // 2. Draw slot photos with pan & zoom
+        // 2. Draw slot photos with studio adjustments
         for (const slot of slots || []) {
           const photoData = slotPhotos[slot.id];
-          const photoSrc = photoData?.preview || photoData?.url;
+          const photoSrc = typeof photoData === "string" ? photoData : (photoData?.preview || photoData?.url);
 
           if (photoSrc) {
             const adj = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
@@ -122,12 +127,12 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 const sw = parsePercentage(slot.width, w);
                 const sh = parsePercentage(slot.height, h);
 
-                // Clip region
+                // Clip region (circle or rounded rectangle)
                 ctx.beginPath();
+                const radius = Math.min(12, Math.min(sw, sh) * 0.05);
                 if (slot.shape === "circle") {
                   ctx.arc(sx + sw / 2, sy + sh / 2, Math.min(sw, sh) / 2, 0, Math.PI * 2);
                 } else {
-                  const radius = Math.min(12, Math.min(sw, sh) * 0.05);
                   if (ctx.roundRect) {
                     ctx.roundRect(sx, sy, sw, sh, radius);
                   } else {
@@ -137,38 +142,146 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
                 ctx.closePath();
                 ctx.clip();
 
+                // Inner Border & Outer Border calculation
+                const innerBorderWidth = adj.innerBorderWidth ? Math.round((adj.innerBorderWidth / 320) * sw) : 0;
+                const innerBorderColor = adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : null;
+                const outerBorderWidth = adj.outerBorderWidth ? Math.round((adj.outerBorderWidth / 320) * sw) : 0;
+                const outerBorderColor = adj.outerBorderColor && adj.outerBorderColor !== "transparent" ? adj.outerBorderColor : null;
+
+                if (innerBorderColor) {
+                  ctx.fillStyle = innerBorderColor;
+                  ctx.fillRect(sx, sy, sw, sh);
+                }
+
+                const psx = sx + innerBorderWidth;
+                const psy = sy + innerBorderWidth;
+                const psw = Math.max(10, sw - innerBorderWidth * 2);
+                const psh = Math.max(10, sh - innerBorderWidth * 2);
+
+                ctx.save();
+                ctx.beginPath();
+                if (slot.shape === "circle") {
+                  ctx.arc(psx + psw / 2, psy + psh / 2, Math.min(psw, psh) / 2, 0, Math.PI * 2);
+                } else {
+                  const innerRadius = Math.max(0, radius - innerBorderWidth * 0.5);
+                  if (ctx.roundRect) ctx.roundRect(psx, psy, psw, psh, innerRadius);
+                  else ctx.rect(psx, psy, psw, psh);
+                }
+                ctx.closePath();
+                ctx.clip();
+
                 // Object-fit calculation (cover vs contain) with pan & zoom
                 const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
-                const slotRatio = sw / sh;
-                let baseW = sw, baseH = sh;
+                const slotRatio = psw / psh;
+                let baseW = psw, baseH = psh;
                 const fitMode = adj.fitMode || slot.objectFit || "cover";
 
                 if (fitMode === "contain") {
                   if (imgRatio > slotRatio) {
-                    baseW = sw;
-                    baseH = sw / imgRatio;
+                    baseW = psw;
+                    baseH = psw / imgRatio;
                   } else {
-                    baseH = sh;
-                    baseW = sh * imgRatio;
+                    baseH = psh;
+                    baseW = psh * imgRatio;
                   }
                 } else {
                   // cover
                   if (imgRatio > slotRatio) {
-                    baseH = sh;
-                    baseW = sh * imgRatio;
+                    baseH = psh;
+                    baseW = psh * imgRatio;
                   } else {
-                    baseW = sw;
-                    baseH = sw / imgRatio;
+                    baseW = psw;
+                    baseH = psw / imgRatio;
                   }
                 }
 
                 const dw = baseW * scale;
                 const dh = baseH * scale;
-                const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
-                const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
+                const dx = psx + (psw - dw) / 2 + (panX / 100) * psw;
+                const dy = psy + (psh - dh) / 2 + (panY / 100) * psh;
 
-                ctx.drawImage(pImg, dx, dy, dw, dh);
+                // Apply Filters
+                const filterParts = [];
+                if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+                else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+                else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+                else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+                else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+                else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+                else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+                else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+                const brightness = adj.brightness ?? 100;
+                const contrast = (adj.contrast ?? 100) + Math.round((adj.sharpness || 0) * 0.4);
+                const saturation = adj.saturation ?? 100;
+                const blur = adj.blur || 0;
+
+                if (brightness !== 100) filterParts.push(`brightness(${brightness}%)`);
+                if (contrast !== 100) filterParts.push(`contrast(${contrast}%)`);
+                if (saturation !== 100) filterParts.push(`saturate(${saturation}%)`);
+                if (blur > 0) filterParts.push(`blur(${Math.max(1, Math.round(blur * (w / 1000)))}px)`);
+
+                if (filterParts.length > 0 && ctx.filter) {
+                  ctx.filter = filterParts.join(" ");
+                }
+
+                // Rotate and Flip Transform
+                const totalRot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+                const flipH = Boolean(adj.flipH);
+                const flipV = Boolean(adj.flipV);
+
+                ctx.save();
+                ctx.translate(dx + dw / 2, dy + dh / 2);
+                if (totalRot !== 0) {
+                  ctx.rotate((totalRot * Math.PI) / 180);
+                }
+                if (flipH || flipV) {
+                  ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+                }
+                ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
                 ctx.restore();
+                ctx.filter = "none";
+                ctx.restore(); // Restore sub-clip
+
+                // Draw Outer Border stroke if specified
+                if (outerBorderColor && outerBorderWidth > 0) {
+                  ctx.strokeStyle = outerBorderColor;
+                  ctx.lineWidth = outerBorderWidth;
+                  ctx.stroke();
+                }
+
+                // Draw Text Overlay
+                if (adj.textOverlay?.text) {
+                  ctx.save();
+                  const fontSz = Math.max(14, Math.round(((adj.textOverlay.fontSize || 18) / 320) * sw));
+                  const fontFam = adj.textOverlay.fontFamily || "sans-serif";
+                  const isBold = adj.textOverlay.bold ? "bold " : "";
+                  const isItalic = adj.textOverlay.italic ? "italic " : "";
+                  ctx.font = `${isBold}${isItalic}${fontSz}px ${fontFam}`;
+                  ctx.fillStyle = adj.textOverlay.color || "#ffffff";
+                  ctx.textAlign = adj.textOverlay.align || "center";
+                  ctx.textBaseline = "middle";
+
+                  if (adj.textOverlay.shadow) {
+                    ctx.shadowColor = "rgba(0,0,0,0.85)";
+                    ctx.shadowBlur = 5;
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 2;
+                  }
+
+                  let tx = sx + sw / 2;
+                  if (adj.textOverlay.align === "left") tx = sx + fontSz * 1.2;
+                  else if (adj.textOverlay.align === "right") tx = sx + sw - fontSz * 1.2;
+
+                  let ty = sy + sh - fontSz * 1.6;
+                  if (adj.textOverlay.position === "top") ty = sy + fontSz * 1.6;
+                  else if (adj.textOverlay.position === "center") ty = sy + sh / 2;
+
+                  ctx.fillText(adj.textOverlay.text, tx, ty, sw - fontSz * 1.5);
+                  ctx.restore();
+                }
+
+                ctx.restore(); // Restore outer clip
                 slotResolve();
               };
 
@@ -177,16 +290,17 @@ const createCompositeFrameImage = async (frameImageUrl, slots, slotPhotos, slotA
           }
         }
 
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
         canvas.toBlob((blob) => {
-          resolve(blob);
+          resolve({ blob, dataUrl });
         }, "image/jpeg", 0.92);
       } catch (err) {
         console.error("Composite creation error:", err);
-        resolve(null);
+        resolve({ blob: null, dataUrl: null });
       }
     };
 
-    frameImg.onerror = () => resolve(null);
+    frameImg.onerror = () => resolve({ blob: null, dataUrl: null });
   });
 };
 
@@ -244,6 +358,48 @@ const AddProducts = () => {
   const dragSlotStartRef = useRef({ x: 0, y: 0, startPanX: 0, startPanY: 0, hasMoved: false });
   const photoInputRefs = useRef({});
   const [saving, setSaving] = useState(false);
+
+  // Pre-save preview states
+  const [viewMode, setViewMode] = useState("editor"); // "editor" | "preview"
+  const [mergedPreviewUrl, setMergedPreviewUrl] = useState(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+
+  const handleGeneratePreview = async () => {
+    if (!selectedFrame || !selectedFrame.frame_image) {
+      toast.error("Please select a frame first.");
+      return;
+    }
+    if (!Object.keys(slotPhotos).length) {
+      toast.error("Please upload at least one photo before previewing.");
+      return;
+    }
+
+    setGeneratingPreview(true);
+    const toastId = toast.loading("Generating full merged frame preview...");
+    try {
+      const { dataUrl } = await createCompositeFrameImage(
+        selectedFrame.frame_image,
+        selectedFrame.photo_slots || [],
+        slotPhotos,
+        slotAdjustments
+      );
+      if (dataUrl) {
+        setMergedPreviewUrl(dataUrl);
+        setViewMode("preview");
+        toast.dismiss(toastId);
+        toast.success("Live merged frame preview ready!");
+      } else {
+        toast.dismiss(toastId);
+        toast.error("Could not generate frame preview.");
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      console.error("Preview generation error:", err);
+      toast.error("Failed to generate preview.");
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
 
   // ==========================================
   // INITIAL FETCH: NEXT PRODUCT ID & CATEGORIES & LOAD IN EDIT MODE
@@ -580,7 +736,7 @@ const AddProducts = () => {
     try {
       // 1. Generate full composite (Frame + Photos merged on Canvas)
       let finalProductImage = selectedFrame.frame_image;
-      const compositeBlob = await createCompositeFrameImage(
+      const { blob: compositeBlob } = await createCompositeFrameImage(
         selectedFrame.frame_image,
         selectedFrame.photo_slots || [],
         slotPhotos,
@@ -1098,7 +1254,7 @@ const AddProducts = () => {
               {/* SECTION 4: LIVE FRAME PREVIEW & SLOT PHOTO PLACEMENT CANVAS */}
               {selectedFrame && (
                 <div className="rounded-[22px] border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-6">
-                  <div className="mb-4 flex items-center justify-between border-b border-[#f0ebe3] pb-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#f0ebe3] pb-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#fff0f0] text-[#c93b3b]">
                         <ImagePlus className="h-5 w-5" />
@@ -1108,17 +1264,79 @@ const AddProducts = () => {
                           Demo Photo Placement
                         </h2>
                         <p className="text-xs text-[#8a8a8a]">
-                          Click slots on the frame below to upload preview photos
+                          {viewMode === "editor"
+                            ? "Click slots on the frame below to upload and adjust demo photos"
+                            : "Exact final composite image preview before adding"}
                         </p>
                       </div>
                     </div>
 
-                    <span className="rounded-full bg-[#fff7e8] px-3 py-1 text-xs font-bold text-[#8b6528]">
-                      {Object.keys(slotPhotos).length} / {selectedFrame.photo_slots?.length || 0} Filled
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="hidden sm:inline-block rounded-full bg-[#fff7e8] px-3 py-1 text-xs font-bold text-[#8b6528]">
+                        {Object.keys(slotPhotos).length} / {selectedFrame.photo_slots?.length || 0} Filled
+                      </span>
+
+                      {/* MODE SWITCH TABS: SLOT EDITOR vs PREVIEW */}
+                      <div className="flex items-center rounded-xl border border-[#d8cfc3] bg-[#faf8f5] p-1">
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("editor")}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                            viewMode === "editor"
+                              ? "bg-[#1a3c36] text-white shadow-xs"
+                              : "text-[#555] hover:text-[#1a3c36]"
+                          }`}
+                        >
+                          <Move className="h-3 w-3 text-[#d5a65a]" /> Slot Editor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGeneratePreview}
+                          disabled={generatingPreview || !Object.keys(slotPhotos).length}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                            viewMode === "preview"
+                              ? "bg-[#1a3c36] text-white shadow-xs"
+                              : "text-[#555] hover:text-[#1a3c36]"
+                          }`}
+                          title="Generate and view exact merged frame before adding product"
+                        >
+                          <Eye className="h-3 w-3 text-[#b07838]" />
+                          {generatingPreview ? "Generating..." : "Preview Merged Frame"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* FRAME CANVAS */}
+                  {viewMode === "preview" && mergedPreviewUrl ? (
+                    <div className="relative flex min-h-[380px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5f1eb] p-5">
+                      <div className="mb-3 flex w-full max-w-[480px] items-center justify-between">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-800 shadow-2xs">
+                          <Check className="h-3.5 w-3.5" /> Full Merged Frame Preview Ready
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("editor")}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#d8d0c5] bg-white px-2.5 py-1 text-xs font-bold text-[#1a3c36] shadow-2xs hover:bg-[#faf7f3] cursor-pointer"
+                        >
+                          ← Back to Slot Editor
+                        </button>
+                      </div>
+
+                      <div className="relative mx-auto w-full max-w-[480px] overflow-hidden rounded-xl shadow-2xl">
+                        <img
+                          src={mergedPreviewUrl}
+                          alt="Full Merged Frame Preview"
+                          className="block h-auto w-full select-none"
+                        />
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-center text-xs text-[#666]">
+                        <span>🔍 This is the exact composite photo that will be saved and displayed to customers in the shop.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* FRAME CANVAS */}
                   <div className="relative flex min-h-[380px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] bg-[#f5f1eb] p-4">
                     <div className="relative mx-auto w-full max-w-[460px] overflow-hidden rounded-lg shadow-md">
                       {/* FRAME BACKGROUND */}
