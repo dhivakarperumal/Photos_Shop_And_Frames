@@ -17,10 +17,41 @@ import toast from "react-hot-toast";
 import api, { API_URL } from "../api";
 import { StoreContext } from "../PrivateRouter/StoreContext";
 
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const getImages = (item, type) => {
-  const images = type === "album"
-    ? [item.thumbnail_image, ...(Array.isArray(item.product_images) ? item.product_images : [])]
-    : [item.image, ...(Array.isArray(item.images) ? item.images : [])];
+  if (!item) return [];
+  if (type === "album") {
+    const rawVariants = parseJsonArray(item.variants);
+    const variantImages = [];
+    rawVariants.forEach((v) => {
+      if (v?.image) variantImages.push(v.image);
+      if (Array.isArray(v?.images)) variantImages.push(...v.images);
+    });
+
+    const productImages = parseJsonArray(item.product_images);
+    const images = [
+      item.displayImage,
+      item.thumbnail_image,
+      ...productImages,
+      ...variantImages,
+    ];
+    return [...new Set(images.filter(Boolean))];
+  }
+
+  const images = [item.image, ...(Array.isArray(item.images) ? item.images : [])];
   return [...new Set(images.filter(Boolean))];
 };
 
@@ -52,12 +83,26 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
   }, [onClose]);
 
   const images = useMemo(() => getImages(item, type).map(resolveImageUrl), [item, type]);
-  const currentImage = images[imageIndex] || image;
+  const currentImage = images[imageIndex] || resolveImageUrl(image) || images[0];
   const id = item.id || item.product_id || item.gift_box_id;
   const title = isAlbum ? item.product_name : item.name;
   const category = isAlbum ? item.sub_category || item.occasion || "Photo Album" : item.category || "Gift Box";
-  const originalPrice = Number(isAlbum ? item.selling_price || 0 : item.mrp || 0);
-  const price = Number(isAlbum ? item.discount_price || item.selling_price || 0 : item.selling_price || item.mrp || 0);
+
+  const albumVariants = isAlbum ? parseJsonArray(item.variants) : [];
+  const firstVariant = albumVariants[0] || {};
+  const variantMrp = Number(firstVariant.mrp || firstVariant.price || firstVariant.selling_price || 0);
+  const variantOffer = Number(firstVariant.offerPrice || firstVariant.offer_price || firstVariant.price || variantMrp || 0);
+
+  const originalPrice = Number(
+    isAlbum
+      ? item.displayOriginalPrice || item.selling_price || variantMrp || 0
+      : item.mrp || 0
+  );
+  const price = Number(
+    isAlbum
+      ? item.displayPrice || item.discount_price || item.selling_price || variantOffer || variantMrp || 0
+      : item.selling_price || item.mrp || 0
+  );
   const isFavorite = wishlist.some((entry) => String(entry.product_id || entry.id || entry._id) === String(id));
   const hasCustomization = isAlbum || item.customization?.customerName || item.customization?.customMessage || item.customization?.photoUpload;
 

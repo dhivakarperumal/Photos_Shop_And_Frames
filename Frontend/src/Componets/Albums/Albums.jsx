@@ -12,13 +12,138 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 import AlbumCard from "../../CommonComponents/AlbumCard";
 import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import toast from "react-hot-toast";
+
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(data:|blob:|https?:\/\/)/i.test(trimmed)) return trimmed;
+  const cleanPath = trimmed.replace(/\\/g, "/");
+  const path = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+  if (/^\/api\/?$/i.test(API_URL)) return path;
+  return `${API_URL.replace(/\/api\/?$/, "")}${path}`;
+};
+
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const normalizeAlbum = (album) => {
+  const variants = parseJsonArray(album.variants);
+  const firstVariant =
+    variants.find(
+      (v) => v && (v.image || (Array.isArray(v.images) && v.images.length))
+    ) ||
+    variants[0] ||
+    {};
+
+  // Collect all variant images
+  const variantImages = [];
+  variants.forEach((v) => {
+    if (v?.image) variantImages.push(v.image);
+    if (Array.isArray(v?.images)) {
+      v.images.forEach((img) => variantImages.push(img));
+    }
+  });
+
+  const rawProductImages = parseJsonArray(album.product_images);
+  const allImages = [
+    album.thumbnail_image,
+    ...rawProductImages,
+    ...variantImages,
+  ].filter(Boolean);
+
+  const displayImageRaw =
+    album.thumbnail_image ||
+    firstVariant.image ||
+    (Array.isArray(firstVariant.images) ? firstVariant.images[0] : "") ||
+    rawProductImages[0] ||
+    allImages[0] ||
+    "";
+
+  const resolvedImages = [...new Set(allImages.map(resolveImageUrl))];
+  const displayImage = resolveImageUrl(displayImageRaw);
+
+  const variantMrp = Number(
+    firstVariant.mrp ?? firstVariant.price ?? firstVariant.selling_price ?? 0
+  );
+  const variantOffer = Number(
+    firstVariant.offerPrice ??
+      firstVariant.offer_price ??
+      firstVariant.price ??
+      firstVariant.offer ??
+      variantMrp
+  );
+
+  let sellingPrice = Number(album.selling_price || 0);
+  if (sellingPrice <= 0 && variantMrp > 0) sellingPrice = variantMrp;
+
+  let discountPrice = Number(album.discount_price || 0);
+  if (discountPrice <= 0 && variantOffer > 0) discountPrice = variantOffer;
+  if (discountPrice <= 0 && sellingPrice > 0) discountPrice = sellingPrice;
+
+  const finalPrice = discountPrice > 0 ? discountPrice : sellingPrice;
+  const originalPrice =
+    sellingPrice > finalPrice
+      ? sellingPrice
+      : variantMrp > finalPrice
+      ? variantMrp
+      : finalPrice;
+
+  let discount = Number(album.discount_percentage || 0);
+  if (discount <= 0 && originalPrice > finalPrice && originalPrice > 0) {
+    discount = Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
+  }
+
+  const stock =
+    variants.length > 0
+      ? variants.reduce(
+          (sum, v) => sum + (Number(v.stock ?? v.stock_quantity ?? 0) || 0),
+          0
+        )
+      : Number(album.stock_quantity || 0);
+
+  const isOutOfStock =
+    album.stock_status === "Out of Stock" || stock <= 0;
+
+  return {
+    ...album,
+    variants,
+    displayImage,
+    thumbnail_image: displayImage,
+    product_images:
+      resolvedImages.length > 0
+        ? resolvedImages
+        : displayImage
+        ? [displayImage]
+        : [],
+    displayPrice: finalPrice,
+    displayOriginalPrice: originalPrice,
+    displayDiscount: discount,
+    selling_price: originalPrice,
+    discount_price: finalPrice,
+    discount_percentage: discount,
+    stock_quantity: stock,
+    isOutOfStock,
+  };
+};
 
 const Albums = () => {
   const legacyModalEnabled = () => false;
@@ -48,9 +173,11 @@ const Albums = () => {
         setLoading(true);
         const response = await api.get("/albums");
         const rows = Array.isArray(response.data?.data) ? response.data.data : [];
-        const activeAlbums = rows.filter(
-          (a) => (a.status || "Active").toLowerCase() === "active"
-        );
+        const activeAlbums = rows
+          .map(normalizeAlbum)
+          .filter(
+            (a) => (a.status || "Active").toLowerCase() === "active"
+          );
         setAlbums(activeAlbums);
 
         // Derive categories/occasions
@@ -58,6 +185,7 @@ const Albums = () => {
         activeAlbums.forEach((album) => {
           if (album.sub_category) categorySet.add(album.sub_category);
           if (album.occasion) categorySet.add(album.occasion);
+          if (album.category && album.category !== "Albums") categorySet.add(album.category);
         });
         setCategories(Array.from(categorySet));
       } catch (error) {
@@ -99,8 +227,8 @@ const Albums = () => {
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
-      const priceA = Number(a.discount_price || a.selling_price || 0);
-      const priceB = Number(b.discount_price || b.selling_price || 0);
+      const priceA = Number(a.displayPrice || a.discount_price || a.selling_price || 0);
+      const priceB = Number(b.displayPrice || b.discount_price || b.selling_price || 0);
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "price-high") return priceB - priceA;
       if (sortBy === "pages") return (b.total_pages || 0) - (a.total_pages || 0);
@@ -122,13 +250,11 @@ const Albums = () => {
   // Add album to cart
   const handleAddToCart = async (e, album, quantity = 1) => {
     if (e) e.stopPropagation();
-    const price = Number(album.discount_price || album.selling_price || 0);
-
-    const productImages = Array.isArray(album.product_images)
+    const price = Number(album.displayPrice || album.discount_price || album.selling_price || 0);
+    const mainImg = album.displayImage || album.thumbnail_image || album.product_images?.[0] || "";
+    const productImages = Array.isArray(album.product_images) && album.product_images.length
       ? album.product_images
-      : album.thumbnail_image
-      ? [album.thumbnail_image]
-      : [];
+      : mainImg ? [mainImg] : [];
 
     const productPayload = {
       id: album.id,
@@ -137,7 +263,7 @@ const Albums = () => {
       category: album.category || "Albums",
       price: price,
       product_images: productImages,
-      image: album.thumbnail_image || productImages[0],
+      image: mainImg,
     };
 
     const options = {
@@ -145,7 +271,7 @@ const Albums = () => {
       size: album.size || `${album.total_pages || 40} Pages`,
       price: price,
       quantity: quantity,
-      preview_image: album.thumbnail_image || productImages[0],
+      preview_image: mainImg,
       slot_photos: customFields.coverPhoto || customFields.coverTitle
         ? {
             coverPhoto: customFields.coverPhoto,
@@ -163,7 +289,9 @@ const Albums = () => {
 
   // Buy now direct checkout
   const handleBuyNow = (album, quantity = 1) => {
-    const price = Number(album.discount_price || album.selling_price || 0);
+    const price = Number(album.displayPrice || album.discount_price || album.selling_price || 0);
+    const mainImg = album.displayImage || album.thumbnail_image || album.product_images?.[0] || "";
+
     const checkoutItem = {
       product_id: album.id,
       product_name: album.product_name,
@@ -171,7 +299,7 @@ const Albums = () => {
       size: album.size || `${album.total_pages || 40} Pages`,
       price: price,
       quantity: quantity,
-      product_image: album.thumbnail_image || album.product_images?.[0] || "",
+      product_image: mainImg,
       slot_photos: customFields.coverPhoto || customFields.coverTitle
         ? {
             coverPhoto: customFields.coverPhoto,
@@ -314,35 +442,22 @@ const Albums = () => {
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {filteredAlbums.map((album) => {
-                const image =
-                  album.thumbnail_image ||
-                  album.product_images?.[0];
-                const sellingPrice = Number(album.selling_price || 0);
-                const discountPrice = Number(album.discount_price || sellingPrice);
-                const discount =
-                  album.discount_percentage ||
-                  (sellingPrice > discountPrice
-                    ? Math.round(((sellingPrice - discountPrice) / sellingPrice) * 100)
-                    : 0);
                 const totalPages = album.total_pages || 40;
-                const isOutOfStock =
-                  album.stock_status === "Out of Stock" ||
-                  Number(album.stock_quantity) <= 0;
                 const albumId = album.id || album.product_id;
 
                 return (
                   <AlbumCard
                     key={albumId}
                     album={album}
-                    image={image}
+                    image={album.displayImage || album.thumbnail_image}
                     title={album.product_name}
-                    category={album.sub_category || album.occasion || "Photo Album"}
+                    category={album.sub_category || album.occasion || album.category || "Photo Album"}
                     badgeText={`${totalPages} Pages • Lay Flat`}
                     size={album.size || album.orientation || "Album"}
-                    outOfStock={isOutOfStock}
-                    discount={discount}
-                    price={discountPrice || sellingPrice}
-                    originalPrice={sellingPrice}
+                    outOfStock={album.isOutOfStock}
+                    discount={album.displayDiscount}
+                    price={album.displayPrice}
+                    originalPrice={album.displayOriginalPrice}
                     metadata={`${album.cover_material || "Hard Cover"} • ${album.page_thickness || "300 GSM"}`}
                     secondaryLabel={album.binding_type}
                     onOpen={openAlbumModal}
@@ -355,7 +470,7 @@ const Albums = () => {
       </PageContainer>
 
       {/* ================= ALBUM PREVIEW & ORDER MODAL ================= */}
-      {selectedAlbum && <ProductQuickView item={selectedAlbum} type="album" image={selectedAlbum.thumbnail_image || selectedAlbum.product_images?.[0]} onClose={() => setSelectedAlbum(null)} />}
+      {selectedAlbum && <ProductQuickView item={selectedAlbum} type="album" image={selectedAlbum.displayImage || selectedAlbum.thumbnail_image} onClose={() => setSelectedAlbum(null)} />}
       {legacyModalEnabled() && selectedAlbum && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"

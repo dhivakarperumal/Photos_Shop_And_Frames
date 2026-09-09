@@ -460,6 +460,25 @@ const AddAlbum = () => {
     setSaving(true);
 
     try {
+      const firstVariantWithImg = (formData.variants || []).find((v) => v && (v.image || (Array.isArray(v.images) && v.images.length))) || formData.variants?.[0] || {};
+      const variantThumbnail = firstVariantWithImg.image || (Array.isArray(firstVariantWithImg.images) ? firstVariantWithImg.images[0] : '');
+      const thumbnailImage = formData.thumbnailImage || variantThumbnail || (formData.productImages?.[0] || '');
+
+      const allVariantImages = [];
+      (formData.variants || []).forEach((v) => {
+        if (v.image) allVariantImages.push(v.image);
+        if (Array.isArray(v.images)) allVariantImages.push(...v.images);
+      });
+      const productImages = (Array.isArray(formData.productImages) && formData.productImages.length > 0)
+        ? formData.productImages
+        : [...new Set([thumbnailImage, ...allVariantImages].filter(Boolean))];
+
+      const variantMrp = Number(firstVariantWithImg.mrp || 0);
+      const variantOffer = Number(firstVariantWithImg.offerPrice || firstVariantWithImg.offer || variantMrp || 0);
+      const mrp = Number(formData.mrp) > 0 ? Number(formData.mrp) : variantMrp;
+      const offerPrice = Number(formData.offerPrice) > 0 ? Number(formData.offerPrice) : (variantOffer > 0 ? variantOffer : mrp);
+      const discountPercentage = mrp > offerPrice ? Math.round(((mrp - offerPrice) / mrp) * 100) : (Number(formData.discountPercentage) || 0);
+
       const payload = {
         product_id: formData.productId,
         product_name: formData.productName,
@@ -485,13 +504,15 @@ const AddAlbum = () => {
         print_quality: formData.printQuality,
         printing_sides: formData.printingSides,
         binding_type: formData.bindingType,
-        thumbnail_image: formData.thumbnailImage,
-        product_images: formData.productImages,
+        thumbnail_image: thumbnailImage,
+        product_images: productImages,
         cost_price: Number(formData.costPrice),
-        mrp: Number(formData.mrp),
-        offer_price: Number(formData.offerPrice),
-        discount_percentage: formData.discountPercentage,
-        stock_quantity: Number(formData.stockQuantity),
+        selling_price: mrp,
+        discount_price: offerPrice,
+        mrp: mrp,
+        offer_price: offerPrice,
+        discount_percentage: discountPercentage,
+        stock_quantity: Number(formData.stockQuantity) || getVariantStockTotal(formData.variants),
         stock_status: formData.stockStatus,
         description: formData.description,
         customization_available: formData.customizationAvailable,

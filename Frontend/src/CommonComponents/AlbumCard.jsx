@@ -51,7 +51,27 @@ const AlbumCard = ({
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">{category}</p>
         {href ? <Link to={href} className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838]" title={title}>{title}</Link> : <button type="button" onClick={open} className="mt-1.5 truncate text-left text-base font-bold text-[#1d2925] hover:text-[#b07838]" title={title}>{title}</button>}
         {metadata && <p className="mt-1 line-clamp-1 truncate text-xs text-[#777]">{metadata}</p>}
-        <div className="mt-4 flex items-center justify-between"><div><span className="text-xl font-black text-[#1a3c36]">₹{price || "--"}</span>{originalPrice > price && <span className="ml-2 text-xs text-[#999] line-through">₹{originalPrice}</span>}</div>{secondaryLabel && <span className="max-w-[100px] truncate text-[11px] font-semibold text-[#888]">{secondaryLabel}</span>}</div>
+        <div className="mt-4 flex items-center justify-between">
+          <div>
+            <span className="text-xl font-black text-[#1a3c36]">
+              ₹{typeof price === "number" && price > 0
+                ? price.toLocaleString("en-IN")
+                : (price || "--")}
+            </span>
+            {Number(originalPrice) > Number(price) && Number(originalPrice) > 0 && (
+              <span className="ml-2 text-xs text-[#999] line-through">
+                ₹{typeof originalPrice === "number"
+                  ? originalPrice.toLocaleString("en-IN")
+                  : originalPrice}
+              </span>
+            )}
+          </div>
+          {secondaryLabel && (
+            <span className="max-w-[100px] truncate text-[11px] font-semibold text-[#888]">
+              {secondaryLabel}
+            </span>
+          )}
+        </div>
         <div className="mt-auto border-t border-[#f0e8dc] pt-3">{onOpen ? <button type="button" onClick={open} className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"><Eye className="h-4 w-4" />View Album &amp; Order</button> : <Link to={href} className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"><ArrowUpRight className="h-4 w-4" />Explore</Link>}</div>
       </div>
     </article>
