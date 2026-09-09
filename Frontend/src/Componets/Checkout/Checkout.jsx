@@ -66,6 +66,19 @@ const uniqueAddresses = (addresses) => {
   });
 };
 
+const loadRazorpayScript = () => new Promise((resolve, reject) => {
+  if (window.Razorpay) {
+    resolve(true);
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = "https://checkout.razorpay.com/v1/checkout.js";
+  script.onload = () => resolve(true);
+  script.onerror = () => reject(new Error("Razorpay checkout could not be loaded"));
+  document.body.appendChild(script);
+});
+
 const Checkout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -273,6 +286,55 @@ const Checkout = () => {
       .includes(addressSearch.trim().toLowerCase()),
   );
 
+  const startOnlinePayment = async (payload) => {
+    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    if (!keyId) {
+      throw new Error("Razorpay key is not configured");
+    }
+
+    const paymentOrderResponse = await api.post("/orders/payment/create", {
+      amount: totalAmount,
+    });
+    const paymentOrder = paymentOrderResponse.data?.data;
+    await loadRazorpayScript();
+
+    return new Promise((resolve, reject) => {
+      const razorpay = new window.Razorpay({
+        key: paymentOrder?.key_id || keyId,
+        amount: paymentOrder.amount,
+        currency: paymentOrder.currency || "INR",
+        name: "Frame Photo Studio",
+        description: "Personalized photo frame order",
+        order_id: paymentOrder.id,
+        prefill: {
+          name: payload.customer_name,
+          email: payload.customer_email,
+          contact: payload.customer_phone,
+        },
+        theme: { color: "#1a3c36" },
+        handler: async (paymentResponse) => {
+          try {
+            const response = await api.post("/orders/payment/verify", {
+              payment: paymentResponse,
+              order: payload,
+            });
+            resolve(response);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        modal: {
+          ondismiss: () => reject(new Error("Payment was cancelled")),
+        },
+      });
+
+      razorpay.on("payment.failed", (event) => {
+        reject(new Error(event.error?.description || "Payment failed"));
+      });
+      razorpay.open();
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -358,7 +420,9 @@ const Checkout = () => {
       }),
     };
 
-      const response = await api.post("/orders", payload);
+      const response = formData.payment_method === "Online Payment / UPI"
+        ? await startOnlinePayment(payload)
+        : await api.post("/orders", payload);
 
       if (response.data?.success) {
         setOrderSuccess(response.data.data);

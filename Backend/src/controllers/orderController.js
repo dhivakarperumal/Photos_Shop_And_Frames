@@ -1,5 +1,87 @@
+const crypto = require("crypto");
+const Razorpay = require("razorpay");
 const orderModule = require("../modules/orderModule");
 const cartModule = require("../modules/cartModule");
+
+const getRazorpayClient = () => {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error("Razorpay credentials are not configured on the server");
+  }
+
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+};
+
+const createPaymentOrder = async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "A valid payment amount is required" });
+    }
+
+    const razorpayOrder = await getRazorpayClient().orders.create({
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      receipt: `checkout_${Date.now()}`,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        key_id: process.env.RAZORPAY_KEY_ID,
+      },
+    });
+  } catch (error) {
+    console.error("Create Razorpay order error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Could not start online payment" });
+  }
+};
+
+const verifyPayment = async (req, res) => {
+  try {
+    const { payment = {}, order = {} } = req.body;
+    const signaturePayload = `${payment.razorpay_order_id}|${payment.razorpay_payment_id}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+      .update(signaturePayload)
+      .digest("hex");
+
+    if (
+      !payment.razorpay_order_id ||
+      !payment.razorpay_payment_id ||
+      !payment.razorpay_signature ||
+      payment.razorpay_signature.length !== expectedSignature.length ||
+      !crypto.timingSafeEqual(
+        Buffer.from(expectedSignature),
+        Buffer.from(payment.razorpay_signature),
+      )
+    ) {
+      return res.status(400).json({ success: false, message: "Payment verification failed" });
+    }
+
+    const razorpayOrder = await getRazorpayClient().orders.fetch(payment.razorpay_order_id);
+    const expectedAmount = Math.round(Number(order.total_amount || 0) * 100);
+    if (!expectedAmount || Number(razorpayOrder.amount) !== expectedAmount) {
+      return res.status(400).json({ success: false, message: "Payment amount does not match the order" });
+    }
+
+    req.body = {
+      ...order,
+      payment_method: "Online Payment / UPI",
+      payment_verified: true,
+      razorpay_payment_id: payment.razorpay_payment_id,
+    };
+    return createOrder(req, res);
+  } catch (error) {
+    console.error("Verify Razorpay payment error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Could not verify online payment" });
+  }
+};
 
 const createOrder = async (req, res) => {
   try {
@@ -19,6 +101,7 @@ const createOrder = async (req, res) => {
       address: submittedAddress,
       items = [],
       clear_cart = false,
+      payment_verified = false,
       // Legacy / billing format support
       order,
     } = req.body;
@@ -100,6 +183,13 @@ const createOrder = async (req, res) => {
       });
     }
 
+    if (String(payment_method || "").toLowerCase().includes("online") && !payment_verified) {
+      return res.status(400).json({
+        success: false,
+        message: "Online payments must be completed through Razorpay",
+      });
+    }
+
     const calculatedTotal =
       Number(total_amount) ||
       items.reduce(
@@ -121,7 +211,7 @@ const createOrder = async (req, res) => {
       pincode: (pincode || "").trim(),
       total_amount: calculatedTotal,
       payment_method: payment_method || "Cash On Delivery",
-      payment_status: payment_method === "Online" ? "Paid" : "Pending",
+      payment_status: payment_verified ? "Paid" : "Pending",
       order_status: "Order Placed",
       notes: notes || null,
       created_by: user_id || req.user?.user_id || null,
@@ -305,6 +395,8 @@ const deleteOrder = async (req, res) => {
 };
 
 module.exports = {
+  createPaymentOrder,
+  verifyPayment,
   createOrder,
   getAllOrders,
   getOrders: getAllOrders,
