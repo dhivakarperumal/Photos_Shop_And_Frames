@@ -637,7 +637,7 @@ const AddProducts = () => {
 
     e.stopPropagation();
     setActiveDraggingSlot(slotId);
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" };
     dragSlotStartRef.current = {
       x: e.clientX,
       y: e.clientY,
@@ -662,14 +662,29 @@ const AddProducts = () => {
       dragSlotStartRef.current.hasMoved = true;
     }
 
-    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0 };
-    const maxPan = Math.max(140, ((curr.scale || 1.0) - 1) * 80 + 140);
+    const curr = slotAdjustments[slotId] || { panX: 0, panY: 0, scale: 1.0, fitMode: "contain" };
+    const slotRect = e.currentTarget.getBoundingClientRect();
+    const photoElement = e.currentTarget.querySelector("img");
+    const photoRatio = photoElement?.naturalWidth && photoElement?.naturalHeight
+      ? photoElement.naturalWidth / photoElement.naturalHeight
+      : 1;
+    const fitMode = curr.fitMode || "contain";
+    const baseWidth = fitMode === "contain"
+      ? Math.min(slotRect.width, slotRect.height * photoRatio)
+      : Math.max(slotRect.width, slotRect.height * photoRatio);
+    const baseHeight = fitMode === "contain"
+      ? Math.min(slotRect.height, slotRect.width / photoRatio)
+      : Math.max(slotRect.height, slotRect.width / photoRatio);
+    const renderedWidth = baseWidth * (curr.scale || 1.0);
+    const renderedHeight = baseHeight * (curr.scale || 1.0);
+    const maxPanX = Math.max(0, ((renderedWidth - slotRect.width) / 2 / slotRect.width) * 100);
+    const maxPanY = Math.max(0, ((renderedHeight - slotRect.height) / 2 / slotRect.height) * 100);
 
-    const deltaPercentX = dx * 0.45;
-    const deltaPercentY = dy * 0.45;
+    const deltaPercentX = slotRect.width ? (dx / slotRect.width) * 100 : 0;
+    const deltaPercentY = slotRect.height ? (dy / slotRect.height) * 100 : 0;
 
-    const newPanX = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanX + deltaPercentX));
-    const newPanY = Math.min(maxPan, Math.max(-maxPan, dragSlotStartRef.current.startPanY + deltaPercentY));
+    const newPanX = Math.min(maxPanX, Math.max(-maxPanX, dragSlotStartRef.current.startPanX + deltaPercentX));
+    const newPanY = Math.min(maxPanY, Math.max(-maxPanY, dragSlotStartRef.current.startPanY + deltaPercentY));
 
     setSlotAdjustments((prev) => ({
       ...prev,
