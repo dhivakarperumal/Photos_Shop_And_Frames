@@ -23,8 +23,40 @@ const normalizeImageUrl = (value) => {
   return `${baseUrl}${value.startsWith('/') ? value : `/${value}`}`;
 };
 
+const parseVariantArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const getProductVariantStock = (data) => {
+  const variants = parseVariantArray(data?.size_variants);
+  return variants.reduce((sum, variant) => sum + Number(variant?.stock || 0), 0);
+};
+
+const getAlbumVariantStock = (album) => {
+  const variants = parseVariantArray(album?.variants);
+  if (variants.length) {
+    return variants.reduce((sum, variant) => sum + Number(variant?.stock || variant?.quantity || 0), 0);
+  }
+  return Number(album?.stock_quantity || 0);
+};
+
+const getStatusLabel = (currentStock) => {
+  if (currentStock === 0) return 'Out of Stock';
+  if (currentStock <= 15) return 'Low Stock';
+  return 'In Stock';
+};
+
 const StockDetails = () => {
   const [products, setProducts] = useState([]);
+  const [albums, setAlbums] = useState([]);
+  const [gifts, setGifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -39,44 +71,110 @@ const StockDetails = () => {
   const pageSize = 10;
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchCatalog = async () => {
       try {
-        const response = await api.get('/products');
-        setProducts(Array.isArray(response?.data?.data) ? response.data.data : []);
+        const [productsResponse, albumsResponse, giftsResponse] = await Promise.all([
+          api.get('/products'),
+          api.get('/albums'),
+          api.get('/gift-boxes'),
+        ]);
+
+        setProducts(Array.isArray(productsResponse?.data?.data) ? productsResponse.data.data : []);
+        setAlbums(Array.isArray(albumsResponse?.data?.data) ? albumsResponse.data.data : []);
+        setGifts(Array.isArray(giftsResponse?.data?.data) ? giftsResponse.data.data : []);
       } catch (error) {
         console.error('Failed to load stock details:', error);
         setProducts([]);
+        setAlbums([]);
+        setGifts([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
+    fetchCatalog();
   }, []);
 
-  const stockRows = useMemo(() => products.map((product) => {
-    const variants = Array.isArray(product.size_variants) ? product.size_variants : [];
-    const currentStock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
-    const firstVariant = variants[0] || {};
-    const status = currentStock === 0 ? 'Out of Stock' : currentStock <= 15 ? 'Low Stock' : 'In Stock';
-    const image = normalizeImageUrl(product.product_images?.[0] || product.frame_data?.frame_image || '');
+  const stockRows = useMemo(() => {
+    const productRows = products.map((product) => {
+      const variants = parseVariantArray(product.size_variants);
+      const currentStock = variants.reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0);
+      const firstVariant = variants[0] || {};
+      const status = getStatusLabel(currentStock);
+      const image = normalizeImageUrl(product.product_images?.[0] || product.frame_data?.frame_image || '');
 
-    return {
-      id: product.id,
-      product: product.product_name || 'Untitled Product',
-      sku: product.product_id || '—',
-      category: product.category || 'Uncategorized',
-      price: Number(firstVariant.offer_price || 0),
-      offerPrice: Number(firstVariant.mrp || 0),
-      currentStock,
-      available: currentStock,
-      reserved: 0,
-      status,
-      lastUpdated: product.updated_at || product.created_at || '',
-      image,
-      rawData: product,
-    };
-  }), [products]);
+      return {
+        id: `product-${product.id || product.product_id || product.product_code || ''}`,
+        type: 'product',
+        product: product.product_name || 'Untitled Product',
+        sku: product.product_id || product.product_code || '—',
+        category: product.category || 'Uncategorized',
+        price: Number(firstVariant.offer_price || product.selling_price || product.price || 0),
+        offerPrice: Number(firstVariant.mrp || product.mrp || product.selling_price || 0),
+        currentStock,
+        available: currentStock,
+        reserved: 0,
+        status,
+        lastUpdated: product.updated_at || product.created_at || '',
+        image,
+        rawData: product,
+      };
+    });
+
+    const albumRows = albums.map((album) => {
+      const variants = parseVariantArray(album.variants);
+      const currentStock = getAlbumVariantStock(album);
+      const status = getStatusLabel(currentStock);
+      const image = normalizeImageUrl(
+        album.product_images?.[0] ||
+        album.thumbnail_image ||
+        (Array.isArray(album.images) ? album.images[0] : '') ||
+        (variants[0]?.image || variants[0]?.images?.[0] || '')
+      );
+
+      return {
+        id: `album-${album.id || album.product_id || album.product_code || ''}`,
+        type: 'album',
+        product: album.product_name || 'Untitled Album',
+        sku: album.product_code || album.product_id || album.id || '—',
+        category: album.category || 'Albums',
+        price: Number(album.discount_price || album.selling_price || album.price || 0),
+        offerPrice: Number(album.mrp || album.selling_price || album.discount_price || 0),
+        currentStock,
+        available: currentStock,
+        reserved: 0,
+        status,
+        lastUpdated: album.updated_at || album.created_at || '',
+        image,
+        rawData: album,
+      };
+    });
+
+    const giftRows = gifts.map((gift) => {
+      const currentStock = Number(gift.current_stock ?? gift.stock_quantity ?? gift.currentStock ?? 0);
+      const status = getStatusLabel(currentStock);
+      const image = normalizeImageUrl(gift.image || gift.images?.[0] || '');
+
+      return {
+        id: `gift-${gift.id || gift.gift_box_id || gift.product_id || ''}`,
+        type: 'gift',
+        product: gift.name || 'Untitled Gift Box',
+        sku: gift.gift_box_id || gift.product_code || gift.id || '—',
+        category: gift.category || 'Gift Boxes',
+        price: Number(gift.selling_price || gift.mrp || 0),
+        offerPrice: Number(gift.mrp || gift.selling_price || 0),
+        currentStock,
+        available: currentStock,
+        reserved: 0,
+        status,
+        lastUpdated: gift.updated_at || gift.created_at || '',
+        image,
+        rawData: gift,
+      };
+    });
+
+    return [...productRows, ...albumRows, ...giftRows];
+  }, [products, albums, gifts]);
 
   const categories = [...new Set(stockRows.map((item) => item.category))].sort();
   const filteredRows = stockRows
@@ -111,13 +209,35 @@ const StockDetails = () => {
   ];
 
   const openStockEditor = (row) => {
-    const variants = Array.isArray(row.rawData?.size_variants) ? row.rawData.size_variants : [];
     setEditingProduct(row);
     setReportOpen(true);
-    setStockValues(variants.map((variant) => ({
-      ...variant,
-      stock: Number(variant.stock) || 0,
-    })));
+
+    if (row.type === 'product') {
+      const variants = Array.isArray(row.rawData?.size_variants) ? row.rawData.size_variants : [];
+      setStockValues(variants.map((variant) => ({
+        ...variant,
+        stock: Number(variant.stock) || 0,
+      })));
+      return;
+    }
+
+    if (row.type === 'album') {
+      const variants = parseVariantArray(row.rawData?.variants);
+      if (variants.length) {
+        setStockValues(variants.map((variant) => ({
+          ...variant,
+          stock: Number(variant.stock ?? variant.quantity ?? 0) || 0,
+        })));
+      } else {
+        setStockValues([{ size: row.rawData?.size || 'Standard', color: '', stock: Number(row.rawData?.stock_quantity ?? row.currentStock ?? 0) || 0 }]);
+      }
+      return;
+    }
+
+    if (row.type === 'gift') {
+      const stock = Number(row.rawData?.current_stock ?? row.rawData?.stock_quantity ?? row.rawData?.currentStock ?? row.currentStock ?? 0);
+      setStockValues([{ size: 'Gift Box', color: '', stock }]);
+    }
   };
 
   const openStockReport = () => {
@@ -143,15 +263,53 @@ const StockDetails = () => {
 
     try {
       setSavingStock(true);
-      await api.put(`/products/${editingProduct.id}`, {
-        ...editingProduct.rawData,
-        size_variants: stockValues,
-      });
+
+      if (editingProduct.type === 'product') {
+        await api.put(`/products/${editingProduct.rawData?.id ?? editingProduct.id}`, {
+          ...editingProduct.rawData,
+          size_variants: stockValues.map((variant) => ({
+            ...variant,
+            stock: Math.max(0, Number(variant.stock) || 0),
+          })),
+        });
+      }
+
+      if (editingProduct.type === 'album') {
+        const nextVariants = stockValues.map((variant) => ({
+          ...variant,
+          stock: Math.max(0, Number(variant.stock) || 0),
+        }));
+        const totalStock = nextVariants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+        await api.put(`/albums/${editingProduct.rawData?.product_id ?? editingProduct.rawData?.id ?? editingProduct.id}`, {
+          ...editingProduct.rawData,
+          variants: nextVariants,
+          stock_quantity: totalStock,
+          stock_status: totalStock <= 0 ? 'Out of Stock' : 'In Stock',
+        });
+      }
+
+      if (editingProduct.type === 'gift') {
+        const totalStock = stockValues.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0);
+        await api.put(`/gift-boxes/${editingProduct.rawData?.gift_box_id ?? editingProduct.rawData?.id ?? editingProduct.id}`, {
+          ...editingProduct.rawData,
+          current_stock: totalStock,
+          stock_status: totalStock <= 0 ? 'Out of Stock' : 'Available',
+        });
+      }
+
       toast.success('Stock updated successfully');
       setEditingProduct(null);
       setReportOpen(false);
-      const response = await api.get('/products');
-      setProducts(Array.isArray(response?.data?.data) ? response.data.data : []);
+
+      const [productsResponse, albumsResponse, giftsResponse] = await Promise.all([
+        api.get('/products'),
+        api.get('/albums'),
+        api.get('/gift-boxes'),
+      ]);
+
+      setProducts(Array.isArray(productsResponse?.data?.data) ? productsResponse.data.data : []);
+      setAlbums(Array.isArray(albumsResponse?.data?.data) ? albumsResponse.data.data : []);
+      setGifts(Array.isArray(giftsResponse?.data?.data) ? giftsResponse.data.data : []);
     } catch (error) {
       console.error('Failed to update stock:', error);
       toast.error(error?.response?.data?.message || 'Failed to update stock');
@@ -282,9 +440,7 @@ const StockDetails = () => {
                   <th className="px-4 py-4">SKU</th>
                   <th className="px-4 py-4">Category</th>
                   <th className="px-4 py-4">Price</th>
-                  <th className="px-4 py-4">Current Stock</th>
-                  <th className="px-4 py-4">Available Stock</th>
-                  <th className="px-4 py-4">Reserved</th>
+                  <th className="px-4 py-4">Stock</th>
                   <th className="px-4 py-4">Status</th>
                   <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
@@ -310,8 +466,6 @@ const StockDetails = () => {
                       <div className="text-[11px] text-[#7a7a7a] line-through">₹{item.offerPrice.toLocaleString('en-IN')}</div>
                     </td>
                     <td className="px-4 py-4">{item.currentStock}</td>
-                    <td className="px-4 py-4">{item.available}</td>
-                    <td className="px-4 py-4">{item.reserved}</td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${
                         item.status === 'In Stock'
