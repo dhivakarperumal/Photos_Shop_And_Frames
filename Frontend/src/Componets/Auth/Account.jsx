@@ -11,6 +11,7 @@ import {
   Package,
   Pencil,
   Save,
+  Search,
   ShoppingBag,
   UserRound,
   X,
@@ -100,6 +101,7 @@ const Account = () => {
   });
   const [saving, setSaving] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [trackingOrderId, setTrackingOrderId] = useState("");
 
   // Tab handling
   const tabFromUrl = searchParams.get("tab");
@@ -128,6 +130,29 @@ const Account = () => {
       }
       return next;
     });
+  };
+
+  const handleTrackOrder = (event) => {
+    event.preventDefault();
+    const requestedOrderId = trackingOrderId.trim().replace(/^#/, "");
+
+    if (!requestedOrderId) {
+      toast.error("Please enter an order ID");
+      return;
+    }
+
+    const matchedOrder = orders.find(
+      (order) =>
+        String(order.order_id || "").toLowerCase() === requestedOrderId.toLowerCase() ||
+        String(order.id || "").toLowerCase() === requestedOrderId.toLowerCase(),
+    );
+
+    if (!matchedOrder) {
+      toast.error("No order found with that order ID");
+      return;
+    }
+
+    handleOpenOrder(matchedOrder);
   };
 
   const handleCloseOrderModal = () => {
@@ -764,6 +789,31 @@ const Account = () => {
                         {orders.length} {orders.length === 1 ? "order" : "orders"}
                       </span>
                     </div>
+
+                    <form
+                      onSubmit={handleTrackOrder}
+                      className="mb-6 flex flex-col gap-2 rounded-xl border border-[#dfd6ca] bg-[#faf8f5] p-4 sm:flex-row sm:items-end"
+                    >
+                      <label className="min-w-0 flex-1">
+                        <span className="mb-1.5 block text-xs font-semibold text-[#1b2925]">
+                          Track an order
+                        </span>
+                        <input
+                          type="text"
+                          value={trackingOrderId}
+                          onChange={(event) => setTrackingOrderId(event.target.value)}
+                          placeholder="Enter order ID, e.g. ORD-20260909-A6FY"
+                          className="h-11 w-full rounded-lg border border-[#dfd6ca] bg-white px-3 text-sm text-[#1b2925] outline-none transition placeholder:text-[#a39a90] focus:border-[#b87840] focus:ring-2 focus:ring-[#b87840]/15"
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#1b2925] px-5 text-xs font-bold text-white transition hover:bg-[#b87840]"
+                      >
+                        <Search size={15} />
+                        Track Order
+                      </button>
+                    </form>
 
                     {orders.length > 0 ? (
                       <div className="divide-y divide-[#eee9e3]">
