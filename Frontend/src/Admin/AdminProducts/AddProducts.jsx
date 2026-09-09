@@ -1501,6 +1501,7 @@ const AddProducts = () => {
                                   <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition group-hover:opacity-100 z-20 p-1">
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setAdjustingSlot(slot);
@@ -1513,6 +1514,7 @@ const AddProducts = () => {
 
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         const curr = slotAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
@@ -1532,6 +1534,7 @@ const AddProducts = () => {
 
                                     <button
                                       type="button"
+                                      onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         photoInputRefs.current[slot.id]?.click();
