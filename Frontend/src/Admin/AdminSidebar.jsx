@@ -71,6 +71,7 @@ const navItems = [
     children: [
       { path: "/admin/frames", label: "Frames", icon: Image },
       { path: "/admin/gifts", label: "Gifts", icon: Gift },
+      { path: "/admin/albums", label: "Albums", icon: Album, },
       { path: "/admin/products", label: "All Products", icon: Package },
       { path: "/admin/products/categories", label: "Category", icon: Layers },
       { path: "/admin/products/stock-details", label: "Stock Details", icon: ClipboardList },
@@ -122,7 +123,6 @@ const navItems = [
     children: [
       { path: "/admin/banners", label: "Banners", icon: Image },
       { path: "/admin/videos", label: "Videos Management", icon: Image },
-      { path: "/admin/albums", label: "Albums", icon: Album, },
       { path: "/admin/gallery", label: "Gallery", icon: Image },
       { path: "/admin/coupons", label: "Coupons & Offers", icon: Tag },
     ],

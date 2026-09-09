@@ -34,6 +34,20 @@ const parseVariantArray = (value) => {
   }
 };
 
+const getVariantColor = (variant) => variant?.color || variant?.colour || variant?.variant_color || '';
+
+const getVariantSize = (variant) => variant?.size || variant?.size_name || variant?.label || variant?.name || variant?.size_description || '';
+
+const getVariantDisplayLabel = (variant, index = 0) => {
+  const size = getVariantSize(variant);
+  const color = getVariantColor(variant);
+
+  if (size && color) return `${color} / ${size}`;
+  if (size) return size;
+  if (color) return color;
+  return `Variant ${index + 1}`;
+};
+
 const getProductVariantStock = (data) => {
   const variants = parseVariantArray(data?.size_variants);
   return variants.reduce((sum, variant) => sum + Number(variant?.stock || 0), 0);
@@ -436,7 +450,7 @@ const StockDetails = () => {
                     {item.image ? <img src={item.image} alt={item.product} className="h-full w-full object-contain" /> : <Package className="h-12 w-12 text-[#b5a998]" />}
                   </div>
                   <h3 className="truncate text-base font-semibold text-[#1f1f1f]">{item.product}</h3>
-                  <p className="mt-1 font-mono text-xs text-[#7a7a7a]">{item.sku}</p>
+                  <p className="mt-1 text-[11px] font-medium text-[#666]">SKU: <span className="font-mono text-[#7a7a7a]">{item.sku}</span></p>
                   <div className="mt-3 flex items-center justify-between text-sm">
                     <span className="font-bold text-[#1e1e1e]">Stock: {item.currentStock}</span>
                     <span className="text-[#666]">{item.category}</span>
@@ -459,7 +473,7 @@ const StockDetails = () => {
                 <tr>
                   <th className="px-4 py-4">S.No</th>
                   <th className="px-4 py-4">Product</th>
-                  <th className="px-4 py-4">SKU</th>
+                  
                   <th className="px-4 py-4">Category</th>
                   <th className="px-4 py-4">Price</th>
                   <th className="px-4 py-4">Stock</th>
@@ -478,10 +492,12 @@ const StockDetails = () => {
                         </div>
                         <div>
                           <div className="font-medium text-[#202020]">{item.product}</div>
+                          <div>{item.sku}</div>
                         </div>
+                       
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-[#5d5d5d]">{item.sku}</td>
+                    
                     <td className="px-4 py-4">{item.category}</td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-[#1d1d1d]">₹{item.price.toLocaleString('en-IN')}</div>
@@ -579,7 +595,7 @@ const StockDetails = () => {
                 {stockValues.map((variant, index) => (
                   <label key={index} className="flex items-center justify-between gap-4 rounded-xl border border-[#e7e0d8] bg-[#faf9f8] p-3">
                     <span>
-                      <span className="block text-sm font-semibold text-[#222]">{variant.size || `Size ${index + 1}`}</span>
+                      <span className="block text-sm font-semibold text-[#222]">{getVariantDisplayLabel(variant, index)}</span>
                       <span className="text-xs text-[#777]">Current stock: {variant.stock}</span>
                     </span>
                     <div className="flex flex-col items-end gap-1">
@@ -589,7 +605,7 @@ const StockDetails = () => {
                         value={variant.add}
                         onChange={(event) => updateStockValue(index, event.target.value)}
                         className="h-10 w-24 rounded-lg border border-[#dfe2e5] bg-white px-3 text-right text-sm font-semibold outline-none focus:border-[#1a3c36]"
-                        aria-label={`Add stock for ${variant.size || `size ${index + 1}`}`}
+                        aria-label={`Add stock for ${getVariantDisplayLabel(variant, index)}`}
                       />
                       <span className="text-[10px] text-[#777]">Add units</span>
                     </div>

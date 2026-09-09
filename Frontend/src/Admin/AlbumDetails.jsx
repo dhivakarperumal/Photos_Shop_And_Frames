@@ -4,13 +4,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 
 const getImageUrl = (imagePath) => {
-  if (!imagePath) return '';
+  if (!imagePath || typeof imagePath !== 'string') return '';
+
   const normalizedPath = String(imagePath).trim();
   if (/^https?:\/\//i.test(normalizedPath)) return encodeURI(normalizedPath);
+  if (/^data:/i.test(normalizedPath)) return normalizedPath;
 
   const cleanPath = normalizedPath.replace(/\\/g, '/');
+  const rawApiUrl = import.meta.env.VITE_API_URL || '/api';
+  const baseUrl = rawApiUrl.replace(/\/api\/?$/, '');
   const finalPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-  return encodeURI(`http://localhost:5000${finalPath}`);
+
+  return encodeURI(`${baseUrl}${finalPath}`);
 };
 
 const readArray = (value) => {
@@ -79,7 +84,13 @@ const AlbumDetails = () => {
     );
   }
 
-  const images = [album.thumbnail_image, ...readArray(album.product_images)].filter(Boolean).map(getImageUrl);
+  const topLevelImages = [album.thumbnail_image, ...readArray(album.product_images)].filter(Boolean);
+  const variantImages = readArray(album.variants).flatMap((variant) => {
+    const variantImageList = Array.isArray(variant?.images) ? variant.images : [];
+    const fallbackImage = variant?.image || '';
+    return [fallbackImage, ...variantImageList].filter(Boolean);
+  });
+  const images = Array.from(new Set([...topLevelImages, ...variantImages])).map(getImageUrl).filter(Boolean);
   const status = album.status || 'Active';
   const stock = Number(album.stock_quantity || 0);
 
