@@ -59,12 +59,19 @@ const getCustomizationById = async (customizationId) => {
   if (!rows.length) return null;
 
   const row = rows[0];
+  const parsed =
+    typeof row.slot_photos === "string"
+      ? JSON.parse(row.slot_photos)
+      : row.slot_photos || {};
+
+  const adjustments = parsed._adjustments || {};
+  const cleanSlotPhotos = { ...parsed };
+  delete cleanSlotPhotos._adjustments;
+
   return {
     ...row,
-    slot_photos:
-      typeof row.slot_photos === "string"
-        ? JSON.parse(row.slot_photos)
-        : row.slot_photos || {},
+    slot_photos: cleanSlotPhotos,
+    photo_adjustments: adjustments,
   };
 };
 

@@ -221,6 +221,7 @@ async function ensureDatabaseSchema() {
         quantity INT(11) NOT NULL DEFAULT 1,
         slot_photos JSON NULL,
         preview_image VARCHAR(500) NULL,
+        item_type VARCHAR(30) NOT NULL DEFAULT 'product',
         created_by VARCHAR(255) NULL,
         updated_by VARCHAR(255) NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -385,6 +386,23 @@ async function ensureDatabaseSchema() {
       );
     } catch (error) {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    try {
+      await connection.query(
+        `ALTER TABLE carts ADD COLUMN item_type VARCHAR(30) NOT NULL DEFAULT 'product'`
+      );
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    try {
+      await connection.query(
+        `UPDATE carts SET item_type = 'gift' WHERE (preview_image LIKE '%/gifts/%' OR preview_image LIKE '%uploads/gifts%') AND (item_type = 'product' OR item_type IS NULL)`
+      );
+      await connection.query(
+        `UPDATE carts SET item_type = 'album' WHERE (preview_image LIKE '%/albums/%' OR preview_image LIKE '%uploads/albums%') AND (item_type = 'product' OR item_type IS NULL)`
+      );
+    } catch (error) {
+      // Ignore migration errors
     }
     await connection.query(createOrdersTableQuery);
     for (const column of [

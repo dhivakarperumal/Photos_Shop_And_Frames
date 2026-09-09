@@ -96,10 +96,10 @@ const generateCompositeFrameBlobAndDataUrl = (
 
               // Clip region (circle or rounded rectangle)
               ctx.beginPath();
+              const radius = Math.min(12, Math.min(sw, sh) * 0.05);
               if (slot.shape === "circle") {
                 ctx.arc(sx + sw / 2, sy + sh / 2, Math.min(sw, sh) / 2, 0, Math.PI * 2);
               } else {
-                const radius = Math.min(12, Math.min(sw, sh) * 0.05);
                 if (ctx.roundRect) {
                   ctx.roundRect(sx, sy, sw, sh, radius);
                 } else {
@@ -109,37 +109,145 @@ const generateCompositeFrameBlobAndDataUrl = (
               ctx.closePath();
               ctx.clip();
 
+              // Inner Border & Outer Border calculation
+              const innerBorderWidth = adj.innerBorderWidth ? Math.round((adj.innerBorderWidth / 320) * sw) : 0;
+              const innerBorderColor = adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : null;
+              const outerBorderWidth = adj.outerBorderWidth ? Math.round((adj.outerBorderWidth / 320) * sw) : 0;
+              const outerBorderColor = adj.outerBorderColor && adj.outerBorderColor !== "transparent" ? adj.outerBorderColor : null;
+
+              if (innerBorderColor) {
+                ctx.fillStyle = innerBorderColor;
+                ctx.fillRect(sx, sy, sw, sh);
+              }
+
+              const psx = sx + innerBorderWidth;
+              const psy = sy + innerBorderWidth;
+              const psw = Math.max(10, sw - innerBorderWidth * 2);
+              const psh = Math.max(10, sh - innerBorderWidth * 2);
+
+              ctx.save();
+              ctx.beginPath();
+              if (slot.shape === "circle") {
+                ctx.arc(psx + psw / 2, psy + psh / 2, Math.min(psw, psh) / 2, 0, Math.PI * 2);
+              } else {
+                const innerRadius = Math.max(0, radius - innerBorderWidth * 0.5);
+                if (ctx.roundRect) ctx.roundRect(psx, psy, psw, psh, innerRadius);
+                else ctx.rect(psx, psy, psw, psh);
+              }
+              ctx.closePath();
+              ctx.clip();
+
               // Calculate object-fit with pan & zoom
               const imgRatio = pImg.naturalWidth / pImg.naturalHeight;
-              const slotRatio = sw / sh;
-              let baseW = sw, baseH = sh;
+              const slotRatio = psw / psh;
+              let baseW = psw, baseH = psh;
 
               if (slot.objectFit === "contain") {
                 if (imgRatio > slotRatio) {
-                  baseW = sw;
-                  baseH = sw / imgRatio;
+                  baseW = psw;
+                  baseH = psw / imgRatio;
                 } else {
-                  baseH = sh;
-                  baseW = sh * imgRatio;
+                  baseH = psh;
+                  baseW = psh * imgRatio;
                 }
               } else {
                 // cover
                 if (imgRatio > slotRatio) {
-                  baseH = sh;
-                  baseW = sh * imgRatio;
+                  baseH = psh;
+                  baseW = psh * imgRatio;
                 } else {
-                  baseW = sw;
-                  baseH = sw / imgRatio;
+                  baseW = psw;
+                  baseH = psw / imgRatio;
                 }
               }
 
               const dw = baseW * scale;
               const dh = baseH * scale;
-              const dx = sx + (sw - dw) / 2 + (panX / 100) * sw;
-              const dy = sy + (sh - dh) / 2 + (panY / 100) * sh;
+              const dx = psx + (psw - dw) / 2 + (panX / 100) * psw;
+              const dy = psy + (psh - dh) / 2 + (panY / 100) * psh;
 
-              ctx.drawImage(pImg, dx, dy, dw, dh);
+              // Apply Filters (Canvas filter)
+              const filterParts = [];
+              if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+              else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+              else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+              else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+              else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+              else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+              else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+              else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+              const brightness = adj.brightness ?? 100;
+              const contrast = (adj.contrast ?? 100) + Math.round((adj.sharpness || 0) * 0.4);
+              const saturation = adj.saturation ?? 100;
+              const blur = adj.blur || 0;
+
+              if (brightness !== 100) filterParts.push(`brightness(${brightness}%)`);
+              if (contrast !== 100) filterParts.push(`contrast(${contrast}%)`);
+              if (saturation !== 100) filterParts.push(`saturate(${saturation}%)`);
+              if (blur > 0) filterParts.push(`blur(${Math.max(1, Math.round(blur * (w / 1000)))}px)`);
+
+              if (filterParts.length > 0 && ctx.filter) {
+                ctx.filter = filterParts.join(" ");
+              }
+
+              // Rotate and Flip Transform
+              const totalRot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+              const flipH = Boolean(adj.flipH);
+              const flipV = Boolean(adj.flipV);
+
+              ctx.save();
+              ctx.translate(dx + dw / 2, dy + dh / 2);
+              if (totalRot !== 0) {
+                ctx.rotate((totalRot * Math.PI) / 180);
+              }
+              if (flipH || flipV) {
+                ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+              }
+              ctx.drawImage(pImg, -dw / 2, -dh / 2, dw, dh);
               ctx.restore();
+              ctx.filter = "none";
+              ctx.restore(); // Restore sub-clip
+
+              // Draw Outer Border stroke if specified
+              if (outerBorderColor && outerBorderWidth > 0) {
+                ctx.strokeStyle = outerBorderColor;
+                ctx.lineWidth = outerBorderWidth;
+                ctx.stroke();
+              }
+
+              // Draw Text Overlay
+              if (adj.textOverlay?.text) {
+                ctx.save();
+                const fontSz = Math.max(14, Math.round(((adj.textOverlay.fontSize || 18) / 320) * sw));
+                const fontFam = adj.textOverlay.fontFamily || "sans-serif";
+                const isBold = adj.textOverlay.bold ? "bold " : "";
+                const isItalic = adj.textOverlay.italic ? "italic " : "";
+                ctx.font = `${isBold}${isItalic}${fontSz}px ${fontFam}`;
+                ctx.fillStyle = adj.textOverlay.color || "#ffffff";
+                ctx.textAlign = adj.textOverlay.align || "center";
+                ctx.textBaseline = "middle";
+
+                if (adj.textOverlay.shadow) {
+                  ctx.shadowColor = "rgba(0,0,0,0.85)";
+                  ctx.shadowBlur = 5;
+                  ctx.shadowOffsetX = 1;
+                  ctx.shadowOffsetY = 2;
+                }
+
+                let tx = sx + sw / 2;
+                if (adj.textOverlay.align === "left") tx = sx + fontSz * 1.2;
+                else if (adj.textOverlay.align === "right") tx = sx + sw - fontSz * 1.2;
+
+                let ty = sy + sh - fontSz * 1.6;
+                if (adj.textOverlay.position === "top") ty = sy + fontSz * 1.6;
+                else if (adj.textOverlay.position === "center") ty = sy + sh / 2;
+
+                ctx.fillText(adj.textOverlay.text, tx, ty, sw - fontSz * 1.5);
+                ctx.restore();
+              }
+
+              ctx.restore(); // Restore outer clip
               slotResolve();
             };
 
@@ -754,25 +862,91 @@ const ProductDetails = () => {
                                   }`}
                                   title="Drag to reposition photo"
                                 >
-                                  {/* PHOTO WITH PAN & ZOOM TRANSFORM */}
+                                  {/* PHOTO WITH STUDIO ADJUSTMENTS */}
                                   {(() => {
                                     const adj = photoAdjustments[slot.id] || { panX: 0, panY: 0, scale: 1.0 };
+                                    const filterParts = [];
+                                    if (adj.filter === "bw") filterParts.push("grayscale(100%) contrast(110%)");
+                                    else if (adj.filter === "sepia") filterParts.push("sepia(85%) contrast(95%)");
+                                    else if (adj.filter === "warm") filterParts.push("sepia(25%) saturate(140%) brightness(105%)");
+                                    else if (adj.filter === "cool") filterParts.push("hue-rotate(185deg) saturate(90%) brightness(105%)");
+                                    else if (adj.filter === "vintage") filterParts.push("sepia(35%) contrast(120%) brightness(90%) saturate(120%)");
+                                    else if (adj.filter === "vivid") filterParts.push("saturate(160%) contrast(115%) brightness(102%)");
+                                    else if (adj.filter === "dramatic") filterParts.push("contrast(140%) brightness(90%) saturate(110%)");
+                                    else if (adj.filter === "fade") filterParts.push("contrast(85%) brightness(110%) saturate(85%)");
+
+                                    if (adj.brightness && adj.brightness !== 100) filterParts.push(`brightness(${adj.brightness}%)`);
+                                    if (adj.contrast && adj.contrast !== 100) filterParts.push(`contrast(${adj.contrast}%)`);
+                                    if (adj.saturation && adj.saturation !== 100) filterParts.push(`saturate(${adj.saturation}%)`);
+                                    if (adj.blur > 0) filterParts.push(`blur(${adj.blur}px)`);
+                                    if (adj.sharpness > 0) filterParts.push(`contrast(${100 + Math.round(adj.sharpness * 0.4)}%)`);
+
+                                    const totalRot = ((adj.rotate || 0) + (adj.angle || 0)) % 360;
+                                    const flipH = Boolean(adj.flipH);
+                                    const flipV = Boolean(adj.flipV);
+
                                     return (
-                                      <img
-                                        src={activePhoto}
-                                        alt={slot.name}
-                                        draggable={false}
-                                        className={`pointer-events-none absolute select-none ${!userPhoto ? "opacity-75" : ""}`}
+                                      <div
+                                        className="relative h-full w-full overflow-hidden"
                                         style={{
-                                          top: "50%",
-                                          left: "50%",
-                                          width: "100%",
-                                          height: "100%",
-                                          objectFit: slot.objectFit === "contain" ? "contain" : "cover",
-                                          transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0})`,
-                                          transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out",
+                                          backgroundColor: adj.innerBorderColor && adj.innerBorderColor !== "transparent" ? adj.innerBorderColor : "transparent",
+                                          padding: adj.innerBorderWidth ? `${adj.innerBorderWidth}px` : "0px",
+                                          boxShadow: adj.outerBorderWidth && adj.outerBorderColor !== "transparent"
+                                            ? `inset 0 0 0 ${adj.outerBorderWidth}px ${adj.outerBorderColor}`
+                                            : "none",
                                         }}
-                                      />
+                                      >
+                                        <img
+                                          src={activePhoto}
+                                          alt={slot.name}
+                                          draggable={false}
+                                          className={`pointer-events-none absolute select-none origin-center ${!userPhoto ? "opacity-75" : ""}`}
+                                          style={{
+                                            top: "50%",
+                                            left: "50%",
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: slot.objectFit === "contain" ? "contain" : "cover",
+                                            transform: `translate(calc(-50% + ${adj.panX || 0}%), calc(-50% + ${adj.panY || 0}%)) scale(${adj.scale || 1.0}) rotate(${totalRot}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})`,
+                                            filter: filterParts.length ? filterParts.join(" ") : "none",
+                                            transition: activeDraggingSlot === slot.id ? "none" : "transform 0.08s ease-out, filter 0.2s ease",
+                                          }}
+                                        />
+
+                                        {adj.textOverlay?.text && (
+                                          <div
+                                            className={`pointer-events-none absolute left-1 right-1 flex z-10 ${
+                                              adj.textOverlay.position === "top"
+                                                ? "top-1.5"
+                                                : adj.textOverlay.position === "center"
+                                                ? "top-1/2 -translate-y-1/2"
+                                                : "bottom-1.5"
+                                            } ${
+                                              adj.textOverlay.align === "left"
+                                                ? "justify-start"
+                                                : adj.textOverlay.align === "right"
+                                                ? "justify-end"
+                                                : "justify-center"
+                                            }`}
+                                          >
+                                            <span
+                                              className="px-1.5 py-0.5 truncate text-center max-w-full"
+                                              style={{
+                                                fontFamily: adj.textOverlay.fontFamily || "inherit",
+                                                fontSize: `${Math.max(10, Math.round((adj.textOverlay.fontSize || 16) * 0.65))}px`,
+                                                color: adj.textOverlay.color || "#fff",
+                                                fontWeight: adj.textOverlay.bold ? "bold" : "normal",
+                                                fontStyle: adj.textOverlay.italic ? "italic" : "normal",
+                                                textShadow: adj.textOverlay.shadow
+                                                  ? "0 1px 3px rgba(0,0,0,0.8)"
+                                                  : "none",
+                                              }}
+                                            >
+                                              {adj.textOverlay.text}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
                                     );
                                   })()}
 

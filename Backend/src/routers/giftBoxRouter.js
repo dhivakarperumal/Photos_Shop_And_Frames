@@ -6,6 +6,8 @@ const router = express.Router();
 router.get("/", giftBoxController.getAllGiftBoxes);
 router.get("/:id", giftBoxController.getGiftBoxById);
 router.post("/", giftBoxController.createGiftBox);
+router.patch("/:id/stock", giftBoxController.adjustStock);
+router.put("/:id/stock", giftBoxController.adjustStock);
 router.put("/:id", giftBoxController.updateGiftBox);
 router.delete("/:id", giftBoxController.deleteGiftBox);
 

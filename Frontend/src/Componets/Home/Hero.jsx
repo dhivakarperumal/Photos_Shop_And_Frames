@@ -55,13 +55,13 @@ const services = [
     icon: FiCamera,
     title: "Photo Printing",
     subtitle: "High Quality Prints",
-    link: "/shop",
+    link: "/frames",
   },
   {
     icon: FiMaximize,
     title: "Custom Frames",
     subtitle: "Design Your Frame",
-    link: "/shop",
+    link: "/custom-frame",
   },
   {
     icon: FiImage,
@@ -73,7 +73,7 @@ const services = [
     icon: FiBook,
     title: "Photo Albums",
     subtitle: "Save Your Memories",
-    link: "/shop",
+    link: "/albums",
   },
   {
     icon: FiUser,
@@ -85,7 +85,7 @@ const services = [
     icon: FiGift,
     title: "Photo Gifts",
     subtitle: "Personalized Gifts",
-    link: "/shop",
+    link: "/gifts",
   },
   {
     icon: FiLayers,
@@ -715,7 +715,7 @@ const Hero = () => {
                 {/* Upload */}
 
                 <Link
-                  to="/shop"
+                  to="/albums"
                   className="
                     group
                     inline-flex
@@ -742,7 +742,7 @@ const Hero = () => {
                   "
                 >
                   <span>
-                    Upload Your Photo
+                    View Albums
                   </span>
 
                   <FiUpload
@@ -761,10 +761,10 @@ const Hero = () => {
               ================================================= */}
 
               <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-  {features.map(({ icon: Icon, title, subtitle }) => (
-    <div
-      key={title}
-      className="
+                {features.map(({ icon: Icon, title, subtitle }) => (
+                  <div
+                    key={title}
+                    className="
         group
         flex
         items-center
@@ -782,10 +782,10 @@ const Hero = () => {
         hover:border-[#cda25b]
         hover:shadow-[0_8px_20px_rgba(0,0,0,0.10)]
       "
-    >
-      {/* Icon */}
-      <div
-        className="
+                  >
+                    {/* Icon */}
+                    <div
+                      className="
           flex
           h-10
           w-10
@@ -802,39 +802,39 @@ const Hero = () => {
           group-hover:bg-[#c18d38]
           group-hover:text-white
         "
-      >
-        <Icon className="text-base" />
-      </div>
+                    >
+                      <Icon className="text-base" />
+                    </div>
 
-      {/* Content */}
-      <div className="min-w-0">
-        <p
-          className="
+                    {/* Content */}
+                    <div className="min-w-0">
+                      <p
+                        className="
             text-xs
             font-bold
             leading-tight
             text-[#1b1b1b]
             sm:text-[13px]
           "
-        >
-          {title}
-        </p>
+                      >
+                        {title}
+                      </p>
 
-        <p
-          className="
+                      <p
+                        className="
             mt-1
             text-[10px]
             leading-tight
             text-[#666]
             sm:text-[11px]
           "
-        >
-          {subtitle}
-        </p>
-      </div>
-    </div>
-  ))}
-</div>
+                      >
+                        {subtitle}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* =================================================
@@ -873,7 +873,7 @@ const Hero = () => {
                     rounded-[24px]
                   "
                 >
-                    <picture className="block h-full">
+                  <picture className="block h-full">
                     {/* Mobile Banner */}
 
                     {mobileImage && (

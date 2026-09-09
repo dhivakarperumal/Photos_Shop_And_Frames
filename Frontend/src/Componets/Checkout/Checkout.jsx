@@ -335,10 +335,15 @@ const Checkout = () => {
         payment_method: formData.payment_method,
         notes: formData.notes.trim() || null,
         clear_cart: !isDirectBuy, // only clear cart if checking out cart items
-        items: checkoutItems.map((item) => ({
-          product_id: item.product_id || item.id,
-          product_name: item.product_name || "Photo Frame",
-          category: item.category || "Photo Frames",
+        items: checkoutItems.map((item) => {
+          const resolvedType = item.item_type || (item.category?.toLowerCase().includes("gift") ? "gift" : item.category?.toLowerCase().includes("album") ? "album" : "product");
+          return {
+            product_id: item.product_id || item.id,
+            gift_box_id: item.gift_box_id || (resolvedType === "gift" ? (item.product_id || item.id) : null),
+            album_id: item.album_id || (resolvedType === "album" ? (item.product_id || item.id) : null),
+            item_type: resolvedType,
+            product_name: item.product_name || (resolvedType === "gift" ? "Gift Box" : resolvedType === "album" ? "Photo Album" : "Photo Frame"),
+            category: item.category || (resolvedType === "gift" ? "Gift Box" : resolvedType === "album" ? "Albums" : "Photo Frames"),
           size: item.size || item.variant_size || "Standard",
           price: Number(item.price || 0),
           quantity: Number(item.quantity || 1),
@@ -349,8 +354,9 @@ const Checkout = () => {
           preview_image: item.preview_image || item.product_image || item.product_images?.[0] || null,
           product_image: item.product_image || item.product_images?.[0] || null,
           frame_image: item.frame_image || item.frame_data?.frame_image || null,
-        })),
-      };
+        };
+      }),
+    };
 
       const response = await api.post("/orders", payload);
 

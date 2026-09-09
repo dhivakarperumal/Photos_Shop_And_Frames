@@ -13,6 +13,7 @@ import {
   Image as ImageIcon,
   ImagePlus,
   LayoutGrid,
+  Minus,
   Package,
   Plus,
   Search,
@@ -276,6 +277,10 @@ const GiftBoxManagement = () => {
     sellingPrice: "",
     image: "/images/1.png",
   });
+  const [stockModalBox, setStockModalBox] = useState(null);
+  const [stockAdjustmentType, setStockAdjustmentType] = useState("reduce");
+  const [stockAdjustmentAmount, setStockAdjustmentAmount] = useState(1);
+  const [stockSubmitting, setStockSubmitting] = useState(false);
   const pageSize = 6;
 
   useEffect(() => {
@@ -626,6 +631,72 @@ const GiftBoxManagement = () => {
     }
   };
 
+  const handleQuickStock = async (boxId, action, amount = 1) => {
+    try {
+      const response = await api.patch(`/gift-boxes/${boxId}/stock`, {
+        action,
+        amount,
+      });
+      if (response.data?.success && response.data?.data) {
+        const updated = normalizeGiftBox(response.data.data);
+        setBoxes((previous) =>
+          previous.map((box) =>
+            box.id === updated.id || box.code === updated.id || box.gift_box_id === updated.id
+              ? updated
+              : box
+          )
+        );
+        toast.success(
+          action === "reduce"
+            ? `Stock reduced by ${amount} (New stock: ${updated.currentStock})`
+            : `Stock increased by ${amount} (New stock: ${updated.currentStock})`
+        );
+      }
+    } catch (error) {
+      console.error("Could not adjust stock:", error);
+      toast.error(error.response?.data?.message || "Failed to adjust stock");
+    }
+  };
+
+  const openStockModal = (box) => {
+    setStockModalBox(box);
+    setStockAdjustmentType("reduce");
+    setStockAdjustmentAmount(1);
+  };
+
+  const handleStockModalSubmit = async (e) => {
+    e.preventDefault();
+    if (!stockModalBox) return;
+
+    const amount = Math.max(0, Number(stockAdjustmentAmount || 0));
+    setStockSubmitting(true);
+    try {
+      const payload =
+        stockAdjustmentType === "set"
+          ? { stock: amount }
+          : { action: stockAdjustmentType, amount };
+
+      const response = await api.patch(`/gift-boxes/${stockModalBox.id}/stock`, payload);
+      if (response.data?.success && response.data?.data) {
+        const updated = normalizeGiftBox(response.data.data);
+        setBoxes((previous) =>
+          previous.map((box) =>
+            box.id === updated.id || box.code === updated.id || box.gift_box_id === updated.id
+              ? updated
+              : box
+          )
+        );
+        toast.success(`Stock updated successfully! New stock: ${updated.currentStock}`);
+        setStockModalBox(null);
+      }
+    } catch (error) {
+      console.error("Failed to update stock:", error);
+      toast.error(error.response?.data?.message || "Failed to update stock");
+    } finally {
+      setStockSubmitting(false);
+    }
+  };
+
   const statCards = [
     {
       label: "Total Gift Boxes",
@@ -878,8 +949,34 @@ const GiftBoxManagement = () => {
                       <td className="px-3 py-3 font-semibold text-[#4e6259]">
                         {money(box.sellingPrice)}
                       </td>
-                      <td className="px-3 py-3 font-bold text-[#344c42]">
-                        {box.currentStock}
+                      <td className="px-3 py-3">
+                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-[#e0e6df] bg-[#fbfdfa] p-1 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStock(box.id, "reduce", 1)}
+                            disabled={box.currentStock <= 0}
+                            title="Reduce stock by 1"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[#d2d9d4] bg-white text-[#4e6259] transition hover:border-[#f5c6cb] hover:bg-[#feeceb] hover:text-[#bb3f3b] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openStockModal(box)}
+                            title="Click to adjust stock"
+                            className="min-w-[28px] px-1 text-center font-bold text-[#203b30] transition hover:text-[#2d7560] hover:underline"
+                          >
+                            {box.currentStock}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStock(box.id, "increase", 1)}
+                            title="Increase stock by 1"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[#d2d9d4] bg-white text-[#4e6259] transition hover:border-[#b8e5c8] hover:bg-[#e8f6ed] hover:text-[#237548]"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
                       </td>
                      
                       <td className="px-5 py-3">
@@ -930,6 +1027,50 @@ const GiftBoxManagement = () => {
               <article key={box.id} className="overflow-hidden rounded-xl border border-[#e1e6df] bg-[#fbfcfa] transition hover:-translate-y-0.5 hover:shadow-md">
                 <div className="flex h-40 items-center justify-center bg-[#eef4ee]">{box.image ? <img src={box.image} alt="" className="h-full w-full object-cover" /> : <Gift className="h-10 w-10 text-[#9aaa9f]" />}</div>
                 <div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[10px] font-bold text-[#588070]">{box.id}</p><h3 className="mt-1 font-bold text-[#263a34]">{box.name}</h3></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}>{box.stockStatus}</span></div><p className="text-xs text-[#77847c]">{box.category} <span className="mx-1">·</span> {box.subCategory || "-"}</p><div className="flex items-center justify-between border-t border-[#e7ece6] pt-3"><div><p className="text-[10px] uppercase tracking-wide text-[#919d95]">Selling Price</p><p className="font-bold text-[#bd713a]">{money(box.sellingPrice)}</p></div><p className="text-xs font-semibold text-[#68776f]">{box.currentStock} in stock</p><button type="button" onClick={() => navigate(`/admin/gifts/${box.id}`)} title="View gift box" className="rounded-md p-2 text-[#688279] hover:bg-[#eaf3ed]"><ClipboardList className="h-4 w-4" /></button></div></div>
+                <div className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[10px] font-bold text-[#588070]">{box.id}</p>
+                      <h3 className="mt-1 font-bold text-[#263a34]">{box.name}</h3>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusClasses[box.stockStatus]}`}>{box.stockStatus}</span>
+                  </div>
+                  <p className="text-xs text-[#77847c]">{box.category} <span className="mx-1">·</span> {box.subCategory || "-"}</p>
+                  <div className="flex items-center justify-between border-t border-[#e7ece6] pt-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-[#919d95]">Selling Price</p>
+                      <p className="font-bold text-[#bd713a]">{money(box.sellingPrice)}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 rounded-lg border border-[#e0e6df] bg-[#fbfdfa] px-1.5 py-1">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStock(box.id, "reduce", 1)}
+                        disabled={box.currentStock <= 0}
+                        title="Reduce stock by 1"
+                        className="flex h-5 w-5 items-center justify-center rounded border border-[#d2d9d4] bg-white text-[#4e6259] transition hover:border-[#f5c6cb] hover:bg-[#feeceb] hover:text-[#bb3f3b] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Minus className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openStockModal(box)}
+                        title="Click to adjust stock"
+                        className="text-xs font-bold text-[#263a34] hover:text-[#2d7560] hover:underline"
+                      >
+                        {box.currentStock} in stock
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickStock(box.id, "increase", 1)}
+                        title="Increase stock by 1"
+                        className="flex h-5 w-5 items-center justify-center rounded border border-[#d2d9d4] bg-white text-[#4e6259] transition hover:border-[#b8e5c8] hover:bg-[#e8f6ed] hover:text-[#237548]"
+                      >
+                        <Plus className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                    <button type="button" onClick={() => openEdit(box)} title="Edit gift box" className="rounded-md p-2 text-[#688279] hover:bg-[#eaf3ed]"><Edit3 className="h-4 w-4" /></button>
+                  </div>
+                </div>
               </article>
             ))}
           </div>
@@ -1364,6 +1505,159 @@ const GiftBoxManagement = () => {
         </div>
       )}
 
+      {/* QUICK STOCK ADJUST MODAL */}
+      {stockModalBox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+          onClick={() => setStockModalBox(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-[#e0e6df] bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#edf0eb] pb-3">
+              <div>
+                <p className="font-mono text-xs font-bold text-[#588070]">{stockModalBox.id}</p>
+                <h3 className="font-bold text-[#233830]">Adjust Gift Stock</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStockModalBox(null)}
+                className="rounded-full p-1 text-[#87928c] hover:bg-[#f0f4f0] hover:text-[#233830]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#eaf0e8] bg-[#f8fbf8] p-3 text-xs text-[#52675e]">
+              <p className="font-semibold text-[#294339]">{stockModalBox.name}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span>Current Stock:</span>
+                <span className="text-sm font-bold text-[#203b30]">{stockModalBox.currentStock} units</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span>Status:</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusClasses[stockModalBox.stockStatus]}`}>
+                  {stockModalBox.stockStatus}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleStockModalSubmit} className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#63726a]">Action</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockAdjustmentType("reduce");
+                      setStockAdjustmentAmount(1);
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                      stockAdjustmentType === "reduce"
+                        ? "border-[#bb3f3b] bg-[#feeceb] text-[#bb3f3b]"
+                        : "border-[#dfe5df] bg-white text-[#52675e] hover:bg-[#f8faf8]"
+                    }`}
+                  >
+                    Reduce Stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockAdjustmentType("increase");
+                      setStockAdjustmentAmount(1);
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                      stockAdjustmentType === "increase"
+                        ? "border-[#237548] bg-[#e8f6ed] text-[#237548]"
+                        : "border-[#dfe5df] bg-white text-[#52675e] hover:bg-[#f8faf8]"
+                    }`}
+                  >
+                    Add Stock
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStockAdjustmentType("set");
+                      setStockAdjustmentAmount(stockModalBox.currentStock);
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                      stockAdjustmentType === "set"
+                        ? "border-[#2d7560] bg-[#eaf3ed] text-[#2d7560]"
+                        : "border-[#dfe5df] bg-white text-[#52675e] hover:bg-[#f8faf8]"
+                    }`}
+                  >
+                    Set Exact
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[#63726a]">
+                  {stockAdjustmentType === "reduce"
+                    ? "Units to Reduce"
+                    : stockAdjustmentType === "increase"
+                    ? "Units to Add"
+                    : "New Stock Total"}
+                </label>
+                <input
+                  type="number"
+                  min={stockAdjustmentType === "set" ? "0" : "1"}
+                  max={stockAdjustmentType === "reduce" ? String(stockModalBox.currentStock) : undefined}
+                  value={stockAdjustmentAmount}
+                  onChange={(e) => setStockAdjustmentAmount(e.target.value)}
+                  className={inputClass}
+                  required
+                />
+              </div>
+
+              {stockAdjustmentType === "reduce" && (
+                <div className="flex gap-2">
+                  {[1, 2, 5, 10].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setStockAdjustmentAmount(num)}
+                      className="rounded-md border border-[#d2d9d4] bg-white px-2.5 py-1 text-xs font-semibold text-[#52675e] transition hover:bg-[#eaf3ed]"
+                    >
+                      -{num}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-lg bg-[#f4f7f3] p-2.5 text-xs text-[#52675e]">
+                <span>New estimated stock: </span>
+                <span className="font-bold text-[#203b30]">
+                  {stockAdjustmentType === "reduce"
+                    ? Math.max(0, stockModalBox.currentStock - Number(stockAdjustmentAmount || 0))
+                    : stockAdjustmentType === "increase"
+                    ? stockModalBox.currentStock + Number(stockAdjustmentAmount || 0)
+                    : Math.max(0, Number(stockAdjustmentAmount || 0))}{" "}
+                  units
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStockModalBox(null)}
+                  className="rounded-lg border border-[#d6ded8] px-4 py-2 text-xs font-bold text-[#556960] hover:bg-[#f0f4f0]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={stockSubmitting}
+                  className="rounded-lg bg-[#28745f] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#1f5d4d] disabled:opacity-50"
+                >
+                  {stockSubmitting ? "Updating..." : "Apply Stock Change"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

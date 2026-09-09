@@ -1,29 +1,152 @@
-import React, { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   BookOpen,
   Check,
-  Eye,
   Heart,
-  Image as ImageIcon,
-  Layers,
   Package,
   Search,
-  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
-  Truck,
   UploadCloud,
   X,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import api from "../../api";
+import api, { API_URL } from "../../api";
+import AlbumCard from "../../CommonComponents/AlbumCard";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 import PageContainer from "../../CommonComponents/PageContainer";
 import PageHeader from "../../CommonComponents/PageHeader";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import toast from "react-hot-toast";
 
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(data:|blob:|https?:\/\/)/i.test(trimmed)) return trimmed;
+  const cleanPath = trimmed.replace(/\\/g, "/");
+  const path = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+  if (/^\/api\/?$/i.test(API_URL)) return path;
+  return `${API_URL.replace(/\/api\/?$/, "")}${path}`;
+};
+
+const parseJsonArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const normalizeAlbum = (album) => {
+  const variants = parseJsonArray(album.variants);
+  const firstVariant =
+    variants.find(
+      (v) => v && (v.image || (Array.isArray(v.images) && v.images.length))
+    ) ||
+    variants[0] ||
+    {};
+
+  // Collect all variant images
+  const variantImages = [];
+  variants.forEach((v) => {
+    if (v?.image) variantImages.push(v.image);
+    if (Array.isArray(v?.images)) {
+      v.images.forEach((img) => variantImages.push(img));
+    }
+  });
+
+  const rawProductImages = parseJsonArray(album.product_images);
+  const allImages = [
+    album.thumbnail_image,
+    ...rawProductImages,
+    ...variantImages,
+  ].filter(Boolean);
+
+  const displayImageRaw =
+    album.thumbnail_image ||
+    firstVariant.image ||
+    (Array.isArray(firstVariant.images) ? firstVariant.images[0] : "") ||
+    rawProductImages[0] ||
+    allImages[0] ||
+    "";
+
+  const resolvedImages = [...new Set(allImages.map(resolveImageUrl))];
+  const displayImage = resolveImageUrl(displayImageRaw);
+
+  const variantMrp = Number(
+    firstVariant.mrp ?? firstVariant.price ?? firstVariant.selling_price ?? 0
+  );
+  const variantOffer = Number(
+    firstVariant.offerPrice ??
+      firstVariant.offer_price ??
+      firstVariant.price ??
+      firstVariant.offer ??
+      variantMrp
+  );
+
+  let sellingPrice = Number(album.selling_price || 0);
+  if (sellingPrice <= 0 && variantMrp > 0) sellingPrice = variantMrp;
+
+  let discountPrice = Number(album.discount_price || 0);
+  if (discountPrice <= 0 && variantOffer > 0) discountPrice = variantOffer;
+  if (discountPrice <= 0 && sellingPrice > 0) discountPrice = sellingPrice;
+
+  const finalPrice = discountPrice > 0 ? discountPrice : sellingPrice;
+  const originalPrice =
+    sellingPrice > finalPrice
+      ? sellingPrice
+      : variantMrp > finalPrice
+      ? variantMrp
+      : finalPrice;
+
+  let discount = Number(album.discount_percentage || 0);
+  if (discount <= 0 && originalPrice > finalPrice && originalPrice > 0) {
+    discount = Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
+  }
+
+  const stock =
+    variants.length > 0
+      ? variants.reduce(
+          (sum, v) => sum + (Number(v.stock ?? v.stock_quantity ?? 0) || 0),
+          0
+        )
+      : Number(album.stock_quantity || 0);
+
+  const isOutOfStock =
+    album.stock_status === "Out of Stock" || stock <= 0;
+
+  return {
+    ...album,
+    variants,
+    displayImage,
+    thumbnail_image: displayImage,
+    product_images:
+      resolvedImages.length > 0
+        ? resolvedImages
+        : displayImage
+        ? [displayImage]
+        : [],
+    displayPrice: finalPrice,
+    displayOriginalPrice: originalPrice,
+    displayDiscount: discount,
+    selling_price: originalPrice,
+    discount_price: finalPrice,
+    discount_percentage: discount,
+    stock_quantity: stock,
+    isOutOfStock,
+  };
+};
+
 const Albums = () => {
+  const legacyModalEnabled = () => false;
   const [albums, setAlbums] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -39,7 +162,7 @@ const Albums = () => {
     coverPhoto: null,
   });
 
-  const { addToCart, openCart, wishlist = [], toggleWishlist } = useContext(StoreContext);
+  const { addToCart, wishlist = [], toggleWishlist } = useContext(StoreContext);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -50,9 +173,11 @@ const Albums = () => {
         setLoading(true);
         const response = await api.get("/albums");
         const rows = Array.isArray(response.data?.data) ? response.data.data : [];
-        const activeAlbums = rows.filter(
-          (a) => (a.status || "Active").toLowerCase() === "active"
-        );
+        const activeAlbums = rows
+          .map(normalizeAlbum)
+          .filter(
+            (a) => (a.status || "Active").toLowerCase() === "active"
+          );
         setAlbums(activeAlbums);
 
         // Derive categories/occasions
@@ -60,6 +185,7 @@ const Albums = () => {
         activeAlbums.forEach((album) => {
           if (album.sub_category) categorySet.add(album.sub_category);
           if (album.occasion) categorySet.add(album.occasion);
+          if (album.category && album.category !== "Albums") categorySet.add(album.category);
         });
         setCategories(Array.from(categorySet));
       } catch (error) {
@@ -79,8 +205,6 @@ const Albums = () => {
     const album = albums.find((item) => String(item.id || item.product_id) === albumId);
     if (album) {
       setSelectedAlbum(album);
-      setModalQuantity(1);
-      setModalImageIndex(0);
     }
   }, [albums, searchParams]);
 
@@ -103,8 +227,8 @@ const Albums = () => {
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
-      const priceA = Number(a.discount_price || a.selling_price || 0);
-      const priceB = Number(b.discount_price || b.selling_price || 0);
+      const priceA = Number(a.displayPrice || a.discount_price || a.selling_price || 0);
+      const priceB = Number(b.displayPrice || b.discount_price || b.selling_price || 0);
       if (sortBy === "price-low") return priceA - priceB;
       if (sortBy === "price-high") return priceB - priceA;
       if (sortBy === "pages") return (b.total_pages || 0) - (a.total_pages || 0);
@@ -126,28 +250,28 @@ const Albums = () => {
   // Add album to cart
   const handleAddToCart = async (e, album, quantity = 1) => {
     if (e) e.stopPropagation();
-    const price = Number(album.discount_price || album.selling_price || 0);
-
-    const productImages = Array.isArray(album.product_images)
+    const price = Number(album.displayPrice || album.discount_price || album.selling_price || 0);
+    const mainImg = album.displayImage || album.thumbnail_image || album.product_images?.[0] || "";
+    const productImages = Array.isArray(album.product_images) && album.product_images.length
       ? album.product_images
-      : album.thumbnail_image
-      ? [album.thumbnail_image]
-      : [];
+      : mainImg ? [mainImg] : [];
 
     const productPayload = {
       id: album.id,
+      item_type: "album",
       product_name: album.product_name,
       category: album.category || "Albums",
       price: price,
       product_images: productImages,
-      image: album.thumbnail_image || productImages[0],
+      image: mainImg,
     };
 
     const options = {
+      item_type: "album",
       size: album.size || `${album.total_pages || 40} Pages`,
       price: price,
       quantity: quantity,
-      preview_image: album.thumbnail_image || productImages[0],
+      preview_image: mainImg,
       slot_photos: customFields.coverPhoto || customFields.coverTitle
         ? {
             coverPhoto: customFields.coverPhoto,
@@ -165,15 +289,18 @@ const Albums = () => {
 
   // Buy now direct checkout
   const handleBuyNow = (album, quantity = 1) => {
-    const price = Number(album.discount_price || album.selling_price || 0);
+    const price = Number(album.displayPrice || album.discount_price || album.selling_price || 0);
+    const mainImg = album.displayImage || album.thumbnail_image || album.product_images?.[0] || "";
+
     const checkoutItem = {
       product_id: album.id,
+      item_type: "album",
       product_name: album.product_name,
       category: album.category || "Albums",
       size: album.size || `${album.total_pages || 40} Pages`,
       price: price,
       quantity: quantity,
-      product_image: album.thumbnail_image || album.product_images?.[0] || "",
+      product_image: mainImg,
       slot_photos: customFields.coverPhoto || customFields.coverTitle
         ? {
             coverPhoto: customFields.coverPhoto,
@@ -316,138 +443,26 @@ const Albums = () => {
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {filteredAlbums.map((album) => {
-                const image =
-                  album.thumbnail_image ||
-                  album.product_images?.[0];
-                const sellingPrice = Number(album.selling_price || 0);
-                const discountPrice = Number(album.discount_price || sellingPrice);
-                const discount =
-                  album.discount_percentage ||
-                  (sellingPrice > discountPrice
-                    ? Math.round(((sellingPrice - discountPrice) / sellingPrice) * 100)
-                    : 0);
                 const totalPages = album.total_pages || 40;
-                const isOutOfStock =
-                  album.stock_status === "Out of Stock" ||
-                  Number(album.stock_quantity) <= 0;
                 const albumId = album.id || album.product_id;
-                const isFavorite = wishlist.some(
-                  (item) => String(item.product_id || item.id || item._id) === String(albumId),
-                );
 
                 return (
-                  <article
+                  <AlbumCard
                     key={albumId}
-                    className="group flex flex-col overflow-hidden rounded-3xl border border-[#e7ded2] bg-white shadow-xs transition hover:-translate-y-1.5 hover:shadow-xl"
-                  >
-                    {/* PRODUCT IMAGE AREA (MATCHING SHOP CARD) */}
-                    <div
-                      onClick={() => openAlbumModal(album)}
-                      className="relative flex h-64 items-center justify-center overflow-hidden bg-[#f4eee6] p-5 cursor-pointer"
-                    >
-                      {image ? (
-                        <img
-                          src={image}
-                          alt={album.product_name}
-                          className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <BookOpen className="h-12 w-12 text-[#b9aa98]" />
-                      )}
-
-                      {/* PAGES COUNT BADGE */}
-                      <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-xs">
-                        <BookOpen className="h-3 w-3 text-[#d4a553]" />
-                        {totalPages} Pages • Lay Flat
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleWishlist?.({ ...album, __wishlistType: "album" });
-                        }}
-                        className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
-                          isFavorite ? "bg-[#d79d4a] text-[#1d2925]" : "bg-white/90 text-[#555] hover:bg-white hover:text-[#b07838]"
-                        }`}
-                        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                      >
-                        <Heart className="h-5 w-5" fill={isFavorite ? "currentColor" : "none"} />
-                      </button>
-
-                      {/* SIZE / ORIENTATION BADGE */}
-                      <span
-                        className={`absolute right-14 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-xs ${
-                          isOutOfStock
-                            ? "border border-red-200 bg-red-50 text-red-600"
-                            : "bg-white/95 text-[#1a3c36]"
-                        }`}
-                      >
-                        {isOutOfStock ? "Out of Stock" : album.size || album.orientation || "Album"}
-                      </span>
-
-                      {/* DISCOUNT BADGE */}
-                      {discount > 0 && (
-                        <span className="absolute left-3 top-3 rounded-full bg-[#1a3c36] px-2.5 py-1 text-[10px] font-bold text-white shadow-xs">
-                          {discount}% OFF
-                        </span>
-                      )}
-                    </div>
-
-                    {/* PRODUCT DETAILS AREA (MATCHING SHOP CARD) */}
-                    <div className="flex flex-1 flex-col p-5">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b07838]">
-                        {album.sub_category || album.occasion || "Photo Album"}
-                      </p>
-
-                      <h2
-                        onClick={() => openAlbumModal(album)}
-                        className="mt-1.5 truncate text-base font-bold text-[#1d2925] hover:text-[#b07838] cursor-pointer"
-                        title={album.product_name}
-                      >
-                        {album.product_name}
-                      </h2>
-
-                      {/* SPECS HIGHLIGHT */}
-                      <p className="mt-1 truncate text-xs text-[#777]">
-                        {album.cover_material || "Hard Cover"} • {album.page_thickness || "300 GSM"}
-                      </p>
-
-                      {/* PRICING (MATCHING SHOP CARD) */}
-                      <div className="mt-4 flex items-center justify-between">
-                        <div>
-                          <span className="text-xl font-black text-[#1a3c36]">
-                            ₹{discountPrice || sellingPrice || "--"}
-                          </span>
-                          {sellingPrice > discountPrice && (
-                            <span className="ml-2 text-xs text-[#999] line-through">
-                              ₹{sellingPrice}
-                            </span>
-                          )}
-                        </div>
-
-                        {album.binding_type && (
-                          <span className="truncate max-w-[100px] text-[11px] font-semibold text-[#888]">
-                            {album.binding_type}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* CARD ACTIONS */}
-                      <div className="mt-auto border-t border-[#f0e8dc] pt-3 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openAlbumModal(album)}
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] text-xs font-bold text-white shadow-sm transition hover:bg-[#235048]"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Album &amp; Order
-                        </button>
-                      </div>
-                    </div>
-                  </article>
+                    album={album}
+                    image={album.displayImage || album.thumbnail_image}
+                    title={album.product_name}
+                    category={album.sub_category || album.occasion || album.category || "Photo Album"}
+                    badgeText={`${totalPages} Pages • Lay Flat`}
+                    size={album.size || album.orientation || "Album"}
+                    outOfStock={album.isOutOfStock}
+                    discount={album.displayDiscount}
+                    price={album.displayPrice}
+                    originalPrice={album.displayOriginalPrice}
+                    metadata={`${album.cover_material || "Hard Cover"} • ${album.page_thickness || "300 GSM"}`}
+                    secondaryLabel={album.binding_type}
+                    onOpen={openAlbumModal}
+                  />
                 );
               })}
             </div>
@@ -456,7 +471,8 @@ const Albums = () => {
       </PageContainer>
 
       {/* ================= ALBUM PREVIEW & ORDER MODAL ================= */}
-      {selectedAlbum && (
+      {selectedAlbum && <ProductQuickView item={selectedAlbum} type="album" image={selectedAlbum.displayImage || selectedAlbum.thumbnail_image} onClose={() => setSelectedAlbum(null)} />}
+      {legacyModalEnabled() && selectedAlbum && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs overflow-y-auto"
           role="dialog"

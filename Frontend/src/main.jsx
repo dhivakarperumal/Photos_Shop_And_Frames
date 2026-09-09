@@ -10,8 +10,10 @@ import Cart from './Componets/Cart/Cart.jsx'
 import Checkout from './Componets/Checkout/Checkout.jsx'
 import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
+import PrivacyPolicy from './Componets/Privacy/PrivacyPolicy.jsx'
 import Gifts from './Componets/Gifts/Gifts.jsx'
 import Frames from './Componets/Frames/Frames.jsx'
+import CustomFrameStudio from './Componets/Frames/CustomFrameStudio.jsx'
 import Albums from './Componets/Albums/Albums.jsx'
 import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
@@ -109,6 +111,10 @@ const router = createHashRouter([
         element: <Contact />,
       },
       {
+        path: 'privacy-policy',
+        element: <PrivacyPolicy />,
+      },
+      {
         path: 'gallery',
         element: <Gallery />,
       },
@@ -119,6 +125,10 @@ const router = createHashRouter([
       {
         path: 'frames',
         element: <Frames />,
+      },
+      {
+        path: 'custom-frame',
+        element: <CustomFrameStudio />,
       },
       {
         path: 'albums',

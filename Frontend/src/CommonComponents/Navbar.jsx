@@ -15,7 +15,7 @@ import {
   FiMapPin,
   FiClock,
   FiPhone,
-  FiSearch,
+  FiPackage,
   FiFacebook,
   FiInstagram,
 } from "react-icons/fi";
@@ -54,9 +54,21 @@ const Navbar = () => {
   const {
     cart = [],
     wishlist = [],
+    undeliveredOrdersCount = 0,
     openCart,
     openFavorites,
   } = useContext(StoreContext) || {};
+
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const isLoggedIn = Boolean(user || userProfile);
   const userDisplayName =
@@ -158,7 +170,7 @@ const Navbar = () => {
       location.pathname.startsWith("/products/") ||
       location.pathname.startsWith("/product/"));
 
-  const isPagesRoute = ["/gallery", "/about", "/contact"].includes(
+  const isPagesRoute = ["/gallery", "/about", "/contact", "/privacy-policy"].includes(
     location.pathname,
   );
 
@@ -176,7 +188,11 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="fixed left-0 top-0 z-50 w-full">
+      <header
+        className={`fixed left-0 top-0 z-50 w-full transition-transform duration-300 ease-in-out ${
+          isScrolled ? "-translate-y-[42px]" : "translate-y-0"
+        }`}
+      >
         <div className="bg-[#0d0d0d] text-white">
           <PageContainer>
             <div className="flex h-[42px] items-center justify-between text-[11px] font-medium tracking-wide text-[#f3f3f3]">
@@ -217,7 +233,13 @@ const Navbar = () => {
           </PageContainer>
         </div>
 
-        <div className="border-b border-[#d79d4a]/40 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.08)]">
+        <div
+          className={`border-b border-[#d79d4a]/40 bg-white transition-shadow duration-300 ${
+            isScrolled
+              ? "shadow-[0_8px_24px_rgba(0,0,0,0.1)]"
+              : "shadow-[0_4px_18px_rgba(0,0,0,0.08)]"
+          }`}
+        >
           <PageContainer>
             <div className="flex h-[88px] items-center justify-between gap-4 bg-white">
               <Link to="/" className="flex items-center gap-3">
@@ -332,6 +354,14 @@ const Navbar = () => {
                       >
                         Contact Us
                       </NavLink>
+                      <NavLink
+                        to="/privacy-policy"
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive ? "bg-[#f8f1e6] text-[#d79d4a]" : "text-[#2d2d2d] hover:bg-[#faf7f3] hover:text-[#d79d4a]"}`
+                        }
+                      >
+                        Privacy Policy
+                      </NavLink>
                     </div>
                   )}
                 </div>
@@ -340,10 +370,19 @@ const Navbar = () => {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
-                  aria-label="Search"
+                  onClick={() =>
+                    navigate(isLoggedIn ? "/account?tab=orders" : "/login")
+                  }
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#d79d4a]/30 bg-[#f2eadb] text-[#1d1d1d] transition hover:border-[#d79d4a] hover:bg-[#f8f1e6]"
+                  aria-label="My Orders"
+                  title="My Orders"
                 >
-                  <FiSearch className="text-lg" />
+                  <FiPackage className="text-lg" />
+                  {undeliveredOrdersCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#d79d4a] text-[10px] font-bold text-[#111] shadow-xs">
+                      {undeliveredOrdersCount}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -434,6 +473,18 @@ const Navbar = () => {
                           >
                             <span>My Cart ({cart.length})</span>
                             <FiShoppingCart className="text-base text-[#7a7a7a]" />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
+                            onClick={() => {
+                              setProfileDropdown(false);
+                              navigate("/account?tab=orders");
+                            }}
+                          >
+                            <span>My Orders {undeliveredOrdersCount > 0 ? `(${undeliveredOrdersCount} active)` : ""}</span>
+                            <FiPackage className="text-base text-[#7a7a7a]" />
                           </button>
 
                           <button

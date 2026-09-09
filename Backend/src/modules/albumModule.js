@@ -74,26 +74,91 @@ const resolveUniqueAlbumId = async (requestedId) => {
   return getNextAlbumId();
 };
 
-const mapRow = (row) => ({
-  ...row,
-  product_images: parseJsonArray(row.product_images),
-  size_options: parseJsonArray(row.size_options),
-  color_options: parseJsonArray(row.color_options),
-  variants: parseJsonArray(row.variants),
-  keywords: parseJsonArray(row.keywords),
-  customization_available: Boolean(row.customization_available),
-  customer_name_printing: Boolean(row.customer_name_printing),
-  photo_upload_required: Boolean(row.photo_upload_required),
-  custom_cover_design: Boolean(row.custom_cover_design),
-  featured_product: Boolean(row.featured_product),
-  cost_price: Number(row.cost_price || 0),
-  selling_price: Number(row.selling_price || 0),
-  discount_price: Number(row.discount_price || 0),
-  discount_percentage: Number(row.discount_percentage || 0),
-  stock_quantity: Number(row.stock_quantity || 0),
-  minimum_stock: Number(row.minimum_stock || 0),
-  estimated_delivery_days: Number(row.estimated_delivery_days || 0),
-});
+const mapRow = (row) => {
+  const variants = parseJsonArray(row.variants);
+  const rawProductImages = parseJsonArray(row.product_images);
+
+  // Extract primary variant info if flat fields are missing
+  const firstVariant =
+    variants.find((v) => v && (v.image || (Array.isArray(v.images) && v.images.length))) ||
+    variants[0] ||
+    {};
+
+  let thumbnail_image =
+    row.thumbnail_image ||
+    firstVariant.image ||
+    (Array.isArray(firstVariant.images) ? firstVariant.images[0] : "") ||
+    rawProductImages[0] ||
+    "";
+
+  // Gather all variant images into product_images if empty
+  let product_images = rawProductImages;
+  if (!product_images.length && variants.length) {
+    const collected = [];
+    if (thumbnail_image) collected.push(thumbnail_image);
+    variants.forEach((v) => {
+      if (v.image) collected.push(v.image);
+      if (Array.isArray(v.images)) v.images.forEach((img) => collected.push(img));
+    });
+    product_images = [...new Set(collected.filter(Boolean))];
+  }
+
+  const variantMrp = Number(
+    firstVariant.mrp || firstVariant.selling_price || firstVariant.price || 0
+  );
+  const variantOffer = Number(
+    firstVariant.offerPrice ||
+      firstVariant.offer_price ||
+      firstVariant.price ||
+      variantMrp ||
+      0
+  );
+
+  let selling_price = Number(row.selling_price || 0);
+  if (selling_price <= 0 && variantMrp > 0) selling_price = variantMrp;
+
+  let discount_price = Number(row.discount_price || 0);
+  if (discount_price <= 0 && variantOffer > 0) discount_price = variantOffer;
+  if (discount_price <= 0 && selling_price > 0) discount_price = selling_price;
+
+  let discount_percentage = Number(row.discount_percentage || 0);
+  if (discount_percentage <= 0 && selling_price > discount_price) {
+    discount_percentage = Math.round(
+      ((selling_price - discount_price) / selling_price) * 100
+    );
+  }
+
+  let stock_quantity = Number(row.stock_quantity || 0);
+  if (stock_quantity <= 0 && variants.length) {
+    stock_quantity = variants.reduce(
+      (sum, v) => sum + (Number(v.stock || v.stock_quantity || 0) || 0),
+      0
+    );
+  }
+
+  return {
+    ...row,
+    thumbnail_image,
+    product_images,
+    size: row.size || firstVariant.size || "12 x 18 Inches",
+    size_options: parseJsonArray(row.size_options),
+    color_options: parseJsonArray(row.color_options),
+    variants,
+    keywords: parseJsonArray(row.keywords),
+    customization_available: Boolean(row.customization_available),
+    customer_name_printing: Boolean(row.customer_name_printing),
+    photo_upload_required: Boolean(row.photo_upload_required),
+    custom_cover_design: Boolean(row.custom_cover_design),
+    featured_product: Boolean(row.featured_product),
+    cost_price: Number(row.cost_price || 0),
+    selling_price,
+    discount_price,
+    discount_percentage,
+    stock_quantity,
+    minimum_stock: Number(row.minimum_stock || 0),
+    estimated_delivery_days: Number(row.estimated_delivery_days || 0),
+  };
+};
 
 const createAlbum = async (albumData) => {
   await ensureAlbumOptionsColumns();
@@ -218,6 +283,23 @@ const createAlbum = async (albumData) => {
     ) VALUES (${placeholders})
   `;
 
+  const parsedVariants = Array.isArray(variants) ? variants : parseJsonArray(variants);
+  const firstVariant = parsedVariants.find((v) => v && (v.image || (Array.isArray(v.images) && v.images.length))) || parsedVariants[0] || {};
+  const resolvedThumbnail = thumbnail_image || firstVariant.image || (Array.isArray(firstVariant.images) ? firstVariant.images[0] : "") || "";
+  const resolvedSelling = Number(selling_price || albumData.mrp || firstVariant.mrp || firstVariant.price || 0);
+  const resolvedDiscountPrice = Number(discount_price || albumData.offer_price || firstVariant.offerPrice || firstVariant.offer_price || resolvedSelling || 0);
+  const resolvedDiscountPerc = Number(discount_percentage || albumData.discount_percentage || (resolvedSelling > resolvedDiscountPrice ? Math.round(((resolvedSelling - resolvedDiscountPrice) / resolvedSelling) * 100) : 0));
+  let resolvedImages = Array.isArray(product_images) ? product_images : parseJsonArray(product_images);
+  if (!resolvedImages.length && parsedVariants.length) {
+    const collected = [];
+    if (resolvedThumbnail) collected.push(resolvedThumbnail);
+    parsedVariants.forEach((v) => {
+      if (v.image) collected.push(v.image);
+      if (Array.isArray(v.images)) v.images.forEach((img) => collected.push(img));
+    });
+    resolvedImages = [...new Set(collected.filter(Boolean))];
+  }
+
   const values = [
     resolvedProductId,
     product_name,
@@ -247,12 +329,12 @@ const createAlbum = async (albumData) => {
     print_quality,
     printing_sides,
     binding_type,
-    thumbnail_image || "",
-    JSON.stringify(Array.isArray(product_images) ? product_images : []),
+    resolvedThumbnail || "",
+    JSON.stringify(resolvedImages),
     Number(cost_price || 0),
-    Number(selling_price || 0),
-    Number(discount_price || 0),
-    Number(discount_percentage || 0),
+    resolvedSelling,
+    resolvedDiscountPrice,
+    resolvedDiscountPerc,
     Number(stock_quantity || 0),
     Number(minimum_stock || 0),
     stock_status || "In Stock",
@@ -427,6 +509,23 @@ const updateAlbum = async (albumId, updateData) => {
     WHERE product_id = ?
   `;
 
+  const parsedVariants = Array.isArray(variants) ? variants : parseJsonArray(variants);
+  const firstVariant = parsedVariants.find((v) => v && (v.image || (Array.isArray(v.images) && v.images.length))) || parsedVariants[0] || {};
+  const resolvedThumbnail = thumbnail_image || firstVariant.image || (Array.isArray(firstVariant.images) ? firstVariant.images[0] : "") || "";
+  const resolvedSelling = Number(selling_price || updateData.mrp || firstVariant.mrp || firstVariant.price || 0);
+  const resolvedDiscountPrice = Number(discount_price || updateData.offer_price || firstVariant.offerPrice || firstVariant.offer_price || resolvedSelling || 0);
+  const resolvedDiscountPerc = Number(discount_percentage || updateData.discount_percentage || (resolvedSelling > resolvedDiscountPrice ? Math.round(((resolvedSelling - resolvedDiscountPrice) / resolvedSelling) * 100) : 0));
+  let resolvedImages = Array.isArray(product_images) ? product_images : parseJsonArray(product_images);
+  if (!resolvedImages.length && parsedVariants.length) {
+    const collected = [];
+    if (resolvedThumbnail) collected.push(resolvedThumbnail);
+    parsedVariants.forEach((v) => {
+      if (v.image) collected.push(v.image);
+      if (Array.isArray(v.images)) v.images.forEach((img) => collected.push(img));
+    });
+    resolvedImages = [...new Set(collected.filter(Boolean))];
+  }
+
   const values = [
     product_name,
     product_code,
@@ -455,12 +554,12 @@ const updateAlbum = async (albumId, updateData) => {
     print_quality,
     printing_sides,
     binding_type,
-    thumbnail_image || "",
-    JSON.stringify(Array.isArray(product_images) ? product_images : []),
+    resolvedThumbnail || "",
+    JSON.stringify(resolvedImages),
     Number(cost_price || 0),
-    Number(selling_price || 0),
-    Number(discount_price || 0),
-    Number(discount_percentage || 0),
+    resolvedSelling,
+    resolvedDiscountPrice,
+    resolvedDiscountPerc,
     Number(stock_quantity || 0),
     Number(minimum_stock || 0),
     stock_status || "In Stock",

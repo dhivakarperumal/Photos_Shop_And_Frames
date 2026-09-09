@@ -8,6 +8,7 @@ const createCustomization = async (req, res) => {
       user_id,
       product_id,
       slot_photos,
+      photo_adjustments,
       preview_image,
     } = req.body;
 
@@ -21,11 +22,16 @@ const createCustomization = async (req, res) => {
     const finalCustomizationId =
       customization_id || `CUST-${Date.now()}-${uuidv4().substring(0, 8)}`;
 
+    const mergedSlotData = {
+      ...(typeof slot_photos === "object" ? slot_photos : {}),
+      ...(photo_adjustments ? { _adjustments: photo_adjustments } : {}),
+    };
+
     const result = await customizationModule.createCustomization({
       customization_id: finalCustomizationId,
       user_id: user_id || null,
       product_id,
-      slot_photos: slot_photos || {},
+      slot_photos: mergedSlotData,
       preview_image: preview_image || null,
       created_by: user_id || req.user?.user_id || req.user?.id || null,
       updated_by: user_id || req.user?.user_id || req.user?.id || null,
