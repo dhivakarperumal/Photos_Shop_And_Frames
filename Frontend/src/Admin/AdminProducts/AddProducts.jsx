@@ -1566,6 +1566,8 @@ const AddProducts = () => {
                       );
                     })}
                   </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1579,6 +1581,17 @@ const AddProducts = () => {
             >
               Cancel
             </Link>
+
+            <button
+              type="button"
+              onClick={handleGeneratePreview}
+              disabled={generatingPreview || !Object.keys(slotPhotos).length}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#1a3c36] bg-white px-6 py-3 text-sm font-bold text-[#1a3c36] shadow-xs transition hover:bg-[#f0f6f4] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+              title="Preview the exact combined product image before adding"
+            >
+              <Eye className="h-4 w-4 text-[#b07838]" />
+              {generatingPreview ? "Generating Preview..." : "Preview Merged Frame"}
+            </button>
 
             <button
               type="submit"
