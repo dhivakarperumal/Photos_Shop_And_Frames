@@ -10,6 +10,7 @@ import {
   CreditCard,
   Heart,
   ImagePlus,
+  Image as ImageIcon,
   Layers,
   Minus,
   Package,
@@ -31,6 +32,7 @@ import api, { API_URL } from "../../api";
 import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageContainer from "../../CommonComponents/PageContainer";
+import PageHeader from "../../CommonComponents/PageHeader";
 import RelatedProducts from "../../CommonComponents/RelatedProducts";
 import toast from "react-hot-toast";
 
@@ -481,6 +483,123 @@ const AlbumDetailsPage = () => {
     }
   };
 
+  // Handle album photos batch upload (up to maxPhotos = sheetCount * 2)
+  const handleAlbumPhotosUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const currentCount = albumPhotos.length;
+    if (currentCount >= maxPhotos) {
+      toast.error(`This album has reached the maximum capacity of ${maxPhotos} photos (${sheetCount} sheets × 2 photos per sheet). You cannot add more than ${maxPhotos} photos.`);
+      e.target.value = "";
+      return;
+    }
+
+    const remainingSlots = maxPhotos - currentCount;
+    let filesToUpload = files;
+
+    if (files.length > remainingSlots) {
+      toast(`You can only add up to ${maxPhotos} photos for this album. Uploading the first ${remainingSlots} photo${remainingSlots > 1 ? "s" : ""}. More than ${maxPhotos} photos are not permitted.`, {
+        icon: "⚠️",
+        duration: 5000,
+      });
+      filesToUpload = files.slice(0, remainingSlots);
+    }
+
+    setUploadingAlbumPhotos(true);
+    const toastId = toast.loading(`Uploading ${filesToUpload.length} album photo${filesToUpload.length > 1 ? "s" : ""}...`);
+
+    try {
+      const formData = new FormData();
+      formData.append("folder", "album_customer_photos");
+      filesToUpload.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const res = await api.post("/upload", formData);
+      const urls = Array.isArray(res.data?.urls)
+        ? res.data.urls
+        : Array.isArray(res.data?.data)
+        ? res.data.data
+        : [res.data?.url || res.data?.fileUrl].filter(Boolean);
+
+      if (urls && urls.length > 0) {
+        setAlbumPhotos((prev) => {
+          const combined = [...prev, ...urls];
+          return combined.slice(0, maxPhotos);
+        });
+        toast.success(`Added ${urls.length} photo${urls.length > 1 ? "s" : ""}! (${currentCount + urls.length}/${maxPhotos})`, { id: toastId });
+      } else {
+        throw new Error("No photo URLs returned from server");
+      }
+    } catch (err) {
+      console.error("Album photos upload error:", err);
+      toast.error("Failed to upload album photos. Please try again.", { id: toastId });
+    } finally {
+      setUploadingAlbumPhotos(false);
+      e.target.value = "";
+    }
+  };
+
+  // Handle individual photo replacement
+  const handleReplacePhoto = async (index, file) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("folder", "album_customer_photos");
+    formData.append("file", file);
+
+    const toastId = toast.loading(`Replacing photo #${index + 1}...`);
+    try {
+      const res = await api.post("/upload", formData);
+      const newUrl = res.data?.url || res.data?.fileUrl || (Array.isArray(res.data?.urls) ? res.data.urls[0] : "");
+      if (!newUrl) throw new Error("Upload failed");
+
+      setAlbumPhotos((prev) => {
+        const updated = [...prev];
+        updated[index] = newUrl;
+        return updated;
+      });
+      toast.success(`Photo #${index + 1} updated!`, { id: toastId });
+    } catch (err) {
+      console.error("Replace photo error:", err);
+      toast.error("Failed to replace photo.", { id: toastId });
+    }
+  };
+
+  // Remove individual photo
+  const handleRemovePhoto = (index) => {
+    setAlbumPhotos((prev) => prev.filter((_, idx) => idx !== index));
+    toast.success(`Photo #${index + 1} removed`);
+  };
+
+  // Clear all photos
+  const handleClearAllPhotos = () => {
+    if (window.confirm("Are you sure you want to remove all uploaded photos?")) {
+      setAlbumPhotos([]);
+      toast.success("All uploaded photos removed");
+    }
+  };
+
+  // Helper to build slot_photos map
+  const getPreparedSlotPhotos = () => {
+    const slotPhotosData = {};
+    albumPhotos.forEach((url, idx) => {
+      slotPhotosData[`Photo ${idx + 1}`] = url;
+    });
+    if (customFields.coverPhoto) {
+      slotPhotosData.coverPhoto = customFields.coverPhoto;
+    }
+    if (customFields.coverTitle) {
+      slotPhotosData.coverTitle = customFields.coverTitle;
+    }
+    if (customFields.dedicationNote) {
+      slotPhotosData.dedicationNote = customFields.dedicationNote;
+    }
+    return (albumPhotos.length > 0 || customFields.coverPhoto || customFields.coverTitle || customFields.dedicationNote)
+      ? slotPhotosData
+      : null;
+  };
+
   // Add to Cart
   const handleAddToCart = async () => {
     if (!user?.user_id) {
@@ -489,6 +608,14 @@ const AlbumDetailsPage = () => {
     }
     if (isOutOfStock) {
       toast.error("This album variant is currently out of stock");
+      return;
+    }
+    if (album.photo_upload_required && albumPhotos.length === 0) {
+      toast.error("Please upload at least 1 photo for this album before adding to cart");
+      return;
+    }
+    if (albumPhotos.length > maxPhotos) {
+      toast.error(`You cannot upload more than ${maxPhotos} photos for this album.`);
       return;
     }
 
@@ -512,13 +639,7 @@ const AlbumDetailsPage = () => {
         price: displayPrice,
         quantity: quantity,
         preview_image: currentImage,
-        slot_photos: customFields.coverPhoto || customFields.coverTitle || customFields.dedicationNote
-          ? {
-              coverPhoto: customFields.coverPhoto,
-              coverTitle: customFields.coverTitle,
-              note: customFields.dedicationNote,
-            }
-          : null,
+        slot_photos: getPreparedSlotPhotos(),
       };
 
       const success = await addToCart(productPayload, options);
@@ -540,6 +661,14 @@ const AlbumDetailsPage = () => {
       toast.error("This album variant is currently out of stock");
       return;
     }
+    if (album.photo_upload_required && albumPhotos.length === 0) {
+      toast.error("Please upload at least 1 photo for this album before ordering");
+      return;
+    }
+    if (albumPhotos.length > maxPhotos) {
+      toast.error(`You cannot upload more than ${maxPhotos} photos for this album.`);
+      return;
+    }
 
     const checkoutItem = {
       product_id: album.id || album.product_id,
@@ -551,13 +680,7 @@ const AlbumDetailsPage = () => {
       price: displayPrice,
       quantity: quantity,
       product_image: currentImage,
-      slot_photos: customFields.coverPhoto || customFields.coverTitle || customFields.dedicationNote
-        ? {
-            coverPhoto: customFields.coverPhoto,
-            coverTitle: customFields.coverTitle,
-            note: customFields.dedicationNote,
-          }
-        : null,
+      slot_photos: getPreparedSlotPhotos(),
     };
 
     navigate("/checkout", { state: { checkoutItems: [checkoutItem] } });
@@ -603,12 +726,12 @@ const AlbumDetailsPage = () => {
     );
   }
 
-  const totalPages = album.total_pages || 40;
-  const sheetCount = album.sheet_count || Math.round(totalPages / 2);
+  const totalPages = album.total_pages || (sheetCount * 2) || 40;
 
   return (
-    <main className="min-h-screen bg-[#f7f3ed] pb-20 pt-6">
-      <PageContainer>
+    <main className="min-h-screen bg-[#f7f3ed] pb-20">
+      <PageHeader title={album.product_name} />
+      <PageContainer className="py-10">
         {/* BREADCRUMBS */}
         <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-xs text-[#777]">
           <Link to="/" className="transition hover:text-[#1a3c36]">Home</Link>
@@ -852,6 +975,151 @@ const AlbumDetailsPage = () => {
                   </div>
                 </div>
               )}
+
+              {/* ============================================================ */}
+              {/* ALBUM PHOTOS UPLOAD (UP TO {maxPhotos} PHOTOS = sheetCount * 2) */}
+              {/* ============================================================ */}
+              <div className="mt-6 rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-5 shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0e8dc] pb-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
+                      <ImageIcon className="h-4 w-4" /> Upload Album Photos ({albumPhotos.length} / {maxPhotos})
+                    </div>
+                    <p className="mt-1 text-[11px] text-[#666]">
+                      This album has <strong className="text-[#1d2925]">{sheetCount} sheets</strong> (2 photos per sheet = <strong className="text-[#1a3c36]">max {maxPhotos} photos</strong>).
+                      You can add up to {maxPhotos} photos (less than {maxPhotos} is allowed). More than {maxPhotos} photos cannot be added.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        albumPhotos.length >= maxPhotos
+                          ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : albumPhotos.length > 0
+                          ? "bg-[#e8efeb] text-[#1a3c36] border border-[#b9d5c8]"
+                          : "bg-gray-100 text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {albumPhotos.length} / {maxPhotos} Photos
+                    </span>
+                    {albumPhotos.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllPhotos}
+                        className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-bold text-red-600 transition hover:bg-red-100"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* CAPACITY PROGRESS BAR */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] font-semibold text-[#888]">
+                    <span>Capacity ({sheetCount} Sheets)</span>
+                    <span>
+                      {maxPhotos - albumPhotos.length > 0
+                        ? `${maxPhotos - albumPhotos.length} slots remaining`
+                        : "Maximum capacity reached (40/40)"}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-[#ece5dc]">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        albumPhotos.length >= maxPhotos ? "bg-[#b07838]" : "bg-[#1a3c36]"
+                      }`}
+                      style={{ width: `${Math.min(100, (albumPhotos.length / maxPhotos) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* MULTI-FILE UPLOAD AREA */}
+                {albumPhotos.length < maxPhotos ? (
+                  <div className="mt-4">
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#1a3c36]/35 bg-white p-5 text-center transition hover:border-[#1a3c36] hover:bg-[#faf7f2]">
+                      <UploadCloud className="h-8 w-8 text-[#1a3c36]" />
+                      <p className="mt-2 text-xs font-bold text-[#1d2925]">
+                        {uploadingAlbumPhotos ? "Uploading Photos to Album..." : "Click or Drag & Drop Photos to Upload"}
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#777]">
+                        Upload single or multiple images • Up to <strong>{maxPhotos} photos max</strong> ({maxPhotos - albumPhotos.length} slots left)
+                      </p>
+                      <span className="mt-2 inline-flex items-center gap-1 rounded-xl bg-[#1a3c36] px-4 py-1.5 text-xs font-bold text-white shadow-2xs">
+                        <Plus className="h-3.5 w-3.5" /> Choose Photos
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={uploadingAlbumPhotos}
+                        onChange={handleAlbumPhotosUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-xs font-semibold text-amber-800">
+                    Maximum limit of {maxPhotos} photos reached for this {sheetCount}-sheet album. Remove any photo to add a different one.
+                  </div>
+                )}
+
+                {/* UPLOADED PHOTOS GRID */}
+                {albumPhotos.length > 0 && (
+                  <div className="mt-4 border-t border-[#f0e8dc] pt-3">
+                    <div className="mb-2.5 flex items-center justify-between text-xs font-semibold text-[#555]">
+                      <span>Uploaded Photos ({albumPhotos.length}):</span>
+                      <span className="text-[11px] text-[#888]">Hover on photo to replace or delete</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 max-h-80 overflow-y-auto p-1 scrollbar-thin">
+                      {albumPhotos.map((photoUrl, idx) => (
+                        <div
+                          key={`${photoUrl}-${idx}`}
+                          className="group relative aspect-square overflow-hidden rounded-xl border border-[#e8dfd2] bg-white p-1 shadow-2xs transition hover:border-[#1a3c36]"
+                        >
+                          <img
+                            src={resolveImageUrl(photoUrl)}
+                            alt={`Album Photo ${idx + 1}`}
+                            className="h-full w-full rounded-lg object-cover"
+                          />
+                          {/* Position Badge */}
+                          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[9px] font-black text-white backdrop-blur-xs">
+                            #{idx + 1}
+                          </span>
+
+                          {/* Hover Controls: Replace / Delete */}
+                          <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/65 opacity-0 transition group-hover:opacity-100 rounded-xl">
+                            <label
+                              className="cursor-pointer rounded-lg bg-white/95 p-1.5 text-[#1d2925] shadow transition hover:bg-white hover:text-[#1a3c36]"
+                              title="Replace this photo"
+                            >
+                              <UploadCloud className="h-3.5 w-3.5" />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleReplacePhoto(idx, f);
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(idx)}
+                              className="rounded-lg bg-white/95 p-1.5 text-red-600 shadow transition hover:bg-white hover:text-red-700"
+                              title="Delete this photo"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* PERSONALIZATION / CUSTOMIZATION SECTION */}
               <div className="mt-6 rounded-2xl border border-[#ebdcc8] bg-[#fdfbf8] p-5">

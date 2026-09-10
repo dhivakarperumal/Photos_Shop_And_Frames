@@ -36,8 +36,9 @@ const detailItems = [
   ['Theme', 'theme'],
   ['Size', 'size'],
   ['Orientation', 'orientation'],
-  ['Total Pages', 'total_pages'],
   ['Sheet Count', 'sheet_count'],
+  ['Total Pages', 'total_pages'],
+  ['Customer Photo Limit', 'photo_limit'],
   ['Cover Type', 'cover_type'],
   ['Cover Material', 'cover_material'],
   ['Cover Finish', 'cover_finish'],
@@ -149,7 +150,23 @@ const AlbumDetails = () => {
             </div>
 
             <div className="mt-6 grid gap-x-6 gap-y-4 sm:grid-cols-2">
-              {detailItems.map(([label, key]) => <div key={key} className="border-b border-[#f0efec] pb-3"><p className="text-xs text-[#777]">{label}</p><p className="mt-1 text-sm font-medium text-[#282828]">{album[key] ?? 'Not specified'}</p></div>)}
+              {detailItems.map(([label, key]) => {
+                const sheetVal = Number(album.sheet_count) || Math.round(Number(album.total_pages || 40) / 2) || 20;
+                let displayVal = album[key];
+                if (key === 'photo_limit') {
+                  displayVal = `${sheetVal * 2} photos max (2 per sheet)`;
+                } else if (key === 'sheet_count') {
+                  displayVal = `${album.sheet_count ?? sheetVal} Sheets`;
+                } else if (key === 'total_pages') {
+                  displayVal = `${album.total_pages ?? (sheetVal * 2)} Pages`;
+                }
+                return (
+                  <div key={key} className="border-b border-[#f0efec] pb-3">
+                    <p className="text-xs text-[#777]">{label}</p>
+                    <p className="mt-1 text-sm font-medium text-[#282828]">{displayVal ?? 'Not specified'}</p>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
