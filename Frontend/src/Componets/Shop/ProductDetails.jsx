@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/navigation";
 import {
   AlignCenter,
   AlignLeft,
@@ -2842,46 +2841,55 @@ const ProductDetails = () => {
 
               <div className="mt-5">
                 {reviewStoreArray.length > 0 ? (
-                  <div className="space-y-3">
+                  <Swiper
+                    spaceBetween={12}
+                    slidesPerView={1}
+                    breakpoints={{
+                      768: { slidesPerView: 2, spaceBetween: 16 },
+                    }}
+                    className="product-reviews-swiper"
+                  >
                     {reviewStoreArray.slice(0, 6).map((entry, index) => (
-                      <article key={`${entry.name}-${index}`} className="rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                        <div className="flex items-start gap-3">
-                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
-                            {entry.image ? (
-                              <img src={entry.image} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-[11px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="text-[11px] font-black text-[#1d2925]">{entry.name}</span>
-                              <span className="text-[10px] font-bold text-[#777]">{entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}</span>
+                      <SwiperSlide key={`${entry.name}-${index}`} className="!h-auto">
+                        <article className="h-full rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                          <div className="flex items-start gap-3">
+                            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
+                              {entry.image ? (
+                                <img src={entry.image} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[11px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
+                              )}
                             </div>
-                            <div className="mt-1 flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, starIndex) => (
-                                <Star key={starIndex} className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#d4a553] text-[#d4a553]" : "text-[#d3cfc5]"}`} />
-                              ))}
-                            </div>
-                            <p className="mt-2 text-[11px] font-black text-[#1d2925]">{entry.title || "Product Feedback"}</p>
-                            <p className="mt-1 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
-                            {entry.images?.length > 0 && (
-                              <div className="mt-3 grid grid-cols-4 gap-2">
-                                {entry.images.slice(0,4).map((image, photoIndex) => (
-                                  <img key={`${image}-${photoIndex}`} src={image} alt="" className="h-16 w-full rounded-xl border border-[#ede4d8] object-cover" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-[11px] font-black text-[#1d2925]">{entry.name}</span>
+                                <span className="text-[10px] font-bold text-[#777]">{entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}</span>
+                              </div>
+                              <div className="mt-1 flex items-center gap-1">
+                                {Array.from({ length: 5 }).map((_, starIndex) => (
+                                  <Star key={starIndex} className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#d4a553] text-[#d4a553]" : "text-[#d3cfc5]"}`} />
                                 ))}
                               </div>
-                            )}
-                            <div className="mt-3 flex items-center gap-2">
-                              <button type="button" className="rounded-full border border-[#d8cfc3] px-3 py-1 text-[10px] font-black text-[#1a3c36] transition hover:bg-[#eef6f3]">
-                                Helpful
-                              </button>
+                              <p className="mt-2 text-[11px] font-black text-[#1d2925]">{entry.title || "Product Feedback"}</p>
+                              <p className="mt-1 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
+                              {entry.images?.length > 0 && (
+                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                  {entry.images.slice(0,4).map((image, photoIndex) => (
+                                    <img key={`${image}-${photoIndex}`} src={image} alt="" className="h-16 w-full rounded-xl border border-[#ede4d8] object-cover" />
+                                  ))}
+                                </div>
+                              )}
+                              <div className="mt-3 flex items-center gap-2">
+                                <button type="button" className="rounded-full border border-[#d8cfc3] px-3 py-1 text-[10px] font-black text-[#1a3c36] transition hover:bg-[#eef6f3]">
+                                  Helpful
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </article>
+                        </article>
+                      </SwiperSlide>
                     ))}
-                  </div>
+                  </Swiper>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-white px-4 py-6 text-center text-[11px] font-bold text-[#666]">
                     No reviews yet. Be the first to review this product!
