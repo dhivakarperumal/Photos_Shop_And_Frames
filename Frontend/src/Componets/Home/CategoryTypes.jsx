@@ -40,14 +40,14 @@ const CategoryTypes = ({ categories }) => {
         </div>
 
         <div className="relative mx-auto mt-6">
-          <button
+          {/* <button
             type="button"
             onClick={() => scrollCategories(-1)}
             className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#d7b77a] bg-[#14201d]/90 text-[#f8ddaa] shadow-lg transition hover:bg-[#b07838] hover:text-white md:flex"
             aria-label="Previous category"
           >
             <ChevronLeft className="h-5 w-5" />
-          </button>
+          </button> */}
 
           <div ref={sliderRef} className="overflow-x-auto scrollbar-none">
             <div className="mx-auto flex min-w-max justify-center gap-5 sm:gap-10 md:gap-12">
@@ -82,14 +82,14 @@ const CategoryTypes = ({ categories }) => {
             </div>
           </div>
 
-          <button
+          {/* <button
             type="button"
             onClick={() => scrollCategories(1)}
             className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#d7b77a] bg-[#14201d]/90 text-[#f8ddaa] shadow-lg transition hover:bg-[#b07838] hover:text-white md:flex"
             aria-label="Next category"
           >
             <ChevronRight className="h-5 w-5" />
-          </button>
+          </button> */}
         </div>
       </PageContainer>
     </section>
