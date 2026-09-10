@@ -455,30 +455,9 @@ const Navbar = () => {
                             </button>
                           )}
 
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => {
-                              setProfileDropdown(false);
-                              if (openCart) openCart();
-                              else navigate("/cart");
-                            }}
-                          >
-                            <span>My Cart ({cart.length})</span>
-                            <FiShoppingCart className="text-base text-[#7a7a7a]" />
-                          </button>
+                          
 
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#1d1d1d] transition hover:bg-[#f7f3ee]"
-                            onClick={() => {
-                              setProfileDropdown(false);
-                              navigate("/account?tab=orders");
-                            }}
-                          >
-                            <span>My Orders {undeliveredOrdersCount > 0 ? `(${undeliveredOrdersCount} active)` : ""}</span>
-                            <FiPackage className="text-base text-[#7a7a7a]" />
-                          </button>
+                          
 
                           <button
                             type="button"
