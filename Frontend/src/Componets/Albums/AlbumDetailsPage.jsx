@@ -109,6 +109,10 @@ const AlbumDetailsPage = () => {
   const [reviewNotice, setReviewNotice] = useState("");
   const [reviewUploadingPhotos, setReviewUploadingPhotos] = useState(false);
 
+  // Album photo upload state used by the route-specific album customization flow
+  const [albumPhotos, setAlbumPhotos] = useState([]);
+  const [uploadingAlbumPhotos, setUploadingAlbumPhotos] = useState(false);
+
   // Fetch album details
   useEffect(() => {
     let isMounted = true;
@@ -690,6 +694,9 @@ const AlbumDetailsPage = () => {
   const isFavorite = wishlist.some(
     (item) => String(item.product_id || item.id || item._id) === String(albumId)
   );
+
+  const sheetCount = Number(album?.sheet_count || album?.sheets || Math.round((album?.total_pages || 40) / 2) || 0);
+  const maxPhotos = Math.max(sheetCount * 2, 0);
 
   // Loading State
   if (loading) {
