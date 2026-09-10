@@ -54,6 +54,18 @@ const parseJson = (value, fallback) => {
   }
 };
 
+const parseReviewPhotoString = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    return value
+      .split(/[|,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
 const GiftDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -84,8 +96,9 @@ const GiftDetailsPage = () => {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewPopupOpen, setReviewPopupOpen] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
+  const [reviewDraft, setReviewDraft] = useState({ rating: 5, title: "", comment: "", photos: [] });
   const [reviewNotice, setReviewNotice] = useState("");
+  const [reviewUploadingPhotos, setReviewUploadingPhotos] = useState(false);
 
   // Fetch gift details
   useEffect(() => {
@@ -167,10 +180,25 @@ const GiftDetailsPage = () => {
       .map((review) => ({
         name: review.reviewer_name || review.reviewer_email || "Customer",
         rating: Number(review.rating || 5),
+        title: review.title || review.product_name || "",
         dis: review.comment || review.title || "",
-        image: review.review_photo || review.product_image || "",
+        image: parseReviewPhotoString(review.review_photo || review.product_image || "")[0] || review.product_image || "",
+        images: parseReviewPhotoString(review.review_photo || review.product_image || ""),
         createdAt: review.created_at || review.updated_at || "",
       }));
+  }, [productReviews]);
+
+  const averageRating = productReviews.length
+    ? productReviews.reduce((sum, review) => sum + Number(review.rating || 5), 0) / productReviews.length
+    : 0;
+
+  const ratingDistribution = useMemo(() => {
+    const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    productReviews.forEach((review) => {
+      const r = Math.min(5, Math.max(1, Number(review.rating || 5)));
+      dist[r] += 1;
+    });
+    return dist;
   }, [productReviews]);
 
   // Items included
@@ -211,6 +239,40 @@ const GiftDetailsPage = () => {
     };
   }, [gift]);
 
+  const handleReviewPhotoUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    setReviewUploadingPhotos(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await api.post("/upload", formData);
+        const uploadedUrl = res.data?.url || res.data?.fileUrl || (Array.isArray(res.data?.urls) ? res.data.urls[0] : "");
+        if (uploadedUrl) uploaded.push(uploadedUrl);
+      }
+
+      if (uploaded.length) {
+        setReviewDraft((prev) => ({ ...prev, photos: [...prev.photos, ...uploaded] }));
+      }
+    } catch (err) {
+      console.error("Upload gift review photo error:", err);
+      toast.error("Unable to upload selected review photos");
+    } finally {
+      setReviewUploadingPhotos(false);
+      event.target.value = "";
+    }
+  };
+
+  const removeReviewPhoto = (photoUrl) => {
+    setReviewDraft((prev) => ({
+      ...prev,
+      photos: prev.photos.filter((url) => url !== photoUrl),
+    }));
+  };
+
   const handleReviewSubmit = async (event) => {
     event.preventDefault();
 
@@ -223,7 +285,14 @@ const GiftDetailsPage = () => {
       return;
     }
 
+    const trimmedTitle = reviewDraft.title.trim();
     const trimmedComment = reviewDraft.comment.trim();
+
+    if (!trimmedTitle) {
+      toast.error("Review title is required");
+      return;
+    }
+
     if (!trimmedComment) {
       toast.error("Review comment is required");
       return;
@@ -246,8 +315,8 @@ const GiftDetailsPage = () => {
         reviewer_email: user?.email || null,
         rating: Number(reviewDraft.rating || 5),
         comment: trimmedComment,
-        title: gift.name || null,
-        review_photo: null,
+        title: trimmedTitle,
+        review_photo: reviewDraft.photos.length ? reviewDraft.photos.join("|") : null,
         created_by: activeUserId,
         updated_by: activeUserId,
         user_id: activeUserId,
@@ -257,7 +326,7 @@ const GiftDetailsPage = () => {
       if (response.data?.success) {
         const newReview = response.data.data || payload;
         setProductReviews((prev) => [newReview, ...prev]);
-        setReviewDraft({ rating: 5, comment: "" });
+        setReviewDraft({ rating: 5, title: "", comment: "", photos: [] });
         setReviewPopupOpen(false);
         setReviewNotice("");
         toast.success("Review submitted successfully");
@@ -751,147 +820,209 @@ const GiftDetailsPage = () => {
           </div>
         </div>
 
-        <section className="mt-8 rounded-3xl border border-[#e5ded4] bg-[#faf8f5] p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section className="mt-8 rounded-[2rem] border border-[#e5ded4] bg-white p-5 shadow-sm md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#b07838]">Customer Reviews</span>
-                <span className="rounded-full bg-[#eef6f3] px-2 py-0.5 text-[10px] font-black text-[#1a3c36]">
-                  {reviewLoading ? "Loading..." : `${productReviews.length} Review${productReviews.length === 1 ? "" : "s"}`}
-                </span>
+                <Sparkles className="h-4 w-4 text-[#b07838]" />
+                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b07838]">Write a Review</span>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="font-mono text-[#1a3c36] font-black">
-                  {productReviews.length ? (productReviews.reduce((sum, review) => sum + Number(review.rating || 5), 0) / productReviews.length).toFixed(1) : "0.0"}
-                </span>
-                <span className="text-[11px] text-[#666]">/ 5</span>
-              </div>
+              <h3 className="mt-2 text-2xl font-black tracking-tight text-[#1d2925]">Write a Review</h3>
+              <p className="mt-1 text-[12px] font-semibold text-[#666]">Share your experience with this product</p>
             </div>
-
-            {activeUserId ? (
-              userAlreadyReviewedGift ? (
-                <div className="text-right">
-                  <button type="button" disabled className="rounded-xl border border-[#d8cfc3] bg-[#f3f0ea] px-4 py-2 text-xs font-bold text-[#8d8a83] cursor-not-allowed">
-                    Write a Review
-                  </button>
-                  <p className="mt-1 text-[11px] font-bold text-[#b07838]">You have already reviewed this gift box.</p>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setReviewDraft({ rating: 5, comment: "" });
-                    setReviewNotice("");
-                    setReviewPopupOpen(true);
-                  }}
-                  className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048]"
-                >
-                  Add Review
-                </button>
-              )
-            ) : (
-              <Link to="/login" className="rounded-xl border border-[#1a3c36] px-4 py-2 text-xs font-bold text-[#1a3c36] hover:bg-[#eef6f3]">
-                Login to Review
-              </Link>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[#eef6f3] px-3 py-1 text-[10px] font-black text-[#1a3c36]">
+                {reviewLoading ? "Loading..." : `${productReviews.length} Review${productReviews.length === 1 ? "" : "s"}`}
+              </span>
+              <span className="rounded-full bg-[#f7f3ea] px-3 py-1 text-[10px] font-black text-[#b07838]">
+                {productReviews.length ? averageRating.toFixed(1) : "0.0"}/5
+              </span>
+            </div>
           </div>
 
-          {reviewNotice && <p className="mt-3 rounded-xl border border-[#f1d6b3] bg-[#fffaf4] px-3 py-2 text-xs font-bold text-[#b07838]">{reviewNotice}</p>}
-
-          {reviewStoreArray.length > 0 ? (
-            <div className="mt-4">
-              <Swiper
-                modules={[Autoplay]}
-                spaceBetween={20}
-                slidesPerView={1}
-                loop={true}
-                autoplay={{ delay: 3500, disableOnInteraction: false }}
-                speed={800}
-                breakpoints={{
-                  640: { slidesPerView: 1 },
-                  768: { slidesPerView: 2 },
-                  1024: { slidesPerView: 3 },
-                }}
-              >
-                {reviewStoreArray.slice(0, 8).map((entry, index) => (
-                  <SwiperSlide key={`${entry.name}-${index}`}> 
-                    <div className="flex h-full min-h-[180px] flex-col justify-between rounded-2xl border border-[#ede4d8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
-                          {entry.image ? (
-                            <img src={entry.image} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-black text-[#1d2925]">{entry.name}</span>
-                          <div className="mt-1 flex items-center gap-1">
-                            {Array.from({ length: 5 }).map((_, starIndex) => (
-                              <Star
-                                key={starIndex}
-                                className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#e5a936] text-[#e5a936]" : "text-[#d3cfc5]"}`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="mt-3 line-clamp-4 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
-
-                      <div className="mt-3 flex items-center justify-between border-t border-[#f0e8dc] pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#b07838]">Verified</span>
-                        <span className="text-[10px] font-bold text-[#777]">
-                          {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}
-                        </span>
-                      </div>
-                    </div>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            </div>
-          ) : (
-            <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-[#faf8f5] px-4 py-6 text-center text-[11px] font-bold text-[#666]">
-              No reviews yet. Be the first to review this gift box!
+          {reviewNotice && (
+            <div className="mt-4 rounded-2xl border border-[#f1d6b3] bg-[#fffaf4] px-4 py-3 text-xs font-black text-[#b07838]">
+              {reviewNotice}
             </div>
           )}
-        </section>
 
-        {reviewPopupOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b07838]">Gift Review</span>
-                  <h3 className="mt-2 text-xl font-black text-[#1d2925]">Share your experience</h3>
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[460px_minmax(420px,1fr)]">
+            <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
+              {activeUserId && userAlreadyReviewedGift ? (
+                <div className="rounded-2xl border border-[#d8cfc3] bg-[#f3f0ea] p-4 text-center">
+                  <p className="text-sm font-black text-[#1a3c36]">You have already reviewed this product.</p>
                 </div>
-                <button type="button" onClick={() => setReviewPopupOpen(false)} className="rounded-full p-2 text-[#666] hover:bg-[#f7f4ef]">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <form onSubmit={handleReviewSubmit} className="mt-5 space-y-4">
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase text-[#444]">Rating</label>
-                  <select value={reviewDraft.rating} onChange={(e) => setReviewDraft((prev) => ({...prev, rating: Number(e.target.value)}))} className="w-full rounded-xl border border-[#d8cfc3] px-3 py-2 text-xs font-bold text-[#1d2925]">
-                    {[5,4,3,2,1].map((v) => <option key={v} value={v}>{v} Star{v > 1 ? 's' : ''}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase text-[#444]">Comment</label>
-                  <textarea rows="4" value={reviewDraft.comment} onChange={(e) => setReviewDraft((prev) => ({...prev, comment: e.target.value}))} className="w-full resize-none rounded-xl border border-[#d8cfc3] px-3 py-2 text-xs text-[#1d2925] outline-none focus:border-[#1a3c36]" placeholder="What did you like about this gift box?" required />
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => setReviewPopupOpen(false)} className="rounded-xl border border-[#d8cfc3] px-4 py-2 text-xs font-bold text-[#666] hover:bg-[#faf8f5]">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={reviewSubmitting} className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048] disabled:opacity-50">
+              ) : (
+                <form onSubmit={handleReviewSubmit} className="space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-[11px] font-black uppercase tracking-[0.15em] text-[#b07838]">Rating</span>
+                      <span className="text-[11px] font-bold text-[#666]">Select your rating</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {[1,2,3,4,5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewDraft((prev) => ({ ...prev, rating: star }))}
+                          className="rounded-full p-1 transition hover:bg-[#fffaf4]"
+                          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                        >
+                          <Star className={`h-6 w-6 ${star <= reviewDraft.rating ? "fill-[#d4a553] text-[#d4a553]" : "text-[#d4cdbf]"}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.15em] text-[#1d2925]">Review Title</label>
+                    <input
+                      type="text"
+                      value={reviewDraft.title}
+                      onChange={(e) => setReviewDraft((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Review title"
+                      className="w-full rounded-2xl border border-[#d8cfc3] bg-white px-3.5 py-2.5 text-xs font-bold text-[#1d2925] outline-none transition focus:border-[#1a3c36] focus:ring-2 focus:ring-[#1a3c36]/15"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[11px] font-black uppercase tracking-[0.15em] text-[#1d2925]">Your Review</label>
+                    <textarea
+                      rows="5"
+                      value={reviewDraft.comment}
+                      onChange={(e) => setReviewDraft((prev) => ({ ...prev, comment: e.target.value }))}
+                      placeholder="Write your review here..."
+                      className="w-full resize-none rounded-2xl border border-[#d8cfc3] bg-white px-3.5 py-3 text-xs text-[#1d2925] outline-none transition focus:border-[#1a3c36] focus:ring-2 focus:ring-[#1a3c36]/15"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#1a3c36] bg-white px-4 py-2 text-[11px] font-black text-[#1a3c36] shadow-sm transition hover:bg-[#eef6f3]">
+                        <ImagePlus className="h-4 w-4" />
+                        {reviewUploadingPhotos ? "Uploading..." : "Add Photos"}
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={handleReviewPhotoUpload} />
+                      </label>
+                      <span className="text-[11px] font-bold text-[#777]">
+                        {reviewDraft.photos.length ? `${reviewDraft.photos.length} photo${reviewDraft.photos.length > 1 ? "s" : ""}` : "No photos added"}
+                      </span>
+                    </div>
+
+                    {reviewDraft.photos.length > 0 && (
+                      <div className="mt-3 grid grid-cols-4 gap-2">
+                        {reviewDraft.photos.map((photo, index) => (
+                          <div key={`${photo}-${index}`} className="relative group">
+                            <img src={photo} alt="Review upload" className="h-20 w-full rounded-xl border border-[#e8dfd2] object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeReviewPhoto(photo)}
+                              className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#1a3c36] text-white shadow transition hover:bg-[#b07838]"
+                              title="Remove photo"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={reviewSubmitting || !reviewDraft.title.trim() || !reviewDraft.comment.trim()}
+                    className="w-full rounded-2xl bg-[#1a3c36] px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-md transition hover:bg-[#235048] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
                     {reviewSubmitting ? "Submitting..." : "Submit Review"}
                   </button>
+                </form>
+              )}
+            </section>
+
+            <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
+              <div className="flex items-center justify-between gap-3 border-b border-[#e8dfd2] pb-3">
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b07838]">Reviews</span>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-3xl font-black text-[#1a3c36]">{productReviews.length ? averageRating.toFixed(1) : "0.0"}</span>
+                    <span className="text-[11px] font-bold text-[#6a6a6a]">out of 5</span>
+                  </div>
                 </div>
-              </form>
-            </div>
+                <div className="text-right">
+                  <span className="rounded-full bg-[#eef6f3] px-3 py-1 text-[10px] font-black text-[#1a3c36]">
+                    {productReviews.length} Review{productReviews.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {[5,4,3,2,1].map((star) => {
+                  const count = ratingDistribution[star] || 0;
+                  const percent = productReviews.length ? (count / productReviews.length) * 100 : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2">
+                      <span className="w-11 text-[11px] font-black text-[#666]">{star} ★</span>
+                      <div className="h-2 flex-1 rounded-full bg-[#e9e4dc] overflow-hidden">
+                        <div className="h-full rounded-full bg-[#d4a553]" style={{ width: `${percent}%` }} />
+                      </div>
+                      <span className="w-8 text-right text-[11px] font-bold text-[#666]">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5">
+                {reviewStoreArray.length > 0 ? (
+                  <div className="space-y-3">
+                    {reviewStoreArray.slice(0, 6).map((entry, index) => (
+                      <article key={`${entry.name}-${index}`} className="rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div className="flex items-start gap-3">
+                          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
+                            {entry.image ? (
+                              <img src={entry.image} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[11px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-[11px] font-black text-[#1d2925]">{entry.name}</span>
+                              <span className="text-[10px] font-bold text-[#777]">{entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-1">
+                              {Array.from({ length: 5 }).map((_, starIndex) => (
+                                <Star key={starIndex} className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#d4a553] text-[#d4a553]" : "text-[#d3cfc5]"}`} />
+                              ))}
+                            </div>
+                            <p className="mt-2 text-[11px] font-black text-[#1d2925]">{entry.title || "Product Feedback"}</p>
+                            <p className="mt-1 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
+                            {entry.images?.length > 0 && (
+                              <div className="mt-3 grid grid-cols-4 gap-2">
+                                {entry.images.slice(0,4).map((image, photoIndex) => (
+                                  <img key={`${image}-${photoIndex}`} src={image} alt="" className="h-16 w-full rounded-xl border border-[#ede4d8] object-cover" />
+                                ))}
+                              </div>
+                            )}
+                            <div className="mt-3 flex items-center gap-2">
+                              <button type="button" className="rounded-full border border-[#d8cfc3] px-3 py-1 text-[10px] font-black text-[#1a3c36] transition hover:bg-[#eef6f3]">
+                                Helpful
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-white px-4 py-6 text-center text-[11px] font-bold text-[#666]">
+                    No reviews yet. Be the first to review this product!
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        )}
+        </section>
 
         {/* RELATED GIFTS */}
         <RelatedProducts gift={gift} type="gift" className="px-0! pb-16 pt-8" />
