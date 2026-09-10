@@ -1,5 +1,9 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 import {
   AlignCenter,
   AlignLeft,
@@ -33,6 +37,7 @@ import {
   ShoppingCart,
   Sliders,
   Sparkles,
+  Star,
   Trash2,
   Truck,
   Type,
@@ -314,6 +319,15 @@ const ProductDetails = () => {
   const [savingCustomization, setSavingCustomization] = useState(false);
   const [customizationId, setCustomizationId] = useState(null);
 
+  // Product review state for the route-specific product page
+  const [productReviews, setProductReviews] = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [reviewPopupOpen, setReviewPopupOpen] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
+  const [reviewNotice, setReviewNotice] = useState("");
+
   // Confirmation Modal state & Action type
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmActionType, setConfirmActionType] = useState("cart"); // "cart" | "buy"
@@ -472,6 +486,121 @@ const ProductDetails = () => {
 
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+
+      try {
+        setReviewLoading(true);
+        const reviewRes = await api.get(`/reviews?product_id=${encodeURIComponent(id)}`);
+        const rows = Array.isArray(reviewRes?.data?.data) ? reviewRes.data.data : [];
+        setProductReviews(rows);
+        setReviewNotice("");
+      } catch (err) {
+        console.error("Fetch product reviews error:", err);
+        setProductReviews([]);
+      } finally {
+        setReviewLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [id]);
+
+  const activeUserId = user?.user_id || user?.id || user?.uuid || null;
+  const activeProductId = Number(product?.id ?? product?.product_id ?? 0);
+
+  const userAlreadyReviewedProduct = useMemo(() => {
+    if (!activeUserId || !activeProductId) return false;
+
+    return productReviews.some((review) => {
+      const reviewUserId = String(review.user_id || review.created_by || review.reviewer_email || "");
+      const reviewProductId = Number(review.product_id ?? review.productID ?? 0);
+      return reviewUserId === String(activeUserId) && reviewProductId === activeProductId;
+    });
+  }, [activeUserId, activeProductId, productReviews]);
+
+  const reviewStoreArray = useMemo(() => {
+    return productReviews
+      .slice()
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .map((review) => ({
+        name: review.reviewer_name || review.reviewer_email || "Customer",
+        rating: Number(review.rating || 5),
+        dis: review.comment || review.title || "",
+        image: review.review_photo || review.product_image || "",
+        createdAt: review.created_at || review.updated_at || "",
+      }));
+  }, [productReviews]);
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!product?.id) {
+      return;
+    }
+
+    if (!activeUserId) {
+      toast.error("Please login before writing a review.");
+      return;
+    }
+
+    const trimmedComment = reviewDraft.comment.trim();
+    if (!trimmedComment) {
+      toast.error("Review comment is required");
+      return;
+    }
+
+    if (userAlreadyReviewedProduct) {
+      setReviewNotice("You have already reviewed this product.");
+      return;
+    }
+
+    try {
+      setReviewSubmitting(true);
+      const payload = {
+        product_id: product.id,
+        product_code: product.product_code || product.product_id || String(product.id),
+        product_name: product.product_name,
+        product_image: product.product_images?.[0] || product.image || product.frame_data?.frame_image || null,
+        product_type: "product",
+        reviewer_name: user?.username || user?.displayName || user?.name || user?.email || "Customer",
+        reviewer_email: user?.email || null,
+        rating: Number(reviewDraft.rating || 5),
+        comment: trimmedComment,
+        title: product.product_name || null,
+        review_photo: null,
+        created_by: activeUserId,
+        updated_by: activeUserId,
+        user_id: activeUserId,
+      };
+
+      const response = await api.post("/reviews", payload);
+      if (response.data?.success) {
+        const newReview = response.data.data || payload;
+        setProductReviews((prev) => [newReview, ...prev]);
+        setReviewDraft({ rating: 5, comment: "" });
+        setReviewFormOpen(false);
+        setReviewPopupOpen(false);
+        setReviewNotice("");
+        toast.success("Review submitted successfully");
+      }
+    } catch (err) {
+      console.error("Submit review error:", err);
+      const apiMessage = err?.response?.data?.message || "Unable to submit your review";
+      if (String(apiMessage).toLowerCase().includes("already reviewed") || err?.response?.status === 409) {
+        setReviewNotice("You have already reviewed this product.");
+        setReviewFormOpen(false);
+        setReviewPopupOpen(false);
+        toast.error("You have already reviewed this product.");
+      } else {
+        toast.error(apiMessage);
+      }
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   const frameData = product?.frame_data || {};
   const photoSlots = frameData.photo_slots || [];
@@ -983,6 +1112,61 @@ const ProductDetails = () => {
 
   return (
     <main className="min-h-screen bg-[#f7f3ed]">
+      {reviewPopupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl border border-[#e8dfd2] bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#b07838]">Add Product Review</span>
+                <h3 className="mt-2 text-xl font-black text-[#1d2925]">{product?.product_name || "Product Review"}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setReviewPopupOpen(false);
+                  setReviewDraft({ rating: 5, comment: "" });
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#d8cfc3] bg-[#faf8f5] text-[#666] hover:bg-[#1a3c36] hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleReviewSubmit} className="mt-5 space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#666]">Rating</label>
+                <select
+                  value={reviewDraft.rating}
+                  onChange={(e) => setReviewDraft((prev) => ({ ...prev, rating: Number(e.target.value) }))}
+                  className="mt-1 w-full rounded-xl border border-[#d8cfc3] bg-[#faf8f5] px-3 py-2 text-xs font-bold text-[#1d2925] outline-none focus:border-[#1a3c36]"
+                >
+                  {[5, 4, 3, 2, 1].map((r) => <option key={r} value={r}>{r} Star{r > 1 ? "s" : ""}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-[#666]">Review</label>
+                <textarea
+                  value={reviewDraft.comment}
+                  onChange={(e) => setReviewDraft((prev) => ({ ...prev, comment: e.target.value }))}
+                  rows="4"
+                  className="mt-1 w-full rounded-xl border border-[#d8cfc3] bg-[#faf8f5] px-3 py-2 text-xs text-[#1d2925] outline-none focus:border-[#1a3c36]"
+                  placeholder="Share your experience with this product"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setReviewPopupOpen(false)} className="rounded-xl border border-[#d8cfc3] px-4 py-2 text-xs font-bold text-[#666] hover:bg-[#faf8f5]">
+                  Cancel
+                </button>
+                <button type="submit" disabled={reviewSubmitting} className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048] disabled:opacity-70">
+                  {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <PageHeader title={product.product_name} />
       <PageContainer className="py-10">
 
@@ -2486,6 +2670,115 @@ const ProductDetails = () => {
             )}
           </div>
         </div>
+      </PageContainer>
+
+      {/* ================= CUSTOMER REVIEWS AT PAGE END ================= */}
+      <PageContainer className="pb-10">
+        <section className="mt-8 rounded-3xl border border-[#e5ded4] bg-[#faf8f5] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#b07838]">Customer Reviews</span>
+                <span className="rounded-full bg-[#eef6f3] px-2 py-0.5 text-[10px] font-black text-[#1a3c36]">
+                  {reviewLoading ? "Loading..." : `${productReviews.length} Review${productReviews.length === 1 ? "" : "s"}`}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="font-mono text-[#1a3c36] font-black">
+                  {productReviews.length ? (productReviews.reduce((sum, review) => sum + Number(review.rating || 5), 0) / productReviews.length).toFixed(1) : "0.0"}
+                </span>
+                <span className="text-[11px] text-[#666]">/ 5</span>
+              </div>
+            </div>
+
+            {activeUserId ? (
+              userAlreadyReviewedProduct ? (
+                <div className="text-right">
+                  <button type="button" disabled className="rounded-xl border border-[#d8cfc3] bg-[#f3f0ea] px-4 py-2 text-xs font-bold text-[#8d8a83] cursor-not-allowed">
+                    Write a Review
+                  </button>
+                  <p className="mt-1 text-[11px] font-bold text-[#b07838]">You have already reviewed this product.</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewDraft({ rating: 5, comment: "" });
+                    setReviewNotice("");
+                    setReviewPopupOpen(true);
+                  }}
+                  className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048]"
+                >
+                  Add Review
+                </button>
+              )
+            ) : (
+              <Link to="/login" className="rounded-xl border border-[#1a3c36] px-4 py-2 text-xs font-bold text-[#1a3c36] hover:bg-[#eef6f3]">
+                Login to Review
+              </Link>
+            )}
+          </div>
+
+          {reviewNotice && <p className="mt-3 rounded-xl border border-[#f1d6b3] bg-[#fffaf4] px-3 py-2 text-xs font-bold text-[#b07838]">{reviewNotice}</p>}
+
+          {reviewStoreArray.length > 0 ? (
+            <div className="mt-4">
+              <Swiper
+                modules={[Autoplay]}
+                spaceBetween={20}
+                slidesPerView={1}
+                loop={true}
+                autoplay={{ delay: 3500, disableOnInteraction: false }}
+                speed={800}
+                breakpoints={{
+                  640: { slidesPerView: 1 },
+                  768: { slidesPerView: 2 },
+                  1024: { slidesPerView: 3 },
+                }}
+              >
+                {reviewStoreArray.slice(0, 8).map((entry, index) => (
+                  <SwiperSlide key={`${entry.name}-${index}`}> 
+                    <div className="flex h-full min-h-[180px] flex-col justify-between rounded-2xl border border-[#ede4d8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
+                          {entry.image ? (
+                            <img src={entry.image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-black text-[#1d2925]">{entry.name}</span>
+                          <div className="mt-1 flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#e5a936] text-[#e5a936]" : "text-[#d3cfc5]"}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 line-clamp-4 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-[#f0e8dc] pt-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#b07838]">Verified</span>
+                        <span className="text-[10px] font-bold text-[#777]">
+                          {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}
+                        </span>
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-[#faf8f5] px-4 py-6 text-center text-[11px] font-bold text-[#666]">
+              No reviews yet. Be the first to review this product!
+            </div>
+          )}
+        </section>
       </PageContainer>
 
       <RelatedProducts product={product} />

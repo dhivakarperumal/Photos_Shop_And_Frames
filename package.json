@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "frontend": "npm --prefix frontend run dev",
-    "backend": "npm --prefix backend run dev",
-    "dev": "npm run frontend",
+    "frontend": "npm --prefix Frontend run dev",
+    "backend": "npm --prefix Backend run dev",
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\"",
     "dev:local": "concurrently \"npm run frontend\" \"npm run backend\""
   },
   "keywords": [],

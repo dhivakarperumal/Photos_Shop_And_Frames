@@ -385,6 +385,18 @@ async function ensureDatabaseSchema() {
     } catch (error) {
       if (error.code !== "ER_DUP_FIELDNAME") throw error;
     }
+    try {
+      await connection.query(`ALTER TABLE reviews ADD COLUMN user_id VARCHAR(255) NULL`);
+      console.log("✅ Added user_id to reviews");
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
+    try {
+      await connection.query(`ALTER TABLE reviews ADD UNIQUE KEY uq_reviews_user_product (user_id, product_id)`);
+      console.log("✅ Added reviews unique composite index on user_id + product_id");
+    } catch (error) {
+      if (error.code !== "ER_DUP_KEYNAME") throw error;
+    }
     await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);

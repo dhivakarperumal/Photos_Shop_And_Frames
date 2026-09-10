@@ -41,12 +41,34 @@ const createReview = async (reviewData) => {
     status = "Published",
     created_by = null,
     updated_by = null,
+    user_id = null,
   } = reviewData;
+
+  const pool = getDB();
+  const normalizedProductId = Number(product_id || 0);
+  const normalizedUserId = String(user_id || "").trim();
+
+  if (!normalizedProductId || !normalizedUserId) {
+    throw new Error("user_id and product_id are required to create a review");
+  }
+
+  const [existingRows] = await pool.query(
+    `SELECT id FROM reviews WHERE user_id = ? AND product_id = ? LIMIT 1`,
+    [normalizedUserId, normalizedProductId]
+  );
+
+  if (existingRows.length > 0) {
+    const err = new Error("You have already reviewed this product.");
+    err.statusCode = 409;
+    err.code = "REVIEW_ALREADY_EXISTS";
+    throw err;
+  }
 
   const query = `
     INSERT INTO reviews (
       uuid,
       review_id,
+      user_id,
       product_id,
       product_code,
       product_name,
@@ -61,13 +83,14 @@ const createReview = async (reviewData) => {
       status,
       created_by,
       updated_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
     uuid,
     review_id,
-    product_id ? Number(product_id) : null,
+    normalizedUserId,
+    normalizedProductId,
     product_code,
     product_name,
     product_image || null,
@@ -83,14 +106,14 @@ const createReview = async (reviewData) => {
     updated_by || null,
   ];
 
-  const pool = getDB();
   const [result] = await pool.query(query, values);
 
   return {
     id: result.insertId,
     uuid,
     review_id,
-    product_id,
+    user_id: normalizedUserId,
+    product_id: normalizedProductId,
     product_code,
     product_name,
     reviewer_name,

@@ -35,6 +35,7 @@ const createReview = async (req, res) => {
       status,
       created_by,
       updated_by,
+      user_id,
     } = req.body;
 
     if (!product_name || !product_code) {
@@ -58,6 +59,13 @@ const createReview = async (req, res) => {
       });
     }
 
+    if (!user_id) {
+      return res.status(401).json({
+        success: false,
+        message: "Login required to submit a review",
+      });
+    }
+
     const finalReviewId = review_id || (await reviewModule.getNextReviewId());
 
     const payload = {
@@ -77,6 +85,7 @@ const createReview = async (req, res) => {
       status: status || "Published",
       created_by: created_by || null,
       updated_by: updated_by || created_by || null,
+      user_id: String(user_id),
     };
 
     const result = await reviewModule.createReview(payload);
@@ -88,6 +97,21 @@ const createReview = async (req, res) => {
     });
   } catch (error) {
     console.error("Create review error:", error);
+
+    if (error?.code === "REVIEW_ALREADY_EXISTS" || error?.statusCode === 409 || String(error.message).includes("already reviewed this product")) {
+      return res.status(409).json({
+        success: false,
+        message: "You have already reviewed this product.",
+      });
+    }
+
+    if (error?.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        success: false,
+        message: "You have already reviewed this product.",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create review",
