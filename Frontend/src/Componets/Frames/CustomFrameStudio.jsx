@@ -7,6 +7,8 @@ import {
   Bold,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Crop,
   Download,
   Eye,
@@ -83,6 +85,106 @@ const CustomFrameStudio = () => {
 
   // Studio tabs: 'photo' | 'borders' | 'rotate' | 'filters' | 'effects' | 'text' | 'size'
   const [activeTab, setActiveTab] = useState("filters");
+
+  // Studio navigation tabs scroll & drag handling
+  const studioTabsNavRef = useRef(null);
+  const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
+  const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
+  const [isDraggingStudioTabs, setIsDraggingStudioTabs] = useState(false);
+  const studioTabsStartX = useRef(0);
+  const studioTabsStartScrollLeft = useRef(0);
+  const studioTabsHasDragged = useRef(false);
+
+  const checkStudioTabsScroll = () => {
+    const el = studioTabsNavRef.current;
+    if (!el) return;
+    const tolerance = 2;
+    setCanScrollTabsLeft(el.scrollLeft > tolerance);
+    setCanScrollTabsRight(el.scrollLeft + el.clientWidth < el.scrollWidth - tolerance);
+  };
+
+  useEffect(() => {
+    const el = studioTabsNavRef.current;
+    if (!el) return;
+
+    checkStudioTabsScroll();
+
+    const handleScroll = () => checkStudioTabsScroll();
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    // Allow mouse wheel to scroll tabs horizontally
+    const handleWheel = (e) => {
+      if (el.scrollWidth > el.clientWidth) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+          checkStudioTabsScroll();
+        }
+      }
+    };
+    el.addEventListener("wheel", handleWheel, { passive: false });
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => checkStudioTabsScroll());
+      resizeObserver.observe(el);
+    }
+
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+      el.removeEventListener("wheel", handleWheel);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, []);
+
+  const scrollStudioTabs = (direction) => {
+    const el = studioTabsNavRef.current;
+    if (!el) return;
+    const scrollAmount = 180;
+    el.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
+  const handleStudioTabsMouseDown = (e) => {
+    const el = studioTabsNavRef.current;
+    if (!el) return;
+    setIsDraggingStudioTabs(true);
+    studioTabsStartX.current = e.pageX - el.offsetLeft;
+    studioTabsStartScrollLeft.current = el.scrollLeft;
+    studioTabsHasDragged.current = false;
+  };
+
+  const handleStudioTabsMouseMove = (e) => {
+    if (!isDraggingStudioTabs) return;
+    const el = studioTabsNavRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - studioTabsStartX.current) * 1.5;
+    if (Math.abs(walk) > 5) {
+      studioTabsHasDragged.current = true;
+    }
+    el.scrollLeft = studioTabsStartScrollLeft.current - walk;
+    checkStudioTabsScroll();
+  };
+
+  const handleStudioTabsMouseUpOrLeave = () => {
+    setIsDraggingStudioTabs(false);
+  };
+
+  // Keep active tab scrolled into view
+  useEffect(() => {
+    if (!activeTab || !studioTabsNavRef.current) return;
+    const activeBtn = studioTabsNavRef.current.querySelector(`[data-tab-id="${activeTab}"]`);
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    }
+    checkStudioTabsScroll();
+  }, [activeTab]);
 
   // Catalog items
   const [framesList, setFramesList] = useState([]);
@@ -1138,34 +1240,76 @@ const CustomFrameStudio = () => {
               </div>
 
               {/* STUDIO NAVIGATION PILLS */}
-              <div className="flex overflow-x-auto border-b border-[#f0e8dc] pb-3 text-xs font-bold scrollbar-none gap-1.5">
-                {[
-                  { id: "filters", label: "Brightness & Filters", icon: Wand2 },
-                  { id: "text", label: "Add Text", icon: Type },
-                  { id: "crop", label: "Crop & Pan", icon: Crop },
-                  { id: "borders", label: "Borders", icon: Palette },
-                  { id: "rotate", label: "Rotate", icon: RotateCw },
-                  { id: "effects", label: "Blur & Sharpness", icon: Sliders },
-                  { id: "size", label: "Size & Price", icon: Package },
-                ].map((t) => {
-                  const Icon = t.icon;
-                  const isActive = activeTab === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setActiveTab(t.id)}
-                      className={`flex items-center gap-1.5 rounded-xl px-3 py-2 whitespace-nowrap transition ${
-                        isActive
-                          ? "bg-[#1a3c36] text-white shadow-xs"
-                          : "bg-[#faf8f5] text-[#666] hover:bg-[#f0ebe3] hover:text-[#1d2925]"
-                      }`}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span>{t.label}</span>
-                    </button>
-                  );
-                })}
+              <div className="relative mb-1">
+                {/* Left Scroll Arrow */}
+                {canScrollTabsLeft && (
+                  <button
+                    type="button"
+                    onClick={() => scrollStudioTabs("left")}
+                    className="absolute left-0 top-0 bottom-3 z-10 flex w-7 items-center justify-center rounded-l-xl bg-gradient-to-r from-white via-white/90 to-transparent text-[#1a3c36] hover:text-[#d5a65a] transition cursor-pointer"
+                    title="Scroll tabs left"
+                    aria-label="Scroll tabs left"
+                  >
+                    <ChevronLeft className="h-4 w-4 drop-shadow-sm" />
+                  </button>
+                )}
+
+                <div
+                  ref={studioTabsNavRef}
+                  onMouseDown={handleStudioTabsMouseDown}
+                  onMouseMove={handleStudioTabsMouseMove}
+                  onMouseUp={handleStudioTabsMouseUpOrLeave}
+                  onMouseLeave={handleStudioTabsMouseUpOrLeave}
+                  className={`flex overflow-x-auto border-b border-[#f0e8dc] pb-2.5 text-xs font-bold gap-1.5 scroll-smooth select-none cursor-grab ${
+                    isDraggingStudioTabs ? "cursor-grabbing" : ""
+                  } [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-[#f0ebe3] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d5a65a]/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#1a3c36]`}
+                  style={{ scrollbarWidth: "thin", scrollbarColor: "#d5a65a99 #f0ebe3" }}
+                >
+                  {[
+                    { id: "filters", label: "Brightness & Filters", icon: Wand2 },
+                    { id: "text", label: "Add Text", icon: Type },
+                    { id: "crop", label: "Crop & Pan", icon: Crop },
+                    { id: "borders", label: "Borders", icon: Palette },
+                    { id: "rotate", label: "Rotate", icon: RotateCw },
+                    { id: "effects", label: "Blur & Sharpness", icon: Sliders },
+                    { id: "size", label: "Size & Price", icon: Package },
+                  ].map((t) => {
+                    const Icon = t.icon;
+                    const isActive = activeTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        data-tab-id={t.id}
+                        type="button"
+                        onClick={() => {
+                          if (studioTabsHasDragged.current) return;
+                          setActiveTab(t.id);
+                        }}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 whitespace-nowrap transition cursor-pointer ${
+                          isActive
+                            ? "bg-[#1a3c36] text-white shadow-xs"
+                            : "bg-[#faf8f5] text-[#666] hover:bg-[#f0ebe3] hover:text-[#1d2925]"
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right Scroll Arrow */}
+                {canScrollTabsRight && (
+                  <button
+                    type="button"
+                    onClick={() => scrollStudioTabs("right")}
+                    className="absolute right-0 top-0 bottom-3 z-10 flex w-7 items-center justify-center rounded-r-xl bg-gradient-to-l from-white via-white/90 to-transparent text-[#1a3c36] hover:text-[#d5a65a] transition cursor-pointer"
+                    title="Scroll tabs right"
+                    aria-label="Scroll tabs right"
+                  >
+                    <ChevronRight className="h-4 w-4 drop-shadow-sm" />
+                  </button>
+                )}
               </div>
 
               {/* ================= TAB 1: BRIGHTNESS & FILTERS (FOR EACH PIC) ================= */}
