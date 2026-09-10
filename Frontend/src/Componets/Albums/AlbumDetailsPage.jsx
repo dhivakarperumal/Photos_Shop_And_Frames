@@ -18,11 +18,15 @@ import {
   ShoppingBag,
   ShoppingCart,
   Sparkles,
+  Star,
   Trash2,
   Truck,
   UploadCloud,
   X,
 } from "lucide-react";
+import { Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
 import api, { API_URL } from "../../api";
 import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
@@ -82,6 +86,13 @@ const AlbumDetailsPage = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
+  // Album review state
+  const [albumReviews, setAlbumReviews] = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewPopupOpen, setReviewPopupOpen] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDraft, setReviewDraft] = useState({ rating: 5, comment: "" });
+  const [reviewNotice, setReviewNotice] = useState("");
 
   // Fetch album details
   useEffect(() => {
@@ -131,6 +142,57 @@ const AlbumDetailsPage = () => {
       isMounted = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!album) return;
+
+    const fetchReviews = async () => {
+      try {
+        setReviewLoading(true);
+        const albumCode = album.product_code || album.product_id || id;
+        const reviewRes = await api.get(`/reviews?product_id=${encodeURIComponent(albumCode)}`);
+        const rows = Array.isArray(reviewRes?.data?.data) ? reviewRes.data.data : [];
+        setAlbumReviews(rows);
+        setReviewNotice("");
+      } catch (err) {
+        console.error("Fetch album reviews error:", err);
+        setAlbumReviews([]);
+      } finally {
+        setReviewLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [album, id]);
+
+  const activeUserId = user?.user_id || user?.id || user?.uuid || null;
+  const activeAlbumCode = album?.product_code || album?.product_id || id;
+
+  const userAlreadyReviewedAlbum = useMemo(() => {
+    if (!activeUserId || !activeAlbumCode) return false;
+
+    return albumReviews.some((review) => {
+      const reviewUserId = String(review.user_id || review.created_by || review.reviewer_email || "");
+      const reviewCode = String(review.product_code || review.product_id || "");
+      return reviewUserId === String(activeUserId) && (
+        String(reviewCode) === String(activeAlbumCode) ||
+        Number(review.product_id ?? 0) === Number(album?.id ?? 0)
+      );
+    });
+  }, [activeUserId, activeAlbumCode, album?.id, albumReviews]);
+
+  const reviewStoreArray = useMemo(() => {
+    return albumReviews
+      .slice()
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .map((review) => ({
+        name: review.reviewer_name || review.reviewer_email || "Customer",
+        rating: Number(review.rating || 5),
+        dis: review.comment || review.title || "",
+        image: review.review_photo || review.product_image || "",
+        createdAt: review.created_at || review.updated_at || "",
+      }));
+  }, [albumReviews]);
 
   // Parse variants and options
   const variants = useMemo(() => (album ? parseJsonArray(album.variants) : []), [album]);
@@ -257,6 +319,72 @@ const AlbumDetailsPage = () => {
     if (matchingVar?.image) {
       const idx = galleryImages.findIndex((img) => img.includes(matchingVar.image) || resolveImageUrl(matchingVar.image) === img);
       if (idx !== -1) setSelectedImageIndex(idx);
+    }
+  };
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!album?.id) {
+      return;
+    }
+
+    if (!activeUserId) {
+      toast.error("Please login before writing a review.");
+      return;
+    }
+
+    const trimmedComment = reviewDraft.comment.trim();
+    if (!trimmedComment) {
+      toast.error("Review comment is required");
+      return;
+    }
+
+    if (userAlreadyReviewedAlbum) {
+      setReviewNotice("You have already reviewed this album.");
+      return;
+    }
+
+    try {
+      setReviewSubmitting(true);
+      const payload = {
+        product_id: Number(album.id || album.product_id),
+        product_code: album.product_code || album.product_id || String(album.id),
+        product_name: album.product_name,
+        product_image: currentImage || album.thumbnail_image || null,
+        product_type: "album",
+        reviewer_name: user?.username || user?.displayName || user?.name || user?.email || "Customer",
+        reviewer_email: user?.email || null,
+        rating: Number(reviewDraft.rating || 5),
+        comment: trimmedComment,
+        title: album.product_name || null,
+        review_photo: null,
+        created_by: activeUserId,
+        updated_by: activeUserId,
+        user_id: activeUserId,
+      };
+
+      const response = await api.post("/reviews", payload);
+      if (response.data?.success) {
+        const newReview = response.data.data || payload;
+        setAlbumReviews((prev) => [newReview, ...prev]);
+        setReviewDraft({ rating: 5, comment: "" });
+        setReviewPopupOpen(false);
+        setReviewNotice("");
+        toast.success("Review submitted successfully");
+      }
+    } catch (err) {
+      console.error("Submit album review error:", err);
+      const apiMessage = err?.response?.data?.message || "Unable to submit your review";
+      if (String(apiMessage).toLowerCase().includes("already reviewed") || err?.response?.status === 409) {
+        setReviewNotice("You have already reviewed this album.");
+        setReviewPopupOpen(false);
+        toast.error("You have already reviewed this album.");
+      } else {
+        toast.error(apiMessage);
+      }
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -805,6 +933,148 @@ const AlbumDetailsPage = () => {
             </div>
           </div>
         </div>
+
+        <section className="mt-8 rounded-3xl border border-[#e5ded4] bg-[#faf8f5] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#b07838]">Customer Reviews</span>
+                <span className="rounded-full bg-[#eef6f3] px-2 py-0.5 text-[10px] font-black text-[#1a3c36]">
+                  {reviewLoading ? "Loading..." : `${albumReviews.length} Review${albumReviews.length === 1 ? "" : "s"}`}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="font-mono text-[#1a3c36] font-black">
+                  {albumReviews.length ? (albumReviews.reduce((sum, review) => sum + Number(review.rating || 5), 0) / albumReviews.length).toFixed(1) : "0.0"}
+                </span>
+                <span className="text-[11px] text-[#666]">/ 5</span>
+              </div>
+            </div>
+
+            {activeUserId ? (
+              userAlreadyReviewedAlbum ? (
+                <div className="text-right">
+                  <button type="button" disabled className="rounded-xl border border-[#d8cfc3] bg-[#f3f0ea] px-4 py-2 text-xs font-bold text-[#8d8a83] cursor-not-allowed">
+                    Write a Review
+                  </button>
+                  <p className="mt-1 text-[11px] font-bold text-[#b07838]">You have already reviewed this album.</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewDraft({ rating: 5, comment: "" });
+                    setReviewNotice("");
+                    setReviewPopupOpen(true);
+                  }}
+                  className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048]"
+                >
+                  Add Review
+                </button>
+              )
+            ) : (
+              <Link to="/login" className="rounded-xl border border-[#1a3c36] px-4 py-2 text-xs font-bold text-[#1a3c36] hover:bg-[#eef6f3]">
+                Login to Review
+              </Link>
+            )}
+          </div>
+
+          {reviewNotice && <p className="mt-3 rounded-xl border border-[#f1d6b3] bg-[#fffaf4] px-3 py-2 text-xs font-bold text-[#b07838]">{reviewNotice}</p>}
+
+          {reviewStoreArray.length > 0 ? (
+            <div className="mt-4">
+              <Swiper
+                modules={[Autoplay]}
+                spaceBetween={20}
+                slidesPerView={1}
+                loop={true}
+                autoplay={{ delay: 3500, disableOnInteraction: false }}
+                speed={800}
+                breakpoints={{
+                  640: { slidesPerView: 1 },
+                  768: { slidesPerView: 2 },
+                  1024: { slidesPerView: 3 },
+                }}
+              >
+                {reviewStoreArray.slice(0, 8).map((entry, index) => (
+                  <SwiperSlide key={`${entry.name}-${index}`}> 
+                    <div className="flex h-full min-h-[180px] flex-col justify-between rounded-2xl border border-[#ede4d8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
+                          {entry.image ? (
+                            <img src={entry.image} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] font-black text-[#1a3c36]">{entry.name.charAt(0).toUpperCase()}</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-black text-[#1d2925]">{entry.name}</span>
+                          <div className="mt-1 flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                className={`h-3.5 w-3.5 ${starIndex < entry.rating ? "fill-[#e5a936] text-[#e5a936]" : "text-[#d3cfc5]"}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 line-clamp-4 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-[#f0e8dc] pt-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#b07838]">Verified</span>
+                        <span className="text-[10px] font-bold text-[#777]">
+                          {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : "Recent"}
+                        </span>
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-[#faf8f5] px-4 py-6 text-center text-[11px] font-bold text-[#666]">
+              No reviews yet. Be the first to review this album!
+            </div>
+          )}
+        </section>
+
+        {reviewPopupOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b07838]">Album Review</span>
+                  <h3 className="mt-2 text-xl font-black text-[#1d2925]">Share your experience</h3>
+                </div>
+                <button type="button" onClick={() => setReviewPopupOpen(false)} className="rounded-full p-2 text-[#666] hover:bg-[#f7f4ef]">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <form onSubmit={handleReviewSubmit} className="mt-5 space-y-4">
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-[#444]">Rating</label>
+                  <select value={reviewDraft.rating} onChange={(e) => setReviewDraft((prev) => ({...prev, rating: Number(e.target.value)}))} className="w-full rounded-xl border border-[#d8cfc3] px-3 py-2 text-xs font-bold text-[#1d2925]">
+                    {[5,4,3,2,1].map((v) => <option key={v} value={v}>{v} Star{v > 1 ? 's' : ''}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-bold uppercase text-[#444]">Comment</label>
+                  <textarea rows="4" value={reviewDraft.comment} onChange={(e) => setReviewDraft((prev) => ({...prev, comment: e.target.value}))} className="w-full resize-none rounded-xl border border-[#d8cfc3] px-3 py-2 text-xs text-[#1d2925] outline-none focus:border-[#1a3c36]" placeholder="What did you like about this album?" required />
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => setReviewPopupOpen(false)} className="rounded-xl border border-[#d8cfc3] px-4 py-2 text-xs font-bold text-[#666] hover:bg-[#faf8f5]">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={reviewSubmitting} className="rounded-xl bg-[#1a3c36] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#235048] disabled:opacity-50">
+                    {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* DETAILED DESCRIPTION & HIGHLIGHTS SECTION */}
         {album.description && (
