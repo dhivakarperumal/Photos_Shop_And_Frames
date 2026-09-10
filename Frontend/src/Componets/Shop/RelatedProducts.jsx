@@ -9,6 +9,7 @@ import PageContainer from "../../CommonComponents/PageContainer";
 import ProductCard from "../../CommonComponents/ProductCard";
 import AlbumCard from "../../CommonComponents/AlbumCard";
 import GiftCard from "../../CommonComponents/GiftCard";
+import ProductQuickView from "../../CommonComponents/ProductQuickView";
 
 const resolveImageUrl = (value) => {
   if (!value || typeof value !== "string") return "";
@@ -30,6 +31,7 @@ const RelatedProducts = ({
   className = "pb-16 pt-8",
 }) => {
   const [relatedItems, setRelatedItems] = useState([]);
+  const [quickViewItem, setQuickViewItem] = useState(null);
   const targetItem = item || album || gift || product;
 
   const computedType = useMemo(() => {
@@ -173,84 +175,101 @@ const RelatedProducts = ({
   if (relatedItems.length === 0) return null;
 
   return (
-    <PageContainer className={className}>
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b07838]">
-            {headerInfo.subtitle}
-          </p>
-          <h2 className="mt-1 text-2xl font-black text-[#1d2925]">
-            {headerInfo.title}
-          </h2>
+    <>
+      <PageContainer className={className}>
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b07838]">
+              {headerInfo.subtitle}
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-[#1d2925]">
+              {headerInfo.title}
+            </h2>
+          </div>
+          <Link
+            to={headerInfo.viewAllLink}
+            className="text-xs font-bold text-[#1a3c36] hover:text-[#b07838] transition hover:underline"
+          >
+            {headerInfo.viewAllText} &rarr;
+          </Link>
         </div>
-        <Link
-          to={headerInfo.viewAllLink}
-          className="text-xs font-bold text-[#1a3c36] hover:text-[#b07838] transition hover:underline"
+
+        <Swiper
+          modules={[Navigation]}
+          navigation
+          spaceBetween={20}
+          slidesPerView={1.15}
+          breakpoints={{
+            640: { slidesPerView: 2 },
+            768: { slidesPerView: 3 },
+            1024: { slidesPerView: 4 },
+            1280: { slidesPerView: 4.5 },
+          }}
+          className="!overflow-visible"
         >
-          {headerInfo.viewAllText} &rarr;
-        </Link>
-      </div>
+          {relatedItems.map((rel) => {
+            if (computedType === "album") {
+              const albumId = rel.product_id || rel.id;
+              const image = resolveImageUrl(
+                rel.thumbnail_image || rel.image || rel.product_images?.[0]
+              );
+              return (
+                <SwiperSlide key={albumId} className="!h-auto">
+                  <AlbumCard
+                    album={rel}
+                    image={image}
+                    title={rel.product_name || "Photo Album"}
+                    category={rel.sub_category || rel.occasion || rel.category || "Photo Album"}
+                    size={rel.size || "12 x 18 Inches"}
+                    pages={rel.total_pages || 40}
+                    price={Number(rel.discount_price || rel.selling_price || 0)}
+                    originalPrice={Number(rel.selling_price || 0)}
+                    href={`/albums/${albumId}`}
+                    onOpen={() => setQuickViewItem({ item: rel, type: "album", image })}
+                  />
+                </SwiperSlide>
+              );
+            }
 
-      <Swiper
-        modules={[Navigation]}
-        navigation
-        spaceBetween={20}
-        slidesPerView={1.15}
-        breakpoints={{
-          640: { slidesPerView: 2 },
-          768: { slidesPerView: 3 },
-          1024: { slidesPerView: 4 },
-          1280: { slidesPerView: 4.5 },
-        }}
-        className="!overflow-visible"
-      >
-        {relatedItems.map((rel) => {
-          if (computedType === "album") {
-            const albumId = rel.product_id || rel.id;
+            if (computedType === "gift") {
+              const giftId = rel.gift_box_id || rel.id;
+              const image = resolveImageUrl(rel.image || rel.product_images?.[0]);
+              return (
+                <SwiperSlide key={giftId} className="!h-auto">
+                  <GiftCard
+                    gift={rel}
+                    image={image}
+                    title={rel.name || "Gift Box"}
+                    category={rel.category || "Gift Box"}
+                    size={rel.box_size || "Gift Box"}
+                    price={Number(rel.selling_price || rel.mrp || 0)}
+                    originalPrice={Number(rel.mrp || 0)}
+                    itemCount={rel.gift_items?.length || 0}
+                    href={`/gifts/${giftId}`}
+                    onOpen={() => setQuickViewItem({ item: rel, type: "gift", image })}
+                  />
+                </SwiperSlide>
+              );
+            }
+
             return (
-              <SwiperSlide key={albumId} className="!h-auto">
-                <AlbumCard
-                  album={rel}
-                  image={resolveImageUrl(rel.thumbnail_image || rel.image)}
-                  title={rel.product_name}
-                  category={rel.sub_category || rel.occasion || rel.category || "Photo Album"}
-                  size={rel.size || "12 x 18 Inches"}
-                  pages={rel.total_pages || 40}
-                  price={Number(rel.discount_price || rel.selling_price || 0)}
-                  originalPrice={Number(rel.selling_price || 0)}
-                  href={`/albums/${albumId}`}
-                />
+              <SwiperSlide key={rel.id} className="!h-auto">
+                <ProductCard product={rel} />
               </SwiperSlide>
             );
-          }
+          })}
+        </Swiper>
+      </PageContainer>
 
-          if (computedType === "gift") {
-            const giftId = rel.gift_box_id || rel.id;
-            return (
-              <SwiperSlide key={giftId} className="!h-auto">
-                <GiftCard
-                  gift={rel}
-                  image={resolveImageUrl(rel.image)}
-                  title={rel.name}
-                  category={rel.category || "Gift Box"}
-                  size={rel.box_size || "Gift Box"}
-                  price={Number(rel.selling_price || rel.mrp || 0)}
-                  originalPrice={Number(rel.mrp || 0)}
-                  itemCount={rel.gift_items?.length || 0}
-                  href={`/gifts/${giftId}`}
-                />
-              </SwiperSlide>
-            );
-          }
-
-          return (
-            <SwiperSlide key={rel.id} className="!h-auto">
-              <ProductCard product={rel} />
-            </SwiperSlide>
-          );
-        })}
-      </Swiper>
-    </PageContainer>
+      {quickViewItem && (
+        <ProductQuickView
+          item={quickViewItem.item}
+          type={quickViewItem.type}
+          image={quickViewItem.image}
+          onClose={() => setQuickViewItem(null)}
+        />
+      )}
+    </>
   );
 };
 
