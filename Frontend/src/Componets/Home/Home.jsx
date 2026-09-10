@@ -63,31 +63,31 @@ const Home = () => {
       <section className="bg-white py-8">
         <div className="mx-auto max-w-7xl px-4">
           <div className="rounded-[26px] border border-[#e9e0d4] bg-white p-5 shadow-[0_16px_40px_rgba(0,0,0,0.08)]">
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-              <div className="text-center md:text-left">
+            <div className="flex flex-col items-center justify-between gap-5 md:flex-row md:gap-4">
+              <div className="w-full text-center md:w-auto md:text-left">
                 <span className="mb-2 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-[#a56e2d] md:justify-start">
                   <Mail className="h-4 w-4" />
                   Stay Updated
                 </span>
-                <h3 className="text-2xl font-black uppercase tracking-[0.12em] text-[#111111]">
+                <h3 className="text-2xl font-black uppercase leading-tight tracking-[0.12em] text-[#111111]">
                   Join Our Newsletter
                 </h3>
-                <p className="mt-2 text-sm font-medium text-[#607062]">
+                <p className="mt-2 text-sm font-medium leading-relaxed text-[#607062]">
                   Get fresh arrivals, offers and style inspiration.
                 </p>
               </div>
 
-              <form onSubmit={handleSubscribe} className="flex w-full max-w-xl items-center gap-3 md:justify-end">
+              <form onSubmit={handleSubscribe} className="flex w-full max-w-xl flex-col items-stretch gap-3 sm:flex-row sm:items-center md:justify-end">
                 <input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Enter your email"
-                  className="h-12 w-full min-w-[240px] rounded-full border border-[#a88b5a] bg-[#fffdfb] px-4 text-sm font-medium text-[#18291d] outline-none placeholder:text-[#707e73] focus:border-[#e5a936]"
+                  className="h-12 w-full rounded-full border border-[#a88b5a] bg-[#fffdfb] px-4 text-sm font-medium text-[#18291d] outline-none placeholder:text-[#707e73] focus:border-[#e5a936]"
                 />
                 <button
                   type="submit"
-                  className="h-12 rounded-full bg-[#111111] px-7 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-[#3b3b3b]"
+                  className="h-12 rounded-full bg-[#111111] px-7 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-[#3b3b3b] sm:min-w-[150px]"
                 >
                   Subscribe
                 </button>
