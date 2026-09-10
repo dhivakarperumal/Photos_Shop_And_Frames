@@ -667,6 +667,29 @@ const Albums = () => {
                         )}
                       </div>
                     </div>
+
+                    <div className="mt-4 rounded-2xl border border-[#d8cfc3] bg-[#f7f4ef] p-3 text-xs text-[#555]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#1a3c36]">Interior Photos Upload:</span>
+                        <span className="rounded-full bg-[#1a3c36] px-2 py-0.5 text-[10px] font-bold text-white">
+                          Up to {((Number(selectedAlbum.sheet_count) || Math.round(Number(selectedAlbum.total_pages || 40) / 2) || 20) * 2)} Photos
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-[#666]">
+                        To upload all your album photos (2 per sheet), customize sizes, and personalize spreads:
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = selectedAlbum.product_id || selectedAlbum.id;
+                          setSelectedAlbum(null);
+                          navigate(`/albums/${targetId}`);
+                        }}
+                        className="mt-2 inline-flex items-center gap-1 font-bold text-[#b07838] hover:underline"
+                      >
+                        Open Full Album Studio & Upload Photos &rarr;
+                      </button>
+                    </div>
                   </div>
                 </div>
 

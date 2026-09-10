@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, CreditCard, Download, Image as ImageIcon, MapPin, Package, Phone, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, CreditCard, Download, Image as ImageIcon, MapPin, Package, Phone, User, Printer } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { API_URL } from "../../api";
 import toast from "react-hot-toast";
@@ -55,6 +55,12 @@ const imageUrl = (value) => {
   return `${baseUrl}${value.startsWith("/") ? value : `/${value}`}`;
 };
 
+const isPhotoUrl = (value) => {
+  if (!value || typeof value !== "string") return false;
+  const str = value.trim();
+  return /^(https?:\/\/|\/|data:|blob:)/i.test(str) || /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(str);
+};
+
 const getSlotPhotos = (value) => {
   if (!value) return [];
   let parsed = value;
@@ -62,12 +68,101 @@ const getSlotPhotos = (value) => {
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return [];
+      return isPhotoUrl(parsed) ? [imageUrl(parsed)] : [];
     }
   }
-  if (Array.isArray(parsed)) return parsed.map(imageUrl).filter(Boolean);
-  if (typeof parsed === "object") return Object.values(parsed).map(imageUrl).filter(Boolean);
+  if (Array.isArray(parsed)) return parsed.filter(isPhotoUrl).map(imageUrl);
+  if (typeof parsed === "object") {
+    return Object.values(parsed).filter(isPhotoUrl).map(imageUrl);
+  }
   return [];
+};
+
+const handleDownloadAllPhotos = async (photos, orderId, productName) => {
+  if (!photos || !photos.length) return;
+  toast.loading(`Downloading ${photos.length} photos...`, { id: "downloadAllNew" });
+  for (let i = 0; i < photos.length; i++) {
+    const photoUrl = photos[i];
+    try {
+      const resp = await fetch(photoUrl);
+      const blob = await resp.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `Order-${orderId || "Order"}-${productName || "Album"}-Photo-${i + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    } catch {
+      const link = document.createElement("a");
+      link.href = photoUrl;
+      link.download = `Order-${orderId || "Order"}-Photo-${i + 1}.jpg`;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
+  toast.success(`Downloaded all ${photos.length} photos!`, { id: "downloadAllNew" });
+};
+
+const handlePrintAlbumPhotos = (photos, orderId, productName, orderDetails) => {
+  if (!photos || !photos.length) return;
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    toast.error("Popup blocked. Please allow popups to print photos.");
+    return;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Order #${orderId} - ${productName || "Album Photos"}</title>
+        <style>
+          @page { size: A4; margin: 10mm; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 15px; color: #1a1a1a; background: #fff; }
+          .header { border-bottom: 2px solid #1a3c36; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+          .header h1 { margin: 0; font-size: 18px; color: #1a3c36; }
+          .header p { margin: 4px 0 0; font-size: 12px; color: #666; }
+          .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+          .photo-card { border: 1px solid #ddd; border-radius: 8px; padding: 8px; page-break-inside: avoid; text-align: center; background: #fafafa; }
+          .photo-card img { max-width: 100%; height: 250px; object-fit: contain; border-radius: 4px; background: #fff; }
+          .photo-label { margin-top: 6px; font-weight: bold; font-size: 12px; color: #333; }
+          @media print { .no-print { display: none; } body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1>Order #${orderId} - Album Photos Sheet</h1>
+            <p>Product: <strong>${productName}</strong> | Total Photos: <strong>${photos.length}</strong> | Customer: <strong>${orderDetails?.customer_name || ""}</strong></p>
+          </div>
+          <div class="no-print">
+            <button onclick="window.print()" style="background:#1a3c36; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">Print Now</button>
+          </div>
+        </div>
+        <div class="grid">
+          ${photos.map((src, idx) => `
+            <div class="photo-card">
+              <img src="${src}" alt="Photo ${idx + 1}" />
+              <div class="photo-label">Position ${idx + 1}</div>
+            </div>
+          `).join("")}
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(function() { window.print(); }, 600);
+          };
+        </script>
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
 };
 
 const NewOrderDetails = () => {
@@ -196,7 +291,73 @@ const NewOrderDetails = () => {
                   const image = imageUrl(item.product_image || item.frame_image);
                   const wholeFrame = imageUrl(item.whole_frame_image);
                   const slotPhotos = getSlotPhotos(item.slot_photos);
-                  return <div key={item.id || item.product_id || item.product_name} className="border-b border-[#f0e8dc] pb-5 last:border-0 last:pb-0"><div className="flex items-center gap-3"><div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#faf8f4]">{image ? <img src={image} alt={item.product_name || "Product"} className="h-full w-full object-contain" /> : <Package className="h-5 w-5 text-[#b7beb9]" />}</div><div className="min-w-0 flex-1"><p className="font-bold">{item.product_name || "Custom Frame"}</p><p className="text-xs text-[#66736e]">{item.category || "Photo Frames"} · Size: {item.size || "Standard"} · Qty: {item.quantity || 1}</p></div><p className="font-bold">{formatCurrency(item.total_price || Number(item.price || 0) * Number(item.quantity || 1))}</p></div>{wholeFrame && <div className="mt-4 rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-3"><div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-sm font-bold"><ImageIcon className="h-4 w-4 text-[#b07838]" /> Whole Frame Photo</div><a href={wholeFrame} download={`Order-${order.order_id}-Whole-Frame.jpg`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-1.5 text-xs font-bold text-white"><Download className="h-3.5 w-3.5" /> Download</a></div><div className="flex justify-center"><img src={wholeFrame} alt="Final assembled frame" className="max-h-[420px] rounded-lg border border-[#e8dfd2] object-contain" /></div></div>}{slotPhotos.length > 0 && <div className="mt-4"><div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2 text-sm font-bold"><ImageIcon className="h-4 w-4 text-[#b07838]" /> Uploaded Photos ({slotPhotos.length})</div><span className="text-xs text-[#66736e]">High-resolution files</span></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{slotPhotos.map((photo, index) => <div key={`${photo}-${index}`} className="overflow-hidden rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-2"><img src={photo} alt={`Uploaded position ${index + 1}`} className="h-36 w-full rounded-lg object-cover" /><div className="mt-2 flex items-center justify-between gap-2"><span className="text-xs font-bold">Position {index + 1}</span><a href={photo} download={`Order-${order.order_id}-Position-${index + 1}.jpg`} target="_blank" rel="noreferrer" className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white" title="Download uploaded photo"><Download className="h-3.5 w-3.5" /></a></div></div>)}</div></div>}</div>;
+                  return (
+                    <div key={item.id || item.product_id || item.product_name} className="border-b border-[#f0e8dc] pb-5 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#faf8f4]">
+                          {image ? <img src={image} alt={item.product_name || "Product"} className="h-full w-full object-contain" /> : <Package className="h-5 w-5 text-[#b7beb9]" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold">{item.product_name || "Custom Frame"}</p>
+                          <p className="text-xs text-[#66736e]">{item.category || "Photo Frames"} · Size: {item.size || "Standard"} · Qty: {item.quantity || 1}</p>
+                        </div>
+                        <p className="font-bold">{formatCurrency(item.total_price || Number(item.price || 0) * Number(item.quantity || 1))}</p>
+                      </div>
+                      {wholeFrame && (
+                        <div className="mt-4 rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-3">
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-sm font-bold">
+                              <ImageIcon className="h-4 w-4 text-[#b07838]" /> Whole Frame Photo
+                            </div>
+                            <a href={wholeFrame} download={`Order-${order.order_id}-Whole-Frame.jpg`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-1.5 text-xs font-bold text-white">
+                              <Download className="h-3.5 w-3.5" /> Download
+                            </a>
+                          </div>
+                          <div className="flex justify-center">
+                            <img src={wholeFrame} alt="Final assembled frame" className="max-h-[420px] rounded-lg border border-[#e8dfd2] object-contain" />
+                          </div>
+                        </div>
+                      )}
+                      {slotPhotos.length > 0 && (
+                        <div className="mt-4">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-sm font-bold">
+                              <ImageIcon className="h-4 w-4 text-[#b07838]" /> Uploaded Photos ({slotPhotos.length})
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAllPhotos(slotPhotos, order.order_id, item.product_name)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#235048]"
+                              >
+                                <Download className="h-3.5 w-3.5" /> Download All ({slotPhotos.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePrintAlbumPhotos(slotPhotos, order.order_id, item.product_name, order)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-[#1a3c36] bg-white px-3 py-1.5 text-xs font-bold text-[#1a3c36] hover:bg-[#faf7f2]"
+                              >
+                                <Printer className="h-3.5 w-3.5" /> Print All
+                              </button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 max-h-96 overflow-y-auto p-1 scrollbar-thin">
+                            {slotPhotos.map((photo, index) => (
+                              <div key={`${photo}-${index}`} className="overflow-hidden rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-2">
+                                <img src={photo} alt={`Uploaded position ${index + 1}`} className="h-36 w-full rounded-lg object-cover" />
+                                <div className="mt-2 flex items-center justify-between gap-2">
+                                  <span className="text-xs font-bold">Position {index + 1}</span>
+                                  <a href={photo} download={`Order-${order.order_id}-Position-${index + 1}.jpg`} target="_blank" rel="noreferrer" className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white" title="Download uploaded photo">
+                                    <Download className="h-3.5 w-3.5" />
+                                  </a>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
                 })}
               </div>
             </section>

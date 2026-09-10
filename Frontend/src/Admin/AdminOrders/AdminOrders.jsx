@@ -27,7 +27,8 @@ import {
   X,
   XCircle,
   Sparkles,
-  Upload
+  Upload,
+  Printer,
 } from "lucide-react";
 import api, { API_URL } from "../../api";
 import toast from "react-hot-toast";
@@ -444,6 +445,149 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete enquiry");
     }
+  };
+
+  const handleDownloadAllPhotos = async (photos, orderId, productName) => {
+    if (!photos || !photos.length) return;
+    toast.loading(`Starting download of ${photos.length} photos...`, { id: "downloadAll" });
+    for (let i = 0; i < photos.length; i++) {
+      const [slotId, photoEntry] = photos[i];
+      const rawUrl = typeof photoEntry === "string" ? photoEntry : photoEntry?.url || photoEntry?.preview || "";
+      const resolvedUrl = imageUrl(rawUrl);
+      try {
+        const resp = await fetch(resolvedUrl);
+        const blob = await resp.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `Order-${orderId || "Order"}-${slotId || `Photo-${i + 1}`}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      } catch {
+        const link = document.createElement("a");
+        link.href = resolvedUrl;
+        link.download = `Order-${orderId || "Order"}-${slotId || `Photo-${i + 1}`}.jpg`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+    toast.success(`Downloaded all ${photos.length} photos!`, { id: "downloadAll" });
+  };
+
+  const handlePrintAlbumPhotos = (photos, orderId, productName, orderDetails) => {
+    if (!photos || !photos.length) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups to print photos.");
+      return;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Order #${orderId} - ${productName || "Album Photos"}</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 10mm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 15px;
+              color: #1a1a1a;
+              background: #fff;
+            }
+            .header {
+              border-bottom: 2px solid #1a3c36;
+              padding-bottom: 10px;
+              margin-bottom: 15px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 18px;
+              color: #1a3c36;
+            }
+            .header p {
+              margin: 4px 0 0;
+              font-size: 12px;
+              color: #666;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .photo-card {
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 8px;
+              page-break-inside: avoid;
+              text-align: center;
+              background: #fafafa;
+            }
+            .photo-card img {
+              max-width: 100%;
+              height: 250px;
+              object-fit: contain;
+              border-radius: 4px;
+              background: #fff;
+            }
+            .photo-label {
+              margin-top: 6px;
+              font-weight: bold;
+              font-size: 12px;
+              color: #333;
+            }
+            @media print {
+              .no-print { display: none; }
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>Order #${orderId} - Album Photos Sheet</h1>
+              <p>Product: <strong>${productName}</strong> | Total Photos: <strong>${photos.length}</strong> | Customer: <strong>${orderDetails?.customer_name || ""}</strong></p>
+            </div>
+            <div class="no-print">
+              <button onclick="window.print()" style="background:#1a3c36; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer;">Print Now</button>
+            </div>
+          </div>
+          <div class="grid">
+            ${photos.map(([label, entry], idx) => {
+              const src = imageUrl(typeof entry === "string" ? entry : entry?.url || entry?.preview || "");
+              return `
+                <div class="photo-card">
+                  <img src="${src}" alt="Photo ${idx + 1}" />
+                  <div class="photo-label">Position ${idx + 1} (${label})</div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 600);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const handleViewOrder = async (orderId) => {
@@ -1117,8 +1261,25 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
               <div className="mt-3 space-y-6">
                 {(selectedOrder.items || []).map((item, idx) => {
-                  const customPhotos = item.slot_photos || {};
-                  const slotEntries = Object.entries(customPhotos);
+                  let customPhotos = item.slot_photos || {};
+                  if (typeof customPhotos === "string") {
+                    try {
+                      customPhotos = JSON.parse(customPhotos);
+                    } catch {
+                      customPhotos = {};
+                    }
+                  }
+
+                  const isPhotoValue = (val) => {
+                    if (!val) return false;
+                    const str = typeof val === "string" ? val : val?.url || val?.preview || "";
+                    if (!str || typeof str !== "string") return false;
+                    const trimmed = str.trim();
+                    return /^(https?:\/\/|\/|data:|blob:)/i.test(trimmed) || /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(trimmed);
+                  };
+
+                  const slotEntries = Object.entries(customPhotos).filter(([, v]) => isPhotoValue(v));
+                  const textEntries = Object.entries(customPhotos).filter(([, v]) => !isPhotoValue(v) && typeof v === "string" && v.trim());
 
                   return (
                     <div
@@ -1201,23 +1362,59 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
                       {/* 2. SEPARATELY UPLOADED CUSTOMER PHOTOS (INDIVIDUAL SLOTS) */}
                       <div className="mt-5">
-                        <div className="flex items-center justify-between border-b border-[#f0e8dc] pb-2">
-                          <p className="text-xs font-bold uppercase tracking-wider text-[#b07838] flex items-center gap-1.5">
-                            <ImageIcon className="h-4 w-4" /> Separately Uploaded Photos ({slotEntries.length} Slots)
-                          </p>
-                          <span className="text-[11px] text-[#777]">
-                            Download individual high-resolution files for lab printing
-                          </span>
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f0e8dc] pb-3">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-[#b07838] flex items-center gap-1.5">
+                              <ImageIcon className="h-4 w-4" /> Customer Uploaded Photos ({slotEntries.length} Photos)
+                            </p>
+                            <span className="text-[11px] text-[#777]">
+                              High-resolution files for lab printing
+                            </span>
+                          </div>
+
+                          {slotEntries.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadAllPhotos(slotEntries, selectedOrder.order_id || selectedOrder.id, item.product_name)}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-[#1a3c36] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#235048]"
+                              >
+                                <Download className="h-3.5 w-3.5" /> Download All ({slotEntries.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePrintAlbumPhotos(slotEntries, selectedOrder.order_id || selectedOrder.id, item.product_name, selectedOrder)}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-[#1a3c36] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1a3c36] shadow-xs transition hover:bg-[#f4efe8]"
+                              >
+                                <Printer className="h-3.5 w-3.5" /> Print All Photos
+                              </button>
+                            </div>
+                          )}
                         </div>
+
+                        {/* Customer text custom details (e.g. Cover title, Dedication note) */}
+                        {textEntries.length > 0 && (
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            {textEntries.map(([key, val]) => (
+                              <div key={key} className="rounded-xl border border-[#e8dfd2] bg-[#faf8f5] p-2.5 text-xs">
+                                <span className="font-bold text-[#b07838] uppercase tracking-wider text-[10px] block">
+                                  {key.replace(/([A-Z])/g, " $1")}
+                                </span>
+                                <span className="mt-1 text-[#2d2d2d] font-medium">{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                         {slotEntries.length === 0 ? (
                           <p className="mt-2 rounded-xl bg-[#faf8f5] p-3 text-xs text-[#888]">
-                            Customer did not attach individual slot photos for this item (standard frame ordered).
+                            Customer did not attach individual photos for this item.
                           </p>
                         ) : (
-                          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 max-h-96 overflow-y-auto p-1 scrollbar-thin">
                             {slotEntries.map(([slotId, photoEntry], pIdx) => {
                               const photoUrl = typeof photoEntry === "string" ? photoEntry : photoEntry?.url || photoEntry?.preview || "";
+                              const resolved = imageUrl(photoUrl);
                               return (
                                 <div
                                   key={slotId || pIdx}
@@ -1225,20 +1422,20 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                                 >
                                   <div className="flex h-36 items-center justify-center overflow-hidden rounded-xl bg-[#eee7de]">
                                     <img
-                                      src={photoUrl}
+                                      src={resolved}
                                       alt={`Slot ${pIdx + 1}`}
                                       className="h-full w-full object-cover"
                                     />
                                   </div>
 
                                   <div className="mt-2 flex items-center justify-between">
-                                    <span className="truncate text-[11px] font-bold text-[#333]">
-                                      Position {pIdx + 1}
+                                    <span className="truncate text-[11px] font-bold text-[#333]" title={slotId}>
+                                      {slotId.startsWith("Photo") ? slotId : `Pos ${pIdx + 1} (${slotId})`}
                                     </span>
 
                                     <a
-                                      href={photoUrl}
-                                      download={`Order-${selectedOrder.order_id}-Position-${pIdx + 1}.jpg`}
+                                      href={resolved}
+                                      download={`Order-${selectedOrder.order_id || selectedOrder.id}-${slotId || `Photo-${pIdx + 1}`}.jpg`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white shadow transition hover:bg-[#235048]"

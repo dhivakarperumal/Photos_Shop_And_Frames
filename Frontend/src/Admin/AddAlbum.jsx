@@ -285,6 +285,26 @@ const AddAlbum = () => {
       return;
     }
 
+    if (name === 'sheetCount') {
+      const sheets = Math.max(0, Number(value) || 0);
+      setFormData((prev) => ({
+        ...prev,
+        sheetCount: value,
+        totalPages: sheets * 2,
+      }));
+      return;
+    }
+
+    if (name === 'totalPages') {
+      const pages = Math.max(0, Number(value) || 0);
+      setFormData((prev) => ({
+        ...prev,
+        totalPages: value,
+        sheetCount: Math.round(pages / 2),
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -961,12 +981,21 @@ const AddAlbum = () => {
                 <h2 className="mb-4 text-lg font-semibold text-[#1f1d1b]">Pages Information</h2>
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Total Pages</span>
-                    <input name="totalPages" type="number" value={formData.totalPages} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-[#2d2d2d]">Sheet Count</span>
+                      <span className="text-[11px] font-bold text-[#b07838]">2 photos / sheet</span>
+                    </div>
+                    <input name="sheetCount" type="number" min="1" value={formData.sheetCount} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+                    <span className="text-[11px] text-[#666] block">
+                      Customers can upload up to <strong>{(Number(formData.sheetCount) || 0) * 2} photos</strong> during ordering.
+                    </span>
                   </label>
                   <label className="space-y-2">
-                    <span className="text-sm font-medium text-[#2d2d2d]">Sheet Count</span>
-                    <input name="sheetCount" type="number" value={formData.sheetCount} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+                    <span className="text-sm font-medium text-[#2d2d2d]">Total Pages</span>
+                    <input name="totalPages" type="number" min="1" value={formData.totalPages} onChange={handleChange} disabled={mode === 'view'} className={fieldStyle} />
+                    <span className="text-[11px] text-[#666] block">
+                      Auto-calculated: {formData.sheetCount || 0} sheets × 2 = {formData.totalPages || 0} pages.
+                    </span>
                   </label>
                   <label className="space-y-2">
                     <span className="text-sm font-medium text-[#2d2d2d]">Page Material</span>
