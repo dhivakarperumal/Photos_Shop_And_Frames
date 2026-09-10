@@ -189,11 +189,11 @@ const Login = () => {
         {/* Top Logo */}
         <div className="flex items-center gap-4 mt-2">
           <div className="w-12 h-12 border border-[#d9b882] flex items-center justify-center relative flex-shrink-0">
-             <span className="text-[#d9b882] font-serif text-xl absolute top-1 left-2">P</span>
+             <span className="text-[#d9b882] font-serif text-xl absolute top-1 left-2">Q</span>
              <span className="text-[#d9b882] font-serif text-xl absolute bottom-1 right-2">F</span>
           </div>
           <div className="flex flex-col">
-             <span className="text-[#d9b882] text-2xl font-serif tracking-[0.15em] uppercase">PixelFrame</span>
+             <span className="text-[#d9b882] text-2xl font-serif tracking-[0.15em] uppercase">Q Frames</span>
              <div className="flex items-center gap-3 opacity-80 mt-1">
                 <div className="h-px bg-[#d9b882] w-8"></div>
                 <span className="text-[#d9b882] text-[10px] tracking-[0.25em] uppercase whitespace-nowrap">Frame your memories</span>
@@ -273,11 +273,11 @@ const Login = () => {
           <div className="flex flex-col items-center mb-5 relative z-10">
             <div className="w-14 h-14 rounded-full bg-[#1f3b31] flex items-center justify-center mb-3 shadow-lg">
                <div className="relative w-7 h-7">
-                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">P</span>
+                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">Q</span>
                   <span className="text-[#d9b882] font-serif text-lg absolute bottom-0 right-1">F</span>
                </div>
             </div>
-            <h2 className="text-[26px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Login to PixelFrame</h2>
+            <h2 className="text-[26px] font-serif font-bold text-[#1a3029] mb-1 tracking-tight">Login to Q Frames</h2>
             <p className="text-gray-500 text-[13px]">Please enter your details to access your account</p>
           </div>
 
