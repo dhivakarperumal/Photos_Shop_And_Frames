@@ -557,7 +557,7 @@ const AdminDashboard = () => {
                     <tr key={order.order_id || order.id || i} className="hover:bg-gray-50/50">
                       <td className="py-3 flex items-center space-x-2">
                         <div className="w-6 h-6 bg-gray-200 rounded overflow-hidden">
-                          <img src="https://via.placeholder.com/24" alt="prod" className="w-full h-full object-cover grayscale opacity-80" />
+                          {i+1}
                         </div>
                         <span className="font-medium text-gray-700 text-xs">{order.order_id || `#${order.id || i + 1}`}</span>
                       </td>
