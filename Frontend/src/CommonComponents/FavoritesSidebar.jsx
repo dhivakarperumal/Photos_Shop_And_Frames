@@ -33,8 +33,8 @@ const FavoritesSidebar = () => {
   const getId = (item) => item.id || item._id || item.product_id;
   const getPrice = (item) => item.price || item.total_price || item.selling_price || item.discount_price || 0;
   const getProductPath = (item) => {
-    if (item.item_type === "gift") return `/gifts?giftId=${getId(item)}`;
-    if (item.item_type === "album") return `/albums?albumId=${getId(item)}`;
+    if (item.item_type === "gift") return `/gifts/${getId(item)}`;
+    if (item.item_type === "album") return `/albums/${getId(item)}`;
     return `/products/${getId(item)}`;
   };
 

@@ -391,9 +391,14 @@ const getAllAlbums = async () => {
 
 const getAlbumById = async (productId) => {
   await ensureAlbumOptionsColumns();
-  const query = `SELECT * FROM albums WHERE product_id = ? LIMIT 1`;
+  const raw = String(productId || "").trim();
+  const isNumeric = /^\d+$/.test(raw);
+  const query = isNumeric
+    ? `SELECT * FROM albums WHERE id = ? OR product_id = ? LIMIT 1`
+    : `SELECT * FROM albums WHERE product_id = ? OR CAST(id AS CHAR) = ? LIMIT 1`;
   const pool = getDB();
-  const [rows] = await pool.query(query, [productId]);
+  const params = isNumeric ? [Number(raw), raw] : [raw, raw];
+  const [rows] = await pool.query(query, params);
 
   if (!rows.length) return null;
   return mapRow(rows[0]);

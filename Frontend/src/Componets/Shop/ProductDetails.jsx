@@ -55,6 +55,7 @@ import PhotoAdjustModal, {
 } from "../../CommonComponents/PhotoAdjustModal";
 import PageHeader from "../../CommonComponents/PageHeader";
 import PageContainer from "../../CommonComponents/PageContainer";
+import RelatedProducts from "./RelatedProducts";
 
 /**
  * Generates an HTML5 canvas composite merging the frame template
@@ -2486,6 +2487,8 @@ const ProductDetails = () => {
           </div>
         </div>
       </PageContainer>
+
+      <RelatedProducts product={product} />
 
       {/* ================= CUSTOMIZATION CONFIRMATION MODAL ================= */}
       {isConfirmModalOpen && (

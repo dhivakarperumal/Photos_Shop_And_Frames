@@ -343,6 +343,7 @@ const Gifts = () => {
                     originalPrice={mrp}
                     metadata={gift.description}
                     secondaryLabel={gift.theme}
+                    href={`/gifts/${gift.gift_box_id || gift.id}`}
                     onOpen={openGiftModal}
                   />
                 );

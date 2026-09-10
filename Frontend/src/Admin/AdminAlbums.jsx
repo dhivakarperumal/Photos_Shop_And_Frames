@@ -23,7 +23,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import api from "../api";
+import api, { API_URL } from "../api";
 
 const formatCurrency = (value) => {
   const numeric = Number(value || 0);
