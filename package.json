@@ -6,7 +6,8 @@
   "scripts": {
     "frontend": "npm --prefix frontend run dev",
     "backend": "npm --prefix backend run dev",
-    "dev": "concurrently \"npm run frontend\" \"npm run backend\""
+    "dev": "npm run frontend",
+    "dev:local": "concurrently \"npm run frontend\" \"npm run backend\""
   },
   "keywords": [],
   "author": "",
