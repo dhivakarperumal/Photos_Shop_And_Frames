@@ -26,7 +26,7 @@ import api, { API_URL } from "../../api";
 import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageContainer from "../../CommonComponents/PageContainer";
-import GiftCard from "../../CommonComponents/GiftCard";
+import RelatedProducts from "../../CommonComponents/RelatedProducts";
 import toast from "react-hot-toast";
 
 const resolveImageUrl = (value) => {
@@ -75,9 +75,6 @@ const GiftDetailsPage = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // Related gifts
-  const [relatedGifts, setRelatedGifts] = useState([]);
-
   // Fetch gift details
   useEffect(() => {
     let isMounted = true;
@@ -111,27 +108,6 @@ const GiftDetailsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
-
-  // Fetch related gift boxes
-  useEffect(() => {
-    const fetchRelated = async () => {
-      try {
-        const res = await api.get("/gift-boxes");
-        const list = Array.isArray(res.data?.data) ? res.data.data : [];
-        const filtered = list
-          .filter(
-            (item) =>
-              String(item.id || item.gift_box_id) !== String(id)
-          )
-          .slice(0, 4);
-        setRelatedGifts(filtered);
-      } catch (err) {
-        console.error("Failed to load related gifts:", err);
-      }
-    };
-
-    fetchRelated();
   }, [id]);
 
   // Items included
@@ -647,39 +623,7 @@ const GiftDetailsPage = () => {
         </div>
 
         {/* RELATED GIFTS */}
-        {relatedGifts.length > 0 && (
-          <section className="mt-16">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[#b07838]">More Presents</p>
-                <h2 className="mt-1 text-2xl font-black text-[#1d2925]">Explore Other Gift Boxes</h2>
-              </div>
-              <Link
-                to="/gifts"
-                className="text-xs font-bold text-[#1a3c36] hover:underline"
-              >
-                View all gift boxes &rarr;
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedGifts.map((relGift) => (
-                <GiftCard
-                  key={relGift.id || relGift.gift_box_id}
-                  gift={relGift}
-                  image={resolveImageUrl(relGift.image)}
-                  title={relGift.name}
-                  category={relGift.category || "Gift Box"}
-                  size={relGift.box_size || "Gift Box"}
-                  price={Number(relGift.selling_price || relGift.mrp || 0)}
-                  originalPrice={Number(relGift.mrp || 0)}
-                  itemCount={relGift.gift_items?.length || 0}
-                  href={`/gifts/${relGift.gift_box_id || relGift.id}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        <RelatedProducts gift={gift} type="gift" />
       </PageContainer>
     </main>
   );

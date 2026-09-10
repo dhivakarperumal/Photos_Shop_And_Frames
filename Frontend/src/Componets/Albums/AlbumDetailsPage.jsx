@@ -27,7 +27,7 @@ import api, { API_URL } from "../../api";
 import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageContainer from "../../CommonComponents/PageContainer";
-import AlbumCard from "../../CommonComponents/AlbumCard";
+import RelatedProducts from "../../CommonComponents/RelatedProducts";
 import toast from "react-hot-toast";
 
 const resolveImageUrl = (value) => {
@@ -82,8 +82,6 @@ const AlbumDetailsPage = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // Related albums
-  const [relatedAlbums, setRelatedAlbums] = useState([]);
 
   // Fetch album details
   useEffect(() => {
@@ -132,28 +130,6 @@ const AlbumDetailsPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
-
-  // Fetch related albums
-  useEffect(() => {
-    const fetchRelated = async () => {
-      try {
-        const res = await api.get("/albums");
-        const list = Array.isArray(res.data?.data) ? res.data.data : [];
-        const filtered = list
-          .filter(
-            (item) =>
-              String(item.id || item.product_id) !== String(id) &&
-              (item.status || "Active").toLowerCase() === "active"
-          )
-          .slice(0, 4);
-        setRelatedAlbums(filtered);
-      } catch (err) {
-        console.error("Failed to load related albums:", err);
-      }
-    };
-
-    fetchRelated();
   }, [id]);
 
   // Parse variants and options
@@ -840,40 +816,8 @@ const AlbumDetailsPage = () => {
           </div>
         )}
 
-        {/* RELATED ALBUMS SECTION */}
-        {relatedAlbums.length > 0 && (
-          <section className="mt-16">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[#b07838]">Discover More</p>
-                <h2 className="mt-1 text-2xl font-black text-[#1d2925]">You May Also Like</h2>
-              </div>
-              <Link
-                to="/albums"
-                className="text-xs font-bold text-[#1a3c36] hover:underline"
-              >
-                View all albums &rarr;
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedAlbums.map((relAlbum) => (
-                <AlbumCard
-                  key={relAlbum.id || relAlbum.product_id}
-                  album={relAlbum}
-                  image={resolveImageUrl(relAlbum.thumbnail_image)}
-                  title={relAlbum.product_name}
-                  category={relAlbum.sub_category || relAlbum.occasion || "Photo Album"}
-                  size={relAlbum.size || "12 x 18 Inches"}
-                  pages={relAlbum.total_pages || 40}
-                  price={Number(relAlbum.discount_price || relAlbum.selling_price || 0)}
-                  originalPrice={Number(relAlbum.selling_price || 0)}
-                  href={`/albums/${relAlbum.product_id || relAlbum.id}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* RELATED ALBUMS */}
+        <RelatedProducts album={album} type="album" />
       </PageContainer>
     </main>
   );
