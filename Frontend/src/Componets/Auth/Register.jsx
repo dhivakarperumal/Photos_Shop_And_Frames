@@ -98,11 +98,11 @@ const Register = () => {
             {/* Top Logo */}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 border border-[#b48353] flex items-center justify-center relative flex-shrink-0">
-                 <span className="text-[#b48353] font-serif text-xl absolute top-1 left-2">P</span>
+                 <span className="text-[#b48353] font-serif text-xl absolute top-1 left-2">Q</span>
                  <span className="text-[#b48353] font-serif text-xl absolute bottom-1 right-2">F</span>
               </div>
               <div className="flex flex-col">
-                 <span className="text-[#1a3029] text-2xl font-serif tracking-[0.15em] uppercase">PixelFrame</span>
+                 <span className="text-[#1a3029] text-2xl font-serif tracking-[0.15em] uppercase">Q Frames</span>
                  <div className="flex items-center gap-3 opacity-70 mt-1">
                     <div className="h-px bg-[#1a3029] w-6"></div>
                     <span className="text-[#1a3029] text-[9px] tracking-[0.2em] uppercase whitespace-nowrap font-medium">Frame your memories</span>
@@ -118,7 +118,7 @@ const Register = () => {
               Create Account
             </h2>
             <h2 className="text-5xl font-serif font-bold text-[#b48353] mb-6 tracking-tight">
-              Join PixelFrame
+              Q Frames
             </h2>
             
             <div className="flex items-center gap-4 mb-5 opacity-40">
@@ -182,7 +182,7 @@ const Register = () => {
           <div className="flex flex-col items-center mb-5 relative z-10 mt-1">
             <div className="w-14 h-14 rounded-full bg-[#1f3b31] flex items-center justify-center mb-3 shadow-md">
                <div className="relative w-7 h-7">
-                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">P</span>
+                  <span className="text-[#d9b882] font-serif text-lg absolute top-0 left-1">Q</span>
                   <span className="text-[#d9b882] font-serif text-lg absolute bottom-0 right-1">F</span>
                </div>
             </div>
