@@ -31,19 +31,51 @@ const ReviewShowcase = ({ reviews = [] }) => {
         </div>
 
         {activeReviews.length ? (
-          <div className="relative">
+          <div className="relative w-full">
+            <style>
+              {`
+                .review-showcase-swiper {
+                  padding: 1.5rem 3rem !important;
+                }
+                .review-showcase-swiper .swiper-button-next,
+                .review-showcase-swiper .swiper-button-prev {
+                  color: #173721 !important;
+                  background-color: white !important;
+                  width: 44px !important;
+                  height: 44px !important;
+                  border-radius: 50% !important;
+                  box-shadow: 0 4px 15px rgba(23,44,30,0.15) !important;
+                  margin-top: -22px !important;
+                }
+                .review-showcase-swiper .swiper-button-next:after,
+                .review-showcase-swiper .swiper-button-prev:after {
+                  font-size: 18px !important;
+                  font-weight: 900 !important;
+                }
+                .review-showcase-swiper .swiper-button-next {
+                  right: 0 !important;
+                }
+                .review-showcase-swiper .swiper-button-prev {
+                  left: 0 !important;
+                }
+                .review-showcase-swiper .swiper-button-disabled {
+                  opacity: 0.4 !important;
+                  pointer-events: none !important;
+                }
+              `}
+            </style>
             <Swiper
               modules={[Navigation, Autoplay]}
-              navigation
-              autoplay={{ delay: 2800, disableOnInteraction: false }}
-              spaceBetween={12}
+              // navigation
+              autoplay={{ delay: 3500, disableOnInteraction: false }}
+              spaceBetween={24}
               slidesPerView={1}
               breakpoints={{
                 640: { slidesPerView: 2 },
                 768: { slidesPerView: 3 },
                 1024: { slidesPerView: 4 },
               }}
-              className="review-showcase-swiper overflow-visible!"
+              className="review-showcase-swiper"
             >
               {activeReviews.map((review, index) => {
                 const reviewImage = normalizeAssetUrl(review.review_photo || review.product_image || "");
