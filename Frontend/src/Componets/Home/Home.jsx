@@ -41,8 +41,8 @@ const Home = () => {
       <AlbumShowcase />
       <PromoBanner />
       <GiftShowcase />
-      <ReviewShowcase reviews={reviews} />
       <HomeGallery />
+      <ReviewShowcase reviews={reviews} />
     </>
   );
 };

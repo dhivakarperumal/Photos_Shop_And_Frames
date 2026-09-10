@@ -31,6 +31,7 @@ const createReview = async (reviewData) => {
     product_code,
     product_name,
     product_image,
+    product_type = "product",
     reviewer_name,
     reviewer_email,
     rating,
@@ -50,6 +51,7 @@ const createReview = async (reviewData) => {
       product_code,
       product_name,
       product_image,
+      product_type,
       reviewer_name,
       reviewer_email,
       rating,
@@ -59,7 +61,7 @@ const createReview = async (reviewData) => {
       status,
       created_by,
       updated_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const values = [
@@ -69,6 +71,7 @@ const createReview = async (reviewData) => {
     product_code,
     product_name,
     product_image || null,
+    product_type,
     reviewer_name,
     reviewer_email || null,
     Number(rating || 5),
@@ -150,6 +153,7 @@ const updateReview = async (id, updateData) => {
     product_code,
     product_name,
     product_image,
+    product_type = "product",
     reviewer_name,
     reviewer_email,
     rating,
@@ -166,6 +170,7 @@ const updateReview = async (id, updateData) => {
         product_code = ?,
         product_name = ?,
         product_image = ?,
+        product_type = ?,
         reviewer_name = ?,
         reviewer_email = ?,
         rating = ?,
@@ -182,6 +187,7 @@ const updateReview = async (id, updateData) => {
     product_code,
     product_name,
     product_image || null,
+    product_type,
     reviewer_name,
     reviewer_email || null,
     Number(rating || 5),

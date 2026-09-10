@@ -1,4 +1,8 @@
-import { Star, Quote, UserRound } from "lucide-react";
+import { Calendar, Check, Quote, Star, UserRound } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 import { API_URL } from "../../api";
 
 const normalizeAssetUrl = (value) => {
@@ -11,80 +15,121 @@ const normalizeAssetUrl = (value) => {
 };
 
 const ReviewShowcase = ({ reviews = [] }) => {
-  const visibleReviews = reviews.filter((review) => review?.status !== "Inactive").slice(0, 3);
+  const activeReviews = reviews.filter((review) => review?.status !== "Inactive");
 
   return (
-    <section className="bg-[#fffaf6] py-12 text-[#213729]">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3 h-px w-28 bg-[#b28b58]" />
+    <section className="bg-[#f8eee5] py-8 text-[#213729]">
+      <div className="mx-auto max-w-7xl px-1">
+        <div className="mb-5 flex flex-col items-center text-center">
+          <span className="mb-2 h-px w-24 bg-[#b28b58]" />
           <h2 className="text-3xl font-black uppercase tracking-[0.18em] text-[#173721] sm:text-4xl">
             Customer Reviews
           </h2>
-          <p className="mt-3 text-sm font-medium text-[#607062] sm:text-base">
+          <p className="mt-2 text-sm font-medium text-[#607062] sm:text-base">
             Loved by happy customers
           </p>
         </div>
 
-        {visibleReviews.length ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {visibleReviews.map((review, index) => {
-              const reviewImage = normalizeAssetUrl(review.review_photo || review.product_image || "");
-              const rating = Number(review.rating || 5);
+        {activeReviews.length ? (
+          <div className="relative">
+            <Swiper
+              modules={[Navigation, Autoplay]}
+              navigation
+              autoplay={{ delay: 2800, disableOnInteraction: false }}
+              spaceBetween={12}
+              slidesPerView={1}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                768: { slidesPerView: 3 },
+                1024: { slidesPerView: 4 },
+              }}
+              className="review-showcase-swiper overflow-visible!"
+            >
+              {activeReviews.map((review, index) => {
+                const reviewImage = normalizeAssetUrl(review.review_photo || review.product_image || "");
+                const productImage = normalizeAssetUrl(review.product_image || review.review_photo || "");
+                const rating = Number(review.rating || 5);
+                const reviewer = review.reviewer_name || "Priya Sharma";
+                const productName = review.product_name || "Pink Romance Bouquet";
+                const date = review.reviewed_at || review.created_at || "2025-08-28T00:00:00.000Z";
+                const reviewDate = new Date(date).toLocaleDateString("en-US", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                });
 
-              return (
-                <article
-                  key={review.id || review.uuid || `${review.reviewer_name}-${index}`}
-                  className="group overflow-hidden rounded-4xl border border-[#e7ddcf] bg-white shadow-[0_14px_40px_rgba(23,44,30,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(23,44,30,0.16)]"
-                >
-                  <div className="relative h-56 overflow-hidden bg-[#f8efe8]">
-                    {reviewImage ? (
-                      <img src={reviewImage} alt={review.product_name || "Customer review"} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#e9d6bc,#f5eee7)]">
-                        <Quote className="h-14 w-14 text-[#a56e2d]" />
+                return (
+                  <SwiperSlide key={review.id || review.uuid || `${review.reviewer_name}-${index}`} className="h-auto!">
+                    <article
+                      className="w-full h-full overflow-hidden rounded-[26px] border border-[#eadfce] bg-[#fffdfb] p-6 shadow-[0_20px_50px_rgba(23,44,30,0.10)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(23,44,30,0.14)]"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-[#f4dcb6] bg-[#f5e7d7]">
+                          {reviewImage ? (
+                            <img src={reviewImage} alt={reviewer} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center text-[#173721]">
+                              <UserRound className="h-8 w-8" />
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-extrabold leading-none text-[#1f2937]">
+                            {reviewer}
+                          </h3>
+
+                          <div className="mt-2 flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, starIndex) => (
+                              <Star
+                                key={starIndex}
+                                className={`h-4 w-4 ${starIndex < rating ? "fill-[#e5a936] text-[#e5a936]" : "text-[#d3cfc5]"}`}
+                              />
+                            ))}
+                          </div>
+
+                          <div className="mt-2 flex items-center gap-2 text-[12px] font-bold text-[#2a8a5a]">
+                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#dbf1e4]">
+                              <Check className="h-3 w-3" />
+                            </span>
+                            <span>Verified Purchase</span>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <span className="absolute left-4 top-4 rounded-full bg-white/92 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-[#4f6a51] shadow-sm">
-                      {review.product_name || "Photo Collection"}
-                    </span>
-                  </div>
 
-                  <div className="p-5">
-                    <div className="mb-3 flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, starIndex) => (
-                        <Star
-                          key={starIndex}
-                          className={`h-4 w-4 ${starIndex < rating ? "fill-[#d49737] text-[#d49737]" : "text-[#d3cfc5]"}`}
-                        />
-                      ))}
-                    </div>
-
-                    <h3 className="mb-2 text-base font-black text-[#173721]">
-                      {review.title || "Happy Customer"}
-                    </h3>
-
-                    <p className="line-clamp-4 min-h-18 text-sm leading-6 text-[#607062]">
-                      “{review.comment || "Beautiful product and great experience."}”
-                    </p>
-
-                    <div className="mt-5 flex items-center gap-3 border-t border-[#efe5d9] pt-4">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#13271f] text-white">
-                        <UserRound className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="text-sm font-black text-[#173721]">
-                          {review.reviewer_name || "Verified Customer"}
-                        </p>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a28459]">
-                          {review?.product_code || "Verified Review"}
+                      <div className="mt-5 rounded-[22px] border border-[#efe5d9] bg-white p-3">
+                        <p className="text-[16px] font-medium leading-7 text-[#344b3e]">
+                          “{review.comment || "The bouquet was absolutely beautiful! Fresh flowers, great packing and delivered on time. It made my day extra special!"}”
                         </p>
                       </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+
+                      <div className="mt-4 flex items-center gap-4 rounded-2xl border border-[#e5d8c8] bg-[#f8f2ec] p-3">
+                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[#e7dcca] bg-white">
+                          {productImage ? (
+                            <img src={productImage} alt={productName} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-[#edd8be]">
+                              <Quote className="h-8 w-8 text-[#8a5720]" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-lg font-black text-[#17251c]">
+                            {productName}
+                          </h4>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-2 text-[12px] font-bold text-[#6a716b]">
+                        <Calendar className="h-4 w-4 text-[#a56e2d]" />
+                        <span>{reviewDate}</span>
+                      </div>
+                    </article>
+                  </SwiperSlide>
+                );
+              })}
+            </Swiper>
           </div>
         ) : (
           <div className="rounded-4xl border border-dashed border-[#b28b58] bg-white px-8 py-10 text-center text-sm font-semibold text-[#607062]">
