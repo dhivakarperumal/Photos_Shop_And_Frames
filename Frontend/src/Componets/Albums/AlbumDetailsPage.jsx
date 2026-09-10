@@ -817,7 +817,7 @@ const AlbumDetailsPage = () => {
         )}
 
         {/* RELATED ALBUMS */}
-        <RelatedProducts album={album} type="album" />
+        <RelatedProducts album={album} type="album" className="!px-0 pb-16 pt-8" />
       </PageContainer>
     </main>
   );

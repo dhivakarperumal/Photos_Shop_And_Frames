@@ -623,7 +623,7 @@ const GiftDetailsPage = () => {
         </div>
 
         {/* RELATED GIFTS */}
-        <RelatedProducts gift={gift} type="gift" />
+        <RelatedProducts gift={gift} type="gift" className="px-0! pb-16 pt-8" />
       </PageContainer>
     </main>
   );
