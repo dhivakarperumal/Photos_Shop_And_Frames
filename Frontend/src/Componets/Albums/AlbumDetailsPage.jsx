@@ -27,6 +27,7 @@ import api, { API_URL } from "../../api";
 import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageContainer from "../../CommonComponents/PageContainer";
+import PageHeader from "../../CommonComponents/PageHeader";
 import RelatedProducts from "../../CommonComponents/RelatedProducts";
 import toast from "react-hot-toast";
 
@@ -410,8 +411,9 @@ const AlbumDetailsPage = () => {
   const sheetCount = album.sheet_count || Math.round(totalPages / 2);
 
   return (
-    <main className="min-h-screen bg-[#f7f3ed] pb-20 pt-6">
-      <PageContainer>
+    <main className="min-h-screen bg-[#f7f3ed] pb-20">
+      <PageHeader title={album.product_name} />
+      <PageContainer className="py-10">
         {/* BREADCRUMBS */}
         <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-xs text-[#777]">
           <Link to="/" className="transition hover:text-[#1a3c36]">Home</Link>
