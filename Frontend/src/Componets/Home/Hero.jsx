@@ -5,7 +5,7 @@ import React, {
   useCallback,
 } from "react";
 import { Link } from "react-router-dom";
-import api from "../../api";
+import api, { BACKEND_BASE_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 
 import {
@@ -109,7 +109,6 @@ const resolveAssetUrl = (url) => {
   if (!url) return "";
 
   const value = String(url).trim();
-
   if (!value) return "";
 
   // Already a full URL
@@ -119,16 +118,11 @@ const resolveAssetUrl = (url) => {
 
   // Convert Windows path separators
   const cleanPath = value.replace(/\\/g, "/");
-
   const path = cleanPath.startsWith("/")
     ? cleanPath
     : `/${cleanPath}`;
 
-  const backendUrl = (
-    import.meta.env.VITE_BACKEND_URL ||
-    "http://localhost:5000"
-  ).replace(/\/$/, "");
-
+  const backendUrl = (BACKEND_BASE_URL || window.location.origin).replace(/\/$/, "");
   return `${backendUrl}${path}`;
 };
 

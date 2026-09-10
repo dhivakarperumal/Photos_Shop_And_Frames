@@ -376,6 +376,12 @@ async function ensureDatabaseSchema() {
     await connection.query(`UPDATE albums SET color_options = '[]' WHERE color_options IS NULL`);
     await connection.query(`UPDATE albums SET variants = '[]' WHERE variants IS NULL`);
     await connection.query(`UPDATE albums SET product_images = '[]' WHERE product_images IS NULL`);
+    try {
+      await connection.query(`ALTER TABLE reviews ADD COLUMN product_type VARCHAR(50) NOT NULL DEFAULT 'product'`);
+      console.log("✅ Added product_type to reviews");
+    } catch (error) {
+      if (error.code !== "ER_DUP_FIELDNAME") throw error;
+    }
     await connection.query(createGiftBoxesTableQuery);
     await connection.query(createCustomizedPhotosTableQuery);
     await connection.query(createCartsTableQuery);

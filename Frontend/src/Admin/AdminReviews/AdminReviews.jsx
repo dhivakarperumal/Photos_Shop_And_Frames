@@ -54,6 +54,39 @@ const formatDate = (dateString) => {
   }
 };
 
+const getCatalogKey = (item) => {
+  if (!item) return "";
+
+  const type = item.type || "product";
+  const id = item.id ?? item.product_id ?? item.gift_box_id ?? item.product_code ?? item.code ?? "";
+  return `${type}:${String(id)}`;
+};
+
+const getCatalogLabel = (item) => {
+  if (!item) return "Select product";
+
+  const type = item.type || "product";
+  const typeName = type === "album" ? "Album" : type === "giftbox" ? "Gift Box" : "Product";
+  const name = item.product_name || item.name || item.productName || "Untitled item";
+  const code = item.product_code || item.product_id || item.gift_box_id || item.code || item.productCode || "";
+
+  return `${name} (${typeName}${code ? ` - ${code}` : ""})`;
+};
+
+const getCatalogImage = (item) => {
+  if (!item) return "";
+
+  return (
+    item.product_image ||
+    item.image ||
+    item.thumbnail_image ||
+    item.product_images?.[0] ||
+    item.images?.[0] ||
+    item.frame_data?.frame_image ||
+    ""
+  );
+};
+
 const AdminReviews = () => {
   const { user, userProfile } = useAuth();
   const currentUserId =
@@ -117,12 +150,59 @@ const AdminReviews = () => {
   // ==========================================
   const fetchProducts = async () => {
     try {
-      const res = await api.get("/products");
-      if (res.data?.data && Array.isArray(res.data.data)) {
-        setProductsList(res.data.data);
+      const [productResult, albumResult, giftBoxResult] = await Promise.allSettled([
+        api.get("/products"),
+        api.get("/albums"),
+        api.get("/gift-boxes"),
+      ]);
+
+      const catalog = [];
+
+      if (productResult.status === "fulfilled" && Array.isArray(productResult.value?.data?.data)) {
+        productResult.value.data.data.forEach((item) => {
+          catalog.push({
+            ...item,
+            type: "product",
+            product_name: item.product_name || item.name,
+            product_code: item.product_code || item.product_id || item.code,
+            product_image: item.product_image || item.image || item.product_images?.[0] || item.frame_data?.frame_image || "",
+            id: item.id,
+          });
+        });
       }
+
+      if (albumResult.status === "fulfilled" && Array.isArray(albumResult.value?.data?.data)) {
+        albumResult.value.data.data.forEach((item) => {
+          catalog.push({
+            ...item,
+            type: "album",
+            product_name: item.product_name || item.name,
+            product_code: item.product_code || item.product_id || item.code || item.album_code,
+            product_id: item.product_id || item.id,
+            product_image: item.product_image || item.image || item.product_images?.[0] || item.thumbnail_image || "",
+            id: item.id,
+          });
+        });
+      }
+
+      if (giftBoxResult.status === "fulfilled" && Array.isArray(giftBoxResult.value?.data?.data)) {
+        giftBoxResult.value.data.data.forEach((item) => {
+          catalog.push({
+            ...item,
+            type: "giftbox",
+            product_name: item.name || item.product_name,
+            product_code: item.gift_box_id || item.product_code || item.product_id || item.code,
+            product_id: item.gift_box_id || item.product_id || item.product_code || item.code,
+            product_image: item.image || item.images?.[0] || item.product_image || "",
+            id: item.id,
+          });
+        });
+      }
+
+      setProductsList(catalog);
     } catch (err) {
-      console.warn("Could not fetch products for reviews:", err);
+      console.warn("Could not fetch reviews catalog:", err);
+      setProductsList([]);
     }
   };
 
@@ -220,14 +300,22 @@ const AdminReviews = () => {
     setFormReviewId(review.review_id || "");
 
     const matchedProd = productsList.find(
-      (p) => String(p.id) === String(review.product_id) || p.product_id === review.product_code
+      (p) =>
+        String(p.id) === String(review.product_id) ||
+        p.product_code === review.product_code ||
+        p.product_id === review.product_code ||
+        p.gift_box_id === review.product_code ||
+        getCatalogKey(p) === `${review.product_type || "product"}:${review.product_id}`
     );
+
     setFormProduct(
       matchedProd || {
         id: review.product_id,
         product_id: review.product_code,
+        product_code: review.product_code,
         product_name: review.product_name,
         image: review.product_image,
+        type: review.product_type || "product",
       }
     );
 
@@ -333,13 +421,10 @@ const AdminReviews = () => {
         uuid: formUuid,
         review_id: formReviewId,
         product_id: formProduct.id || null,
-        product_code: formProduct.product_id || formProduct.code || "IQF",
-        product_name: formProduct.product_name || formProduct.name,
-        product_image:
-          formProduct.product_images?.[0] ||
-          formProduct.frame_data?.frame_image ||
-          formProduct.image ||
-          "",
+        product_code: formProduct.product_code || formProduct.product_id || formProduct.gift_box_id || formProduct.code || "IQF",
+        product_name: formProduct.product_name || formProduct.name || "",
+        product_image: getCatalogImage(formProduct),
+        product_type: formProduct.type || "product",
         reviewer_name: formReviewerName.trim(),
         reviewer_email: formReviewerEmail.trim() || null,
         rating: Number(formRating),
@@ -853,20 +938,18 @@ const AdminReviews = () => {
                       Select Product <span className="text-red-500">*</span>
                     </label>
                     <select
-                      value={formProduct?.id || formProduct?.product_id || ""}
+                      value={getCatalogKey(formProduct)}
                       onChange={(e) => {
                         const val = e.target.value;
-                        const p = productsList.find(
-                          (item) => String(item.id) === val || item.product_id === val
-                        );
-                        setFormProduct(p);
+                        const p = productsList.find((item) => getCatalogKey(item) === val);
+                        setFormProduct(p || null);
                       }}
                       className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-white px-3 text-xs text-[#222] shadow-xs outline-none focus:border-[#d4a553]"
                       required
                     >
                       {productsList.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.product_name} ({p.product_id})
+                        <option key={getCatalogKey(p)} value={getCatalogKey(p)}>
+                          {getCatalogLabel(p)}
                         </option>
                       ))}
                     </select>
@@ -903,75 +986,64 @@ const AdminReviews = () => {
                   </div>
                 </div>
 
-                {/* STAR RATING PICKER */}
-                <div className="rounded-xl border border-[#e8e2d8] bg-[#faf8f5] p-3">
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                    Rating ({formRating} / 5 Stars) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5].map((star) => {
-                      const isFilled =
-                        (formHoverRating || formRating) >= star;
-                      return (
-                        <button
-                          key={star}
-                          type="button"
-                          onMouseEnter={() => setFormHoverRating(star)}
-                          onMouseLeave={() => setFormHoverRating(0)}
-                          onClick={() => setFormRating(star)}
-                          className="p-1 transition hover:scale-110"
-                        >
-                          <Star
-                            className={`h-7 w-7 ${
-                              isFilled
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        </button>
-                      );
-                    })}
-                    <span className="ml-2 text-xs font-bold text-[#1a3c36]">
-                      {formRating === 5
-                        ? "5.0 - Excellent"
-                        : formRating === 4
-                        ? "4.0 - Very Good"
-                        : formRating === 3
-                        ? "3.0 - Good"
-                        : formRating === 2
-                        ? "2.0 - Fair"
-                        : "1.0 - Poor"}
-                    </span>
+                {/* RATING + REVIEW DESCRIPTION (TWO COLUMN LAYOUT) */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* STAR RATING PICKER */}
+                  <div className="rounded-xl border border-[#e8e2d8] bg-[#faf8f5] p-3">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
+                      Rating ({formRating} / 5 Stars) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const isFilled =
+                          (formHoverRating || formRating) >= star;
+                        return (
+                          <button
+                            key={star}
+                            type="button"
+                            onMouseEnter={() => setFormHoverRating(star)}
+                            onMouseLeave={() => setFormHoverRating(0)}
+                            onClick={() => setFormRating(star)}
+                            className="p-1 transition hover:scale-110"
+                          >
+                            <Star
+                              className={`h-7 w-7 ${
+                                isFilled
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                      <span className="ml-2 text-xs font-bold text-[#1a3c36]">
+                        {formRating === 5
+                          ? "5.0 - Excellent"
+                          : formRating === 4
+                          ? "4.0 - Very Good"
+                          : formRating === 3
+                          ? "3.0 - Good"
+                          : formRating === 2
+                          ? "2.0 - Fair"
+                          : "1.0 - Poor"}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* REVIEW TITLE */}
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                    Review Headline (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="e.g. Exceeded my expectations, stunning finish!"
-                    className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-white px-3 text-xs text-[#222] shadow-xs outline-none focus:border-[#d4a553]"
-                  />
-                </div>
-
-                {/* REVIEW COMMENT */}
-                <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                    Review Description <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={formComment}
-                    onChange={(e) => setFormComment(e.target.value)}
-                    placeholder="Write the customer's detailed review..."
-                    className="w-full rounded-xl border border-[#e8e1d9] bg-white p-3 text-xs text-[#222] shadow-xs outline-none focus:border-[#d4a553]"
-                    required
-                  />
+                  {/* REVIEW COMMENT */}
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
+                      Review Description <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={formComment}
+                      onChange={(e) => setFormComment(e.target.value)}
+                      placeholder="Write the customer's detailed review..."
+                      className="h-full min-h-[150px] w-full rounded-xl border border-[#e8e1d9] bg-white p-3 text-xs text-[#222] shadow-xs outline-none focus:border-[#d4a553]"
+                      required
+                    />
+                  </div>
                 </div>
 
                 {/* REVIEW PHOTO UPLOAD (FOLDER: 'review') */}
@@ -1040,8 +1112,8 @@ const AdminReviews = () => {
                   )}
                 </div>
 
-                {/* USER_ID FIELDS (CREATED_BY & UPDATED_BY) */}
-                <div className="grid gap-4 sm:grid-cols-3">
+                {/* STATUS FIELD ONLY */}
+                <div className="grid gap-4 sm:grid-cols-1">
                   <div>
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
                       Status
@@ -1054,41 +1126,6 @@ const AdminReviews = () => {
                       <option value="Published">Published (Active)</option>
                       <option value="Pending">Pending Review</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Created By (User ID)
-                    </label>
-                    <input
-                      type="text"
-                      value={formCreatedBy}
-                      onChange={(e) => setFormCreatedBy(e.target.value)}
-                      placeholder="User UUID (e.g. 45e2dff5-...)"
-                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-[11px] text-[#444] outline-none focus:border-[#d4a553]"
-                      list="users-datalist"
-                    />
-                    <datalist id="users-datalist">
-                      {usersList.map((u) => (
-                        <option key={u.id} value={u.user_id}>
-                          {u.username} ({u.role})
-                        </option>
-                      ))}
-                    </datalist>
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#6b6b6b]">
-                      Updated By (User ID)
-                    </label>
-                    <input
-                      type="text"
-                      value={formUpdatedBy}
-                      onChange={(e) => setFormUpdatedBy(e.target.value)}
-                      placeholder="User UUID (e.g. 45e2dff5-...)"
-                      className="h-10 w-full rounded-xl border border-[#e8e1d9] bg-[#f8f7f5] px-3 font-mono text-[11px] text-[#444] outline-none focus:border-[#d4a553]"
-                      list="users-datalist"
-                    />
                   </div>
                 </div>
 
