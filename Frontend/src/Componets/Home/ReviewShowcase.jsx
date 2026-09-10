@@ -37,6 +37,12 @@ const ReviewShowcase = ({ reviews = [] }) => {
                 .review-showcase-swiper {
                   padding: 1.5rem 3rem !important;
                 }
+                .review-showcase-swiper .swiper-slide {
+                  width: 100% !important;
+                }
+                .review-showcase-swiper .swiper-wrapper {
+                  align-items: stretch;
+                }
                 .review-showcase-swiper .swiper-button-next,
                 .review-showcase-swiper .swiper-button-prev {
                   color: #173721 !important;
@@ -62,6 +68,19 @@ const ReviewShowcase = ({ reviews = [] }) => {
                   opacity: 0.4 !important;
                   pointer-events: none !important;
                 }
+
+                @media (max-width: 640px) {
+                  .review-showcase-swiper {
+                    padding: 0 0.5rem !important;
+                  }
+                  .review-showcase-swiper .swiper-slide {
+                    width: 100% !important;
+                  }
+                  .review-showcase-swiper .swiper-slide article {
+                    margin: 0 auto;
+                    width: 100%;
+                  }
+                }
               `}
             </style>
             <Swiper
@@ -71,6 +90,7 @@ const ReviewShowcase = ({ reviews = [] }) => {
               spaceBetween={24}
               slidesPerView={1}
               breakpoints={{
+                0: { slidesPerView: 1, spaceBetween: 16 },
                 640: { slidesPerView: 1 },
                 768: { slidesPerView: 2 },
                 1024: { slidesPerView: 3 },
