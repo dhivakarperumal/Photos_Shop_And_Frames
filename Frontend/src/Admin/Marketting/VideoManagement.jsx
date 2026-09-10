@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
-import api, { API_URL } from "../../api";
+import api, { BACKEND_BASE_URL } from "../../api";
 import {
     FiPlus,
     FiSearch,
@@ -34,7 +34,7 @@ const getYoutubeId = (value) => {
 
 const resolveMediaUrl = (url) => {
     if (!url || /^(https?:|data:|blob:)/i.test(url)) return url;
-    const backendUrl = API_URL.replace(/\/api\/?$/, "");
+    const backendUrl = (BACKEND_BASE_URL || window.location.origin).replace(/\/$/, "");
     return `${backendUrl}${url.startsWith("/") ? url : `/${url}`}`;
 };
 

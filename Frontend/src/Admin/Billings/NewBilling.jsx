@@ -14,7 +14,7 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 const money = (value) =>
   `₹ ${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 const fieldClass =
-  "mt-1 h-9 w-full rounded-md border border-[#e5e7eb] bg-white px-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]";
+  "mt-1 h-11 w-full rounded-lg border border-[#c7d2d0] bg-white px-3 text-xs outline-none transition-all duration-200 focus:border-[#1a3c36] focus:ring-2 focus:ring-[#1a3c36]/20 hover:border-[#1a3c36]/60 shadow-sm";
 
 const parseVariants = (value) => {
   if (Array.isArray(value)) return value;
@@ -537,20 +537,44 @@ const NewBilling = () => {
           </button>
         </div>
 
-        <div className="mb-3 grid grid-cols-3 gap-2 rounded-lg border border-[#e5e7eb] bg-white p-2 text-xs font-semibold">
-          <div className={`rounded-md px-3 py-2 ${billingStep === 1 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
-            1. Add Products
-          </div>
-          <div className={`rounded-md px-3 py-2 ${billingStep === 2 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
-            2. Customer Address
-          </div>
-          <div className={`rounded-md px-3 py-2 ${billingStep === 3 ? "bg-[#1a3c36] text-white" : "text-[#6b7280]"}`}>
-            3. Billing Details
-          </div>
+        {/* Step Indicator */}
+        <div className="mb-3 flex w-full items-center justify-between rounded-xl border border-[#e5e7eb] bg-white px-6 py-4 shadow-sm">
+          {[
+            { step: 1, label: "Add Products" },
+            { step: 2, label: "Customer Address" },
+            { step: 3, label: "Billing Details" },
+          ].map(({ step, label }, idx) => (
+            <div key={step} className={`flex items-center ${idx < 2 ? "flex-1" : ""}`}>
+              <div className="flex flex-col items-center gap-1.5">
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all duration-300 ${
+                    billingStep > step
+                      ? "bg-[#1a3c36] text-white shadow-md shadow-[#1a3c36]/30"
+                      : billingStep === step
+                      ? "border-[3px] border-[#1a3c36] bg-[#1a3c36] text-white shadow-lg shadow-[#1a3c36]/25 ring-4 ring-[#1a3c36]/15"
+                      : "border-2 border-[#d1d5db] bg-white text-[#9ca3af]"
+                  }`}
+                >
+                  {billingStep > step ? (
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    step
+                  )}
+                </div>
+                <span className={`text-[10px] font-bold tracking-wide ${billingStep >= step ? "text-[#1a3c36]" : "text-[#9ca3af]"}`}>
+                  {label}
+                </span>
+              </div>
+              {idx < 2 && (
+                <div className={`mx-3 mb-5 h-[2px] flex-1 rounded-full transition-all duration-500 ${billingStep > step ? "bg-[#1a3c36]" : "bg-[#d1d5db]"}`} />
+              )}
+            </div>
+          ))}
         </div>
 
-        <div className="grid gap-3 ">
-          
+        <div className="grid gap-3">
           <section className={`rounded-lg mt-5 border border-[#e5e7eb] bg-white p-3 ${billingStep === 3 ? "hidden" : ""}`}>
             <h2 className="mb-4 text-sm font-bold">{billingStep === 1 ? "Order Details" : "Customer Details"}</h2>
 
@@ -558,7 +582,7 @@ const NewBilling = () => {
             <section className={`rounded-lg border border-[#e5e7eb] bg-white p-4 ${billingStep !== 1 ? "hidden" : ""}`}>
               <h2 className="mb-4 text-sm font-bold text-[#1f2937]">Order Details</h2>
               <div className="grid gap-3 md:grid-cols-3">
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Order Date *
                 <input
                   type="date"
@@ -567,7 +591,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Order Time *
                 <input
                   type="time"
@@ -576,7 +600,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Order Type
                 <select className={fieldClass}>
                   <option>Shop Order</option>
@@ -585,51 +609,10 @@ const NewBilling = () => {
               </label>
               </div>
             </section>
+            </div>
 
-            <section className={`rounded-lg border border-[#e5e7eb] bg-white p-4 ${billingStep !== 2 ? "hidden" : ""}`}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1f2937]">Select Customer</h2>
-                  <p className="mt-1 text-[10px] text-[#6b7280]">Search and select an existing customer</p>
-                </div>
-                {selectedCustomer && <span className="rounded-full bg-[#e8f7ed] px-2.5 py-1 text-[10px] font-semibold text-[#198754]">Selected</span>}
-              </div>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6b7280]" />
-                <input
-                  value={customerSearch}
-                  onChange={(event) => {
-                    setCustomerSearch(event.target.value);
-                    setSelectedCustomer(null);
-                  }}
-                  placeholder="Search by name, email, or mobile number..."
-                  className="h-10 w-full rounded-md border border-[#e5e7eb] pl-9 pr-3 text-xs outline-none focus:border-[#1a3c36] focus:ring-1 focus:ring-[#1a3c36]"
-                />
-                {customerSearch && !selectedCustomer && (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-md border border-[#e5e7eb] bg-white shadow-lg">
-                    {filteredCustomers.length ? (
-                      filteredCustomers.map((user) => (
-                        <button
-                          type="button"
-                          key={user.user_id || user.id || user.email}
-                          onClick={() => selectCustomer(user)}
-                          className="block w-full border-b border-[#f0f1f3] px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[#fff4ed]"
-                        >
-                          <span className="font-semibold">{user.username || user.name || "Unnamed User"}</span>
-                          <span className="ml-2 text-[#6b7280]">{user.email || user.mobile_number || user.phone || ""}</span>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-3 text-xs text-[#6b7280]">No users found.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-              
-            </section>
-          </div>
             <div className={`grid gap-3 md:grid-cols-2 ${billingStep !== 2 ? "hidden" : ""}`}>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Name *
                 <input
                   value={customerForm.name}
@@ -638,7 +621,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Email
                 <input
                   type="email"
@@ -648,7 +631,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Phone *
                 <input
                   value={customerForm.phone}
@@ -657,27 +640,27 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Door Number
                 <input value={customerForm.door_number} onChange={(event) => setCustomerForm((prev) => ({ ...prev, door_number: event.target.value }))} placeholder="Enter door number" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Street Name
                 <input value={customerForm.street_name} onChange={(event) => setCustomerForm((prev) => ({ ...prev, street_name: event.target.value }))} placeholder="Enter street name" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Landmark
                 <input value={customerForm.landmark} onChange={(event) => setCustomerForm((prev) => ({ ...prev, landmark: event.target.value }))} placeholder="Enter landmark" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 City
                 <input value={customerForm.city} onChange={(event) => setCustomerForm((prev) => ({ ...prev, city: event.target.value }))} placeholder="Enter city" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 District
                 <input value={customerForm.district} onChange={(event) => setCustomerForm((prev) => ({ ...prev, district: event.target.value }))} placeholder="Enter district" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 State
                 <select value={customerForm.state} onChange={(event) => setCustomerForm((prev) => ({ ...prev, state: event.target.value }))} className={fieldClass}>
                   <option value="">Select state</option>
@@ -719,11 +702,11 @@ const NewBilling = () => {
                   <option>Puducherry</option>
                 </select>
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Country
                 <input value={customerForm.country} onChange={(event) => setCustomerForm((prev) => ({ ...prev, country: event.target.value }))} placeholder="Enter country" className={fieldClass} />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Pincode
                 <input value={customerForm.pincode} onChange={(event) => setCustomerForm((prev) => ({ ...prev, pincode: event.target.value }))} placeholder="Enter pincode" className={fieldClass} />
               </label>
@@ -731,7 +714,7 @@ const NewBilling = () => {
           </section>
         </div>
 
-        <section className={`mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3 ${billingStep === 2 ? "hidden" : ""}`}><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Product Details</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-md border border-[#e5e7eb] px-2 text-right text-xs" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
+        <section className={`mt-3 rounded-lg border border-[#e5e7eb] bg-white p-3 ${billingStep === 2 ? "hidden" : ""}`}><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold">Product Details</h2><button type="button" onClick={() => setShowProductModal(true)} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]"><Plus className="mr-1 inline h-3.5 w-3.5" /> Add Item</button></div>{items.length ? <div className="overflow-x-auto"><table className="min-w-full text-left text-[11px]"><thead><tr className="bg-[#fff4ed] font-semibold"><th className="rounded-tl-md px-2 py-3">S No</th><th className="px-2 py-3">Product</th><th className="px-2 py-3">Category</th><th className="px-2 py-3">Price</th><th className="px-2 py-3">Qty</th><th className="px-2 py-3">Discount</th><th className="px-2 py-3">Total</th><th className="rounded-tr-md px-2 py-3">Action</th></tr></thead><tbody>{items.map((item, index) => <tr key={item.id} className="border-b border-[#f0f1f3]"><td className="px-2 py-3">{index + 1}</td><td className="px-2 py-3"><div className="flex items-center gap-2"><img src={item.image || "https://placehold.co/80x80/f3f4f6/6b7280?text=No+Image"} alt={item.name} className="h-10 w-10 rounded-md object-cover border border-[#f0f1f3]" /><div><div className="font-semibold text-[#1f2937]">{item.name}</div><div className="font-normal text-[#6b7280]">{item.detail || "-"}</div></div></div></td><td className="px-2 py-3">{item.category}</td><td className="px-2 py-3">{money(item.price)}</td><td className="px-2 py-3"><div className="flex items-center"><button type="button" onClick={() => updateQuantity(item.id, -1)} className="border border-[#e5e7eb] px-2 py-1"><Minus className="h-3 w-3" /></button><span className="border-y border-[#e5e7eb] px-3 py-1">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.id, 1)} className="border border-[#e5e7eb] px-2 py-1"><Plus className="h-3 w-3" /></button></div></td><td className="px-2 py-3"><input type="number" min="0" value={item.discount} onChange={(event) => updateItemDiscount(item.id, event.target.value)} className="h-9 w-24 rounded-lg border border-[#c7d2d0] px-2 text-right text-xs outline-none transition-all duration-200 focus:border-[#1a3c36] focus:ring-2 focus:ring-[#1a3c36]/20 shadow-sm" /></td><td className="px-2 py-3 font-semibold">{money(item.price * item.quantity - Number(item.discount || 0))}</td><td className="px-2 py-3"><button type="button" onClick={() => removeItem(item.id)} className="rounded-md border border-[#ffb3b3] p-2 text-[#d04d4d]"><Trash2 className="h-3.5 w-3.5" /></button></td></tr>)}</tbody></table></div> : <p className="py-8 text-center text-xs text-[#6b7280]">No products added. Click Add Item to select a product.</p>}</section>
 
         {billingStep === 1 && <div className="mt-3 flex justify-end"><button type="button" onClick={() => canContinueToAddress && setBillingStep(2)} disabled={!canContinueToAddress} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-50">Next: Customer Address</button></div>}
         {billingStep === 2 && <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={() => setBillingStep(1)} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42]">Previous</button><button type="button" onClick={() => canContinueToBilling && setBillingStep(3)} disabled={!canContinueToBilling} className="rounded-md bg-[#1a3c36] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#214a42] disabled:cursor-not-allowed disabled:opacity-50">Next: Billing Details</button></div>}
@@ -749,14 +732,14 @@ const NewBilling = () => {
           <section className="rounded-lg border border-[#e5e7eb] bg-white p-3">
             <h2 className="text-sm font-bold">Discount &amp; Charges</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Discount Type
                 <select className={fieldClass}>
                   <option>Flat Discount</option>
                   <option>Percentage</option>
                 </select>
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Discount Amount (₹)
                 <input
                   value={discount}
@@ -764,7 +747,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Shipping Charge (₹)
                 <input
                   value={shippingCharge}
@@ -772,7 +755,7 @@ const NewBilling = () => {
                   className={fieldClass}
                 />
               </label>
-              <label className="text-[10px] font-semibold">
+              <label className="text-[10px] font-bold">
                 Packaging Charge (₹)
                 <input
                   value={packagingCharge}
@@ -811,7 +794,7 @@ const NewBilling = () => {
 
         <div className={`mt-3 flex flex-col gap-3 rounded-lg border border-[#e5e7eb] bg-white p-3 md:flex-row md:items-end md:justify-between ${billingStep !== 3 ? "hidden" : ""}`}>
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="text-[10px] font-semibold">
+            <label className="text-[10px] font-bold">
               Payment Method *
               <select className={fieldClass}>
                 <option>Cash</option>
@@ -819,7 +802,7 @@ const NewBilling = () => {
                 <option>Card</option>
               </select>
             </label>
-            <label className="text-[10px] font-semibold">
+            <label className="text-[10px] font-bold">
               Received Amount (₹)
               <input
                 value={receivedAmount}
@@ -827,9 +810,9 @@ const NewBilling = () => {
                 className={fieldClass}
               />
             </label>
-            <div className="text-[10px] font-semibold">
+            <div className="text-[10px] font-bold">
               Change (₹)
-              <div className="mt-1 flex h-9 items-center rounded-md bg-[#e8f7ed] px-3 text-xs text-[#198754]">
+              <div className="mt-1 flex h-11 items-center rounded-lg bg-[#e8f7ed] px-3 text-xs font-semibold text-[#198754] shadow-sm border border-[#b7e4ca]">
                 {change.toFixed(2)}
               </div>
             </div>
