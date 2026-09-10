@@ -216,7 +216,7 @@ const AlbumShowcase = () => {
           ) : (
             <Swiper
               modules={[Navigation]}
-              navigation
+              // navigation
               spaceBetween={20}
               slidesPerView={1.15}
               breakpoints={{
