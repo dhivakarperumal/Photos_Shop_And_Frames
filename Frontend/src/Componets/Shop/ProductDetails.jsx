@@ -2842,6 +2842,8 @@ const ProductDetails = () => {
               <div className="mt-5">
                 {reviewStoreArray.length > 0 ? (
                   <Swiper
+                    modules={[Autoplay]}
+                    autoplay={{ delay: 3500, disableOnInteraction: false }}
                     spaceBetween={12}
                     slidesPerView={1}
                     breakpoints={{
