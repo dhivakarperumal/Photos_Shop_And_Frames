@@ -4,6 +4,7 @@ import { Autoplay, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import { API_URL } from "../../api";
+import PageContainer from "../../CommonComponents/PageContainer";
 
 const normalizeAssetUrl = (value) => {
   if (!value) return "";
@@ -19,7 +20,7 @@ const ReviewShowcase = ({ reviews = [] }) => {
 
   return (
     <section className="bg-[#322d29] py-8 text-[#e7efea]">
-      <div className="mx-auto max-w-7xl px-1">
+      <PageContainer>
         <div className="mb-5 flex flex-col items-center text-center">
           <span className="mb-2 h-px w-24 bg-[#b28b58]" />
           <h2 className="text-3xl font-black uppercase tracking-[0.18em] text-[#f8eee5] sm:text-4xl">
@@ -182,7 +183,7 @@ const ReviewShowcase = ({ reviews = [] }) => {
             No customer reviews yet.
           </div>
         )}
-      </div>
+      </PageContainer>
     </section>
   );
 };

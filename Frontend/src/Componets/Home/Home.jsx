@@ -11,6 +11,7 @@ import HomeGallery from "./HomeGallery";
 import ProductCollection from "./ProductCollection";
 import ReviewShowcase from "./ReviewShowcase";
 import api from "../../api";
+import PageContainer from "../../CommonComponents/PageContainer";
 
 const Home = () => {
   const [frames, setFrames] = useState([]);
@@ -63,7 +64,7 @@ const Home = () => {
       <ReviewShowcase reviews={reviews} />
 
       <section className="bg-white py-8">
-        <div className="mx-auto max-w-7xl px-4">
+        <PageContainer>
           <div className="rounded-[26px] border border-[#e9e0d4] bg-white p-5 shadow-[0_16px_40px_rgba(0,0,0,0.08)]">
             <div className="flex flex-col items-center justify-between gap-5 md:flex-row md:gap-4">
               <div className="w-full text-center md:w-auto md:text-left">
@@ -102,7 +103,7 @@ const Home = () => {
               </div>
             )}
           </div>
-        </div>
+        </PageContainer>
       </section>
     </>
   );
