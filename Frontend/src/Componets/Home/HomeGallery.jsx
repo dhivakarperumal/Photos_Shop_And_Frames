@@ -152,8 +152,8 @@ const HomeGallery = () => {
       activeFilter === "All"
         ? allPhotos
         : allPhotos.filter(
-            (p) => p.category?.toLowerCase() === activeFilter.toLowerCase()
-          );
+          (p) => p.category?.toLowerCase() === activeFilter.toLowerCase()
+        );
     return filtered.slice(0, 5);
   }, [allPhotos, activeFilter]);
 
@@ -193,59 +193,58 @@ const HomeGallery = () => {
   return (
     <section className="relative overflow-hidden bg-[#fffdfa] py-14 sm:py-18 lg:py-20 border-t border-[#eee5d8]">
       <PageContainer>
+       
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 sm:pb-8 border-b border-[#ebdcca]">
-          <div>
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 sm:pb-8 border-b border-[#ebdcca]">
+
+          {/* Captured & Framed */}
+          <div className="shrink-0">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#b07838]" />
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#b07838]">
+              <p className="text-base font-bold uppercase tracking-[0.24em] text-[#b07838]">
                 Captured &amp; Framed
               </p>
             </div>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-[#14201d] sm:text-3xl lg:text-4xl">
-              Moments Framed,{" "}
-              <span className="font-serif italic font-normal text-[#b07838]">
-                Memories Forever
-              </span>
-            </h2>
-            <p className="mt-2 max-w-xl text-xs sm:text-sm text-[#5d6863]">
-              Discover our latest framed moments, hand-crafted memories, and client
-              showcases curated with love.
-            </p>
           </div>
 
+          {/* Center Filter Bar */}
+          <div className="flex-1 flex items-center justify-center min-w-0">
+            <div className="flex items-center justify-center gap-2 overflow-x-auto max-w-full pb-1 scrollbar-none">
+              {categories.map((cat) => {
+                const isActive =
+                  activeFilter.toLowerCase() === cat.toLowerCase();
+
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setActiveFilter(cat);
+                      setSelectedPhotoIndex(null);
+                    }}
+                    className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-all duration-200 ${isActive
+                        ? "bg-[#14201d] text-white shadow-sm ring-2 ring-[#14201d]/15"
+                        : "bg-[#f4efe8] text-[#55635e] hover:bg-[#eae2d7] hover:text-[#14201d]"
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* View Full Gallery */}
           <Link
             to="/gallery"
-            className="group inline-flex items-center gap-2 self-start md:self-auto rounded-lg border border-[#d6c7b2] bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#14201d] transition hover:border-[#14201d] hover:bg-[#14201d] hover:text-white shadow-xs"
+            className="group shrink-0 inline-flex items-center justify-center gap-2 rounded-lg border border-[#d6c7b2] bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#14201d] transition hover:border-[#14201d] hover:bg-[#14201d] hover:text-white shadow-xs"
           >
             <span>View Full Gallery</span>
             <ArrowUpRight className="h-4 w-4 transition duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Link>
         </div>
+        
 
-        {/* Filter Bar */}
-        <div className="mt-7 flex items-center justify-start sm:justify-center overflow-x-auto pb-2 scrollbar-none gap-2">
-          {categories.map((cat) => {
-            const isActive = activeFilter.toLowerCase() === cat.toLowerCase();
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => {
-                  setActiveFilter(cat);
-                  setSelectedPhotoIndex(null);
-                }}
-                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition-all duration-200 ${
-                  isActive
-                    ? "bg-[#14201d] text-white shadow-sm ring-2 ring-[#14201d]/15"
-                    : "bg-[#f4efe8] text-[#55635e] hover:bg-[#eae2d7] hover:text-[#14201d]"
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
 
         {/* Gallery Content - 5 items in 1 row on desktop */}
         <div className="mt-7">
