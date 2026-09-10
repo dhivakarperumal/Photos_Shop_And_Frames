@@ -456,7 +456,7 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
       if (!processedAsAlbum && !processedAsGift) {
         const [productRows] = numericProductId
           ? await connection.query(
-              `SELECT size_variants FROM products WHERE id = ? FOR UPDATE`,
+              `SELECT id, product_name, category, size_variants FROM products WHERE id = ? FOR UPDATE`,
               [numericProductId],
             )
           : [[]];
@@ -623,9 +623,9 @@ const createOrder = async (arg1, arg2 = [], arg3 = null) => {
         const itemValues = [
           orderId,
           numericProductId || rawId,
-          inventory.productName || item.product_name || "Custom Frame",
-          inventory.category || item.category || "Photo Frames",
-          inventory.selectedSize || selectedSize || "Standard",
+          productRows[0]?.product_name || item.product_name || "Custom Frame",
+          productRows[0]?.category || item.category || "Photo Frames",
+          selectedSize || "Standard",
           Number(item.price || item.unit_price || 0),
           quantity,
           Number(item.total_price || (Number(item.price || item.unit_price || 0) * quantity)),
