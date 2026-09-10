@@ -1,5 +1,62 @@
 const { getDB } = require("../config/db");
 
+let cartTableReady;
+
+const ensureCartTable = async () => {
+  if (!cartTableReady) {
+    cartTableReady = (async () => {
+      const pool = getDB();
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS carts (
+          id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+          user_id VARCHAR(255) NOT NULL,
+          product_id INT(11) NOT NULL,
+          customization_id VARCHAR(255) NULL,
+          size VARCHAR(100) NOT NULL DEFAULT 'Standard',
+          price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+          quantity INT(11) NOT NULL DEFAULT 1,
+          slot_photos JSON NULL,
+          preview_image VARCHAR(500) NULL,
+          item_type VARCHAR(30) NOT NULL DEFAULT 'product',
+          created_by VARCHAR(255) NULL,
+          updated_by VARCHAR(255) NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          KEY idx_user_id (user_id),
+          KEY idx_product_id (product_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      const columns = {
+        customization_id: "VARCHAR(255) NULL",
+        size: "VARCHAR(100) NOT NULL DEFAULT 'Standard'",
+        price: "DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+        quantity: "INT(11) NOT NULL DEFAULT 1",
+        slot_photos: "JSON NULL",
+        preview_image: "VARCHAR(500) NULL",
+        item_type: "VARCHAR(30) NOT NULL DEFAULT 'product'",
+        created_by: "VARCHAR(255) NULL",
+        updated_by: "VARCHAR(255) NULL",
+      };
+
+      for (const [column, definition] of Object.entries(columns)) {
+        const [rows] = await pool.query(
+          `SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carts' AND COLUMN_NAME = ? LIMIT 1`,
+          [column],
+        );
+        if (!rows.length) {
+          await pool.query(`ALTER TABLE carts ADD COLUMN ${column} ${definition}`);
+        }
+      }
+    })().catch((error) => {
+      cartTableReady = undefined;
+      throw error;
+    });
+  }
+  await cartTableReady;
+};
+
 const parseJson = (value, fallback) => {
   if (value === null || value === undefined || value === "") return fallback;
   if (typeof value !== "string") return value;
@@ -18,6 +75,7 @@ const parseJson = (value, fallback) => {
 
 const getCartByUser = async (userId) => {
   const pool = getDB();
+  await ensureCartTable();
   const query = `
     SELECT 
       c.id,
@@ -140,6 +198,7 @@ const addToCart = async (cartData) => {
   } = cartData;
 
   const pool = getDB();
+  await ensureCartTable();
 
   // Check if identical item already in cart for this user
   const checkQuery = customization_id

@@ -4,7 +4,9 @@ let wishlistTableReady;
 
 const ensureWishlistTable = async () => {
   if (!wishlistTableReady) {
-    wishlistTableReady = getDB().query(`
+    wishlistTableReady = (async () => {
+      const pool = getDB();
+      await pool.query(`
       CREATE TABLE IF NOT EXISTS wishlists (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
@@ -23,10 +25,32 @@ const ensureWishlistTable = async () => {
         KEY idx_wishlist_user (user_id),
         KEY idx_wishlist_product (product_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `).then(async () => {
-      const pool = getDB();
-      await pool.query("ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS item_type VARCHAR(30) NOT NULL DEFAULT 'product'");
-      await pool.query("ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS item_name VARCHAR(255) NULL");
+      `);
+
+      const columns = {
+        variant_color: "VARCHAR(100) NULL",
+        variant_size: "VARCHAR(100) NULL",
+        image: "VARCHAR(500) NULL",
+        email: "VARCHAR(255) NULL",
+        item_type: "VARCHAR(30) NOT NULL DEFAULT 'product'",
+        item_name: "VARCHAR(255) NULL",
+        price: "DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+        total_price: "DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+      };
+
+      for (const [column, definition] of Object.entries(columns)) {
+        const [rows] = await pool.query(
+          `SELECT 1 FROM information_schema.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wishlists' AND COLUMN_NAME = ? LIMIT 1`,
+          [column],
+        );
+        if (!rows.length) {
+          await pool.query(`ALTER TABLE wishlists ADD COLUMN ${column} ${definition}`);
+        }
+      }
+    })().catch((error) => {
+      wishlistTableReady = undefined;
+      throw error;
     });
   }
   await wishlistTableReady;

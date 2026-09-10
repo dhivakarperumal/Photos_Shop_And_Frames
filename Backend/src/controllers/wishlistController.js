@@ -15,8 +15,8 @@ const getWishlistByUser = async (req, res) => {
 const addToWishlist = async (req, res) => {
   try {
     const { user_id, product_id } = req.body;
-    if (!user_id || !product_id) {
-      return res.status(400).json({ success: false, message: "User ID and product ID are required" });
+    if (!user_id || !product_id || !Number.isInteger(Number(product_id)) || Number(product_id) < 1) {
+      return res.status(400).json({ success: false, message: "User ID and a valid product ID are required" });
     }
     const items = await wishlistModule.addToWishlist(req.body);
     return res.status(201).json({ success: true, message: "Added to favorites", data: items });

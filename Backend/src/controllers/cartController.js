@@ -48,10 +48,10 @@ const addToCart = async (req, res) => {
       });
     }
 
-    if (!product_id) {
+    if (!product_id || !Number.isInteger(Number(product_id)) || Number(product_id) < 1) {
       return res.status(400).json({
         success: false,
-        message: "Product ID is required",
+        message: "A valid product ID is required",
       });
     }
 
