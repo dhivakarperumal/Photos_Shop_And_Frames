@@ -10,6 +10,7 @@ const router = express.Router();
 // Public routes
 router.post("/register", userController.registerUser);
 router.post("/login", userController.loginUser);
+router.post("/google-login", userController.googleLoginUser);
 
 // Protected routes (require authentication)
 router.get("/profile/:userId", userController.getUserProfile);

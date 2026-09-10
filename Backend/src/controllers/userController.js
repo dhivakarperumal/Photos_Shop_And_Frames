@@ -1,7 +1,11 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
+const { OAuth2Client } = require("google-auth-library");
 const userModule = require("../modules/userModule");
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "645152369108-a91u0hks1d90u4im40mvkrdpfg53kif9.apps.googleusercontent.com";
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /**
  * User Controller - Handles all user-related API requests
@@ -170,6 +174,103 @@ const loginUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Login failed",
+    });
+  }
+};
+
+// Google login user
+const googleLoginUser = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: "Google credential is required",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload.email_verified) {
+      return res.status(401).json({
+        success: false,
+        message: "Google email could not be verified",
+      });
+    }
+
+    const normalizedEmail = String(payload.email).trim().toLowerCase();
+    const existingUser = await userModule.getUserByEmail(normalizedEmail);
+
+    let user = existingUser;
+    if (!user) {
+      const generatedPassword = await bcrypt.hash(uuidv4(), 10);
+      const newUser = {
+        user_id: uuidv4(),
+        username: payload.name || payload.given_name || normalizedEmail.split("@")[0],
+        mobile_number: null,
+        email: normalizedEmail,
+        password: generatedPassword,
+        profile_image: payload.picture || null,
+        role: "user",
+        status: "Active",
+        created_by: "google",
+        provider: "google",
+        provider_account_id: payload.sub,
+        google_client_id: GOOGLE_CLIENT_ID,
+      };
+
+      await userModule.createUser(newUser);
+      user = await userModule.getUserByEmail(normalizedEmail);
+    } else {
+      await userModule.updateGoogleIdentityByEmail(normalizedEmail, {
+        provider: "google",
+        providerAccountId: payload.sub,
+        googleClientId: GOOGLE_CLIENT_ID,
+      });
+      user = await userModule.getUserByEmail(normalizedEmail);
+    }
+
+    if (user.status !== "Active") {
+      return res.status(403).json({
+        success: false,
+        message: "User account is not active",
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || "your_secret_key",
+      { expiresIn: "7d" }
+    );
+
+    const userPayload = {
+      id: user.id,
+      user_id: user.user_id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      phone: user.mobile_number,
+      mobile_number: user.mobile_number,
+      profile_image: user.profile_image,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Google login successful",
+      token,
+      user: userPayload,
+      data: userPayload,
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
+    return res.status(401).json({
+      success: false,
+      message: error.message || "Google login failed",
     });
   }
 };
@@ -378,6 +479,7 @@ const deleteUser = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  googleLoginUser,
   getUserProfile,
   getAllUsers,
   getAdminUser,

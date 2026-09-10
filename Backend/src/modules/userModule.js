@@ -16,12 +16,15 @@ const createUser = async (userData) => {
     role,
     status,
     created_by,
+    provider = "local",
+    provider_account_id = null,
+    google_client_id = null,
   } = userData;
 
   const query = `
     INSERT INTO users 
-    (user_id, username, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    (user_id, username, mobile_number, email, password, profile_image, role, status, provider, provider_account_id, google_client_id, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `;
 
   const values = [
@@ -33,6 +36,9 @@ const createUser = async (userData) => {
     profile_image || null,
     role || "user",
     status || "Active",
+    provider,
+    provider_account_id || null,
+    google_client_id || null,
     created_by || null,
   ];
 
@@ -236,6 +242,14 @@ const saveAddressByUserId = async (userId, address) => {
   return getLatestAddressByUserId(userId);
 };
 
+const updateGoogleIdentityByEmail = async (email, identity) => {
+  const pool = getDB();
+  await pool.query(
+    `UPDATE users SET provider = ?, provider_account_id = ?, google_client_id = ?, updated_at = NOW() WHERE email = ?`,
+    [identity.provider || "google", identity.providerAccountId || null, identity.googleClientId || null, email]
+  );
+};
+
 const getPasswordHashByUserId = async (userId) => {
   const pool = getDB();
   const [rows] = await pool.query("SELECT password FROM users WHERE user_id = ? LIMIT 1", [userId]);
@@ -284,6 +298,7 @@ module.exports = {
   getAllUsers,
   updateUser,
   updateUserByUserId,
+  updateGoogleIdentityByEmail,
   getLatestAddressByUserId,
   getAddressesByUserId,
   saveAddressByUserId,

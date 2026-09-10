@@ -19,6 +19,45 @@ async function addColumns() {
     console.log("Adding columns to products table...");
     try {
       await connection.query(
+        `ALTER TABLE users ADD COLUMN provider VARCHAR(50) NOT NULL DEFAULT 'local'`
+      );
+      console.log("✅ Added provider to users table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  provider already exists in users table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
+        `ALTER TABLE users ADD COLUMN provider_account_id VARCHAR(255) NULL`
+      );
+      console.log("✅ Added provider_account_id to users table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  provider_account_id already exists in users table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
+        `ALTER TABLE users ADD COLUMN google_client_id VARCHAR(255) NULL`
+      );
+      console.log("✅ Added google_client_id to users table");
+    } catch (error) {
+      if (error.code === "ER_DUP_FIELDNAME") {
+        console.log("ℹ️  google_client_id already exists in users table");
+      } else {
+        throw error;
+      }
+    }
+
+    try {
+      await connection.query(
         `ALTER TABLE products ADD COLUMN created_by VARCHAR(100)`
       );
       console.log("✅ Added created_by to products table");
