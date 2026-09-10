@@ -22,6 +22,7 @@ import PageContainer from "../../CommonComponents/PageContainer";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import PageHeader from "../../CommonComponents/PageHeader";
 import OrderDetailsModal from "./OrderDetailsModal";
+import LogoutConfirmModal from "../../CommonComponents/LogoutConfirmModal";
 
 const emptyAddress = {
   customer_name: "",
@@ -102,6 +103,7 @@ const Account = () => {
   const [saving, setSaving] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingOrderId, setTrackingOrderId] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Tab handling
   const tabFromUrl = searchParams.get("tab");
@@ -407,7 +409,7 @@ const Account = () => {
                   <div className="pt-2 mt-2 border-t border-[#dfd6ca]">
                     <button
                       type="button"
-                      onClick={handleLogout}
+                      onClick={() => setShowLogoutConfirm(true)}
                       className="flex w-full items-center gap-3.5 rounded-lg px-3.5 py-3 text-left text-sm font-semibold text-[#c24130] hover:bg-[#fae5e2]/60 transition cursor-pointer"
                     >
                       <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#fae5e2] text-[#c24130]">
@@ -1063,6 +1065,12 @@ const Account = () => {
         isOpen={Boolean(selectedOrder)}
         onClose={handleCloseOrderModal}
       />
+      {showLogoutConfirm && (
+        <LogoutConfirmModal
+          onCancel={() => setShowLogoutConfirm(false)}
+          onConfirm={handleLogout}
+        />
+      )}
     </>
   );
 };

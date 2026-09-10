@@ -34,6 +34,7 @@ import {
   FaBullhorn,
 } from "react-icons/fa";
 import PageContainer from "./PageContainer";
+import LogoutConfirmModal from "./LogoutConfirmModal";
 
 const Navbar = () => {
   const [openMenu, setOpenMenu] = useState(null);
@@ -86,6 +87,8 @@ const Navbar = () => {
     setProfileDropdown(false);
     navigate("/", { replace: true });
   };
+
+  const requestLogout = () => setShowLogoutConfirm(true);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -473,7 +476,7 @@ const Navbar = () => {
 
                           <button
                             type="button"
-                            onClick={handleConfirmLogout}
+                            onClick={requestLogout}
                             className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#d94d4d] transition hover:bg-[#fff1f1]"
                           >
                             <span>Logout</span>
@@ -579,6 +582,13 @@ const Navbar = () => {
               </nav>
             </PageContainer>
           </div>
+        )}
+
+        {showLogoutConfirm && (
+          <LogoutConfirmModal
+            onCancel={() => setShowLogoutConfirm(false)}
+            onConfirm={handleConfirmLogout}
+          />
         )}
       </header>
 
