@@ -1,5 +1,21 @@
 const { getDB } = require("../config/db");
 
+const normalizeSubCategories = (value) => {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined || value === "") return [];
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [String(parsed)];
+    } catch {
+      return [value.trim()].filter(Boolean);
+    }
+  }
+
+  return [String(value)];
+};
+
 const getNextCategoryId = async () => {
   const query = `
     SELECT category_id
@@ -89,7 +105,7 @@ const getAllCategories = async () => {
 
   return rows.map((row) => ({
     ...row,
-    sub_categories: row.sub_categories ? JSON.parse(row.sub_categories) : [],
+    sub_categories: normalizeSubCategories(row.sub_categories),
   }));
 };
 
@@ -103,7 +119,7 @@ const getCategoryById = async (categoryId) => {
   const category = rows[0];
   return {
     ...category,
-    sub_categories: category.sub_categories ? JSON.parse(category.sub_categories) : [],
+    sub_categories: normalizeSubCategories(category.sub_categories),
   };
 };
 
