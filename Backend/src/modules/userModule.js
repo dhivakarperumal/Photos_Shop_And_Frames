@@ -16,15 +16,12 @@ const createUser = async (userData) => {
     role,
     status,
     created_by,
-    provider = "local",
-    provider_account_id = null,
-    google_client_id = null,
   } = userData;
 
   const query = `
     INSERT INTO users 
-    (user_id, username, mobile_number, email, password, profile_image, role, status, provider, provider_account_id, google_client_id, created_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    (user_id, username, mobile_number, email, password, profile_image, role, status, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `;
 
   const values = [
@@ -36,9 +33,6 @@ const createUser = async (userData) => {
     profile_image || null,
     role || "user",
     status || "Active",
-    provider,
-    provider_account_id || null,
-    google_client_id || null,
     created_by || null,
   ];
 

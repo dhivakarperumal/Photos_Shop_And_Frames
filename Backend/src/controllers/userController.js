@@ -127,8 +127,24 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Check password safely. Some older records may have a plain-text password,
+    // or a non-standard password field shape; never let a compare exception
+    // become a server 500 during user login.
+    let isPasswordValid = false;
+    try {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } catch (compareError) {
+      console.warn("Password compare hash guard triggered:", compareError?.message || compareError);
+      isPasswordValid = String(user.password).trim() === String(password);
+    }
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
