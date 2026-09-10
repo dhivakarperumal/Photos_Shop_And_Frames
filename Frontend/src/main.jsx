@@ -12,9 +12,11 @@ import About from './Componets/About/About.jsx'
 import Contact from './Componets/Contact/Contact.jsx'
 import PrivacyPolicy from './Componets/Privacy/PrivacyPolicy.jsx'
 import Gifts from './Componets/Gifts/Gifts.jsx'
+import GiftDetailsPage from './Componets/Gifts/GiftDetailsPage.jsx'
 import Frames from './Componets/Frames/Frames.jsx'
 import CustomFrameStudio from './Componets/Frames/CustomFrameStudio.jsx'
 import Albums from './Componets/Albums/Albums.jsx'
+import AlbumDetailsPage from './Componets/Albums/AlbumDetailsPage.jsx'
 import Gallery from './Componets/Gallery/Gallery.jsx'
 import Login from './Componets/Auth/Login.jsx'
 import Register from './Componets/Auth/Register.jsx'
@@ -123,6 +125,14 @@ const router = createHashRouter([
         element: <Gifts />,
       },
       {
+        path: 'gifts/:id',
+        element: <GiftDetailsPage />,
+      },
+      {
+        path: 'gift/:id',
+        element: <GiftDetailsPage />,
+      },
+      {
         path: 'frames',
         element: <Frames />,
       },
@@ -133,6 +143,14 @@ const router = createHashRouter([
       {
         path: 'albums',
         element: <Albums />,
+      },
+      {
+        path: 'albums/:id',
+        element: <AlbumDetailsPage />,
+      },
+      {
+        path: 'album/:id',
+        element: <AlbumDetailsPage />,
       },
 
       {

@@ -1324,6 +1324,7 @@ const Shop = () => {
                           price={item.__price}
                           originalPrice={item.__mrp}
                           discount={item.__discount}
+                          href={`/gifts/${item.gift_box_id || item.__id}`}
                           onOpen={() =>
                             setQuickViewItem({
                               item,
@@ -1345,6 +1346,7 @@ const Shop = () => {
                           price={item.__price}
                           originalPrice={item.__mrp}
                           discount={item.__discount}
+                          href={`/albums/${item.product_id || item.__id}`}
                           onOpen={() =>
                             setQuickViewItem({
                               item,

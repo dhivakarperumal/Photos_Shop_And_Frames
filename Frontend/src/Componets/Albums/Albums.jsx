@@ -468,6 +468,7 @@ const Albums = () => {
                     originalPrice={album.displayOriginalPrice}
                     metadata={`${album.cover_material || "Hard Cover"} • ${album.page_thickness || "300 GSM"}`}
                     secondaryLabel={album.binding_type}
+                    href={`/albums/${album.product_id || album.id}`}
                     onOpen={openAlbumModal}
                   />
                 );

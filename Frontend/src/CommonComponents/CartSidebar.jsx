@@ -160,13 +160,24 @@ const CartSidebar = () => {
                   const itemSubtotal =
                     Number(item.price || 0) * Number(item.quantity || 1);
 
+                  const itemPath =
+                    item.item_type === "album"
+                      ? `/albums/${item.product_id}`
+                      : item.item_type === "gift"
+                      ? `/gifts/${item.product_id}`
+                      : `/products/${item.product_id}`;
+
                   return (
                     <div
                       key={item.id}
                       className="group relative flex gap-3 rounded-2xl border border-[#ece4d8] bg-[#fdfcfb] p-3 shadow-2xs transition hover:border-[#d4a553] hover:bg-white"
                     >
                       {/* THUMBNAIL */}
-                      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ebdccb] bg-[#f7f3ed] p-1">
+                      <Link
+                        to={itemPath}
+                        onClick={closeCart}
+                        className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#ebdccb] bg-[#f7f3ed] p-1 transition hover:opacity-90"
+                      >
                         {img ? (
                           <img
                             src={img}
@@ -176,15 +187,19 @@ const CartSidebar = () => {
                         ) : (
                           <Package className="h-6 w-6 text-[#b9aa98]" />
                         )}
-                      </div>
+                      </Link>
 
                       {/* ITEM DETAILS */}
                       <div className="flex min-w-0 flex-1 flex-col justify-between">
                         <div>
                           <div className="flex items-start justify-between gap-1.5">
-                            <h4 className="truncate text-xs font-bold text-[#1d2925]">
+                            <Link
+                              to={itemPath}
+                              onClick={closeCart}
+                              className="truncate text-xs font-bold text-[#1d2925] hover:text-[#b07838] transition"
+                            >
                               {item.product_name}
-                            </h4>
+                            </Link>
 
                             <button
                               type="button"

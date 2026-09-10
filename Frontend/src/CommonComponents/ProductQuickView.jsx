@@ -90,20 +90,40 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
   const id = item.id || item.product_id || item.gift_box_id;
   const title = isAlbum ? item.product_name : item.name;
   const category = isAlbum ? item.sub_category || item.occasion || "Photo Album" : item.category || "Gift Box";
+  const fullDetailsPath = isAlbum ? `/albums/${item.product_id || id}` : `/gifts/${item.gift_box_id || id}`;
 
   const albumVariants = isAlbum ? parseJsonArray(item.variants) : [];
-  const firstVariant = albumVariants[0] || {};
-  const variantMrp = Number(firstVariant.mrp || firstVariant.price || firstVariant.selling_price || 0);
-  const variantOffer = Number(firstVariant.offerPrice || firstVariant.offer_price || firstVariant.price || variantMrp || 0);
+  const albumSizes = useMemo(() => {
+    if (!isAlbum) return [];
+    const fromOpts = parseJsonArray(item.size_options);
+    const fromVars = albumVariants.map((v) => v.size).filter(Boolean);
+    const base = item.size ? [item.size] : [];
+    const set = Array.from(new Set([...fromOpts, ...fromVars, ...base].filter(Boolean)));
+    return set.length ? set : ["8 x 12 Inches", "10 x 14 Inches", "12 x 18 Inches"];
+  }, [isAlbum, item, albumVariants]);
+
+  const [selectedSize, setSelectedSize] = useState(albumSizes[0] || item.size || "12 x 18 Inches");
+
+  const activeVariant = useMemo(() => {
+    if (!albumVariants.length) return null;
+    return (
+      albumVariants.find(
+        (v) => String(v.size || "").toLowerCase() === String(selectedSize || "").toLowerCase()
+      ) || albumVariants[0]
+    );
+  }, [albumVariants, selectedSize]);
+
+  const variantMrp = Number(activeVariant?.mrp || activeVariant?.price || activeVariant?.selling_price || 0);
+  const variantOffer = Number(activeVariant?.offerPrice || activeVariant?.offer_price || activeVariant?.price || variantMrp || 0);
 
   const originalPrice = Number(
     isAlbum
-      ? item.displayOriginalPrice || item.selling_price || variantMrp || 0
+      ? variantMrp || item.displayOriginalPrice || item.selling_price || 0
       : item.mrp || 0
   );
   const price = Number(
     isAlbum
-      ? item.displayPrice || item.discount_price || item.selling_price || variantOffer || variantMrp || 0
+      ? variantOffer || item.displayPrice || item.discount_price || item.selling_price || 0
       : item.selling_price || item.mrp || 0
   );
   const isFavorite = wishlist.some((entry) => String(entry.product_id || entry.id || entry._id) === String(id));
@@ -156,9 +176,10 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
       };
 
   const addItemToCart = async () => {
+    const chosenSize = isAlbum ? (selectedSize || item.size || "12 x 18 Inches") : (item.box_size || "Standard Box");
     const success = await addToCart?.(productPayload, {
       item_type: isAlbum ? "album" : "gift",
-      size: isAlbum ? item.size || `${item.total_pages || 40} Pages` : item.box_size || "Standard Box",
+      size: chosenSize,
       price,
       quantity,
       preview_image: currentImage,
@@ -172,6 +193,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
       notifyLoginRequired("Please login before buying this item");
       return;
     }
+    const chosenSize = isAlbum ? (selectedSize || item.size || "12 x 18 Inches") : (item.box_size || "Standard Box");
     navigate("/checkout", {
       state: {
         checkoutItems: [{
@@ -180,7 +202,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
           item_type: isAlbum ? "album" : "gift",
           product_name: title,
           category,
-          size: isAlbum ? item.size || `${item.total_pages || 40} Pages` : item.box_size || "Standard Box",
+          size: chosenSize,
           price,
           quantity,
           product_image: currentImage,
@@ -203,21 +225,59 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
           {images.length > 1 && <div className="flex gap-2 overflow-x-auto pb-1">{images.map((itemImage, index) => <button key={`${itemImage}-${index}`} type="button" onClick={() => setImageIndex(index)} className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 bg-[#f8f4ee] p-1 ${imageIndex === index ? "border-[#1a3c36]" : "border-transparent opacity-70"}`}><img src={itemImage} alt={`${title} ${index + 1}`} className="h-full w-full object-contain" /></button>)}</div>}
           <div className="rounded-2xl border border-[#e8dfd2] bg-[#fdfcfb] p-3.5 text-xs">
             <h4 className="border-b border-[#eee] pb-2 text-[10px] font-bold uppercase tracking-wider text-[#b07838]">{isAlbum ? "Album Specifications" : "Box Specifications"}</h4>
-            {isAlbum ? <><Spec label="Dimensions" value={item.size || "12 x 18 Inches"} /><Spec label="Total Pages" value={`${item.total_pages || 40} (${item.sheet_count || 20} Sheets)`} /><Spec label="Cover Material" value={item.cover_material || "Leatherette"} /><Spec label="Binding" value={item.binding_type || "Lay Flat"} /><Spec label="Paper Quality" value={item.page_thickness || "300 GSM"} /></> : <><Spec label="Category" value={category} /><Spec label="Box Size" value={item.box_size || "Standard"} /><Spec label="Material" value={item.material || "Premium Box"} /><Spec label="Items" value={`${item.gift_items?.length || 0} Included`} /></>}
+            {isAlbum ? <><Spec label="Dimensions" value={selectedSize || item.size || "12 x 18 Inches"} /><Spec label="Total Pages" value={`${item.total_pages || 40} (${item.sheet_count || 20} Sheets)`} /><Spec label="Cover Material" value={item.cover_material || "Leatherette"} /><Spec label="Binding" value={item.binding_type || "Lay Flat"} /><Spec label="Paper Quality" value={item.page_thickness || "300 GSM"} /></> : <><Spec label="Category" value={category} /><Spec label="Box Size" value={item.box_size || "Standard"} /><Spec label="Material" value={item.material || "Premium Box"} /><Spec label="Items" value={`${item.gift_items?.length || 0} Included`} /></>}
           </div>
         </div>
 
         <div className="flex min-h-0 flex-col pt-1 md:max-h-[calc(100vh-5rem)] md:overflow-y-auto md:pr-1">
           <div>
-            <span className="inline-flex rounded-full bg-[#f2ecdf] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#9b6b2d]">{category}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex rounded-full bg-[#f2ecdf] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#9b6b2d]">{category}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(fullDetailsPath);
+                }}
+                className="text-xs font-bold text-[#b07838] hover:underline"
+              >
+                View Full Page &rarr;
+              </button>
+            </div>
             <h2 className="mt-2 pr-8 text-2xl font-black leading-tight text-[#1d2925] sm:text-3xl">{title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#777]">{item.short_description || item.description || (isAlbum ? `${item.cover_material || "Premium cover"} • ${item.page_thickness || "300 GSM"}` : `${item.box_type || "Magnetic Closure"} • ${item.material || "Premium Box"}`)}</p>
             <div className="mt-4 flex items-baseline gap-3"><span className="text-2xl font-black text-[#1a3c36]">₹{price.toLocaleString()}</span>{originalPrice > price && <><span className="text-sm text-[#999] line-through">₹{originalPrice.toLocaleString()}</span><span className="rounded-md bg-[#eef6f3] px-2 py-0.5 text-xs font-bold text-[#1b794b]">Save ₹{(originalPrice - price).toLocaleString()}</span></>}</div>
 
+            {/* ALBUM SIZE SELECTOR */}
+            {isAlbum && albumSizes.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-[#e8ded2] bg-[#fbf9f6] p-3.5">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-[#1d2925]">Select Album Size:</span>
+                  <span className="text-[#b07838]">{selectedSize}</span>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {albumSizes.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setSelectedSize(size)}
+                      className={`rounded-xl border-2 px-3 py-1.5 text-xs font-bold transition ${
+                        selectedSize === size
+                          ? "border-[#1a3c36] bg-[#1a3c36] text-white shadow-xs"
+                          : "border-[#dfd6ca] bg-white text-[#444] hover:border-[#b07838]"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {isAlbum && <CustomizationFields titleLabel="Names / Cover Title" noteLabel="Dedication Note / Subtitle" titlePlaceholder="e.g., Rahul & Priya • Wedding Memories" notePlaceholder="Add a special date, message, or chapter title..." fields={customFields} updateField={updateField} uploadPhoto={uploadPhoto} uploading={uploading} />}
             {!isAlbum && hasCustomization && <CustomizationFields titleLabel="Recipient Name" noteLabel="Handwritten Note / Message" titlePlaceholder="e.g., Happy Birthday Rahul" notePlaceholder="Add a heartfelt message for the card..." fields={customFields} updateField={updateField} uploadPhoto={uploadPhoto} uploading={uploading} />}
 
-            {!isAlbum && item.gift_items?.length > 0 && <div className="mt-4 rounded-2xl border border-[#ebe3d7] bg-[#faf8f5] p-3.5"><h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]"><Gift className="h-3.5 w-3.5" /> Items Included ({item.gift_items.length})</h4><p className="mt-2 text-xs text-[#555]">{item.gift_items.map((giftItem) => giftItem.name).filter(Boolean).join(" • ")}</p></div>}
+            {!isAlbum && item.gift_items?.length > 0 && <div className="mt-4 rounded-2xl border border-[#ebe3d7] bg-[#faf8f5] p-3.5"><h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]"><Gift className="h-3.5 w-3.5" /> Items Included ({item.gift_items.length})</h4><p className="mt-2 text-xs text-[#555]">{item.gift_items.map((giftItem) => typeof giftItem === "string" ? giftItem : giftItem?.name).filter(Boolean).join(" • ")}</p></div>}
           </div>
 
           <div className="mt-5 border-t border-[#f0e8dc] pt-4"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-2"><span className="text-xs font-bold text-[#555]">Quantity</span><button type="button" onClick={() => toggleWishlist?.({ ...item, __wishlistType: type })} className={`flex h-9 w-9 items-center justify-center rounded-full border ${isFavorite ? "border-[#d79d4a] bg-[#d79d4a] text-[#1d2925]" : "border-[#e5ded4] bg-[#faf8f5] text-[#777]"}`} aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}><Heart className="h-4 w-4" fill={isFavorite ? "currentColor" : "none"} /></button></div><div className="inline-flex items-center rounded-xl border border-[#d8cfc3] bg-white p-1"><button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-[#555] hover:bg-[#f4efe8]"><Minus className="h-3 w-3" /></button><span className="w-8 text-center text-xs font-bold text-[#1d2925]">{quantity}</span><button type="button" onClick={() => setQuantity((value) => value + 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-sm font-bold text-[#555] hover:bg-[#f4efe8]"><Plus className="h-3 w-3" /></button></div></div><div className="grid grid-cols-2 gap-3"><button type="button" onClick={addItemToCart} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#1a3c36] bg-white py-3 text-xs font-bold text-[#1a3c36] hover:bg-[#f7f4ef]"><ShoppingCart className="h-4 w-4" /> Add to Cart</button><button type="button" onClick={buyNow} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1a3c36] py-3 text-xs font-bold text-white hover:bg-[#235048]"><ShoppingBag className="h-4 w-4" /> Buy Now</button></div></div>
