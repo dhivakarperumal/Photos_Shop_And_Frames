@@ -992,20 +992,20 @@ const ProductDetails = () => {
             <div className="sticky top-28 rounded-3xl border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-8">
               {/* CANVAS HEADER WITH VIEW SWITCHER */}
               <div className="mb-4 flex flex-col gap-3 border-b border-[#f0e8dc] pb-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+                <div className="min-w-0 shrink">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef6f3] text-[#1a3c36]">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#eef6f3] text-[#1a3c36]">
                       <Sparkles className="h-4 w-4" />
                     </span>
-                    <h3 className="text-sm font-bold text-[#1d2925]">
+                    <h3 className="text-sm font-bold text-[#1d2925] truncate">
                       {viewMode === "editor"
                         ? "Interactive Photo Slots"
                         : viewMode === "wall"
-                        ? "Wall Visualizer Simulation"
-                        : "Whole Merged Frame Preview"}
+                        ? "Wall Visualizer"
+                        : "Whole Frame Preview"}
                     </h3>
                   </div>
-                  <p className="mt-0.5 text-[11px] text-[#777]">
+                  <p className="mt-0.5 text-[11px] text-[#777] truncate">
                     {customPhotoCount > 0
                       ? `${customPhotoCount} of ${totalSlotsCount} custom photos placed`
                       : "Click slots to add your photos"}
@@ -1013,52 +1013,52 @@ const ProductDetails = () => {
                 </div>
 
                 {/* VIEW MODE TOGGLE BUTTONS & TOOLBAR */}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto scrollbar-none">
                   <button
                     type="button"
                     onClick={() => setViewMode((m) => (m === "wall" ? "editor" : "wall"))}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition shadow-xs ${
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 sm:px-3 py-1.5 text-xs font-bold transition shadow-xs whitespace-nowrap cursor-pointer ${
                       viewMode === "wall"
                         ? "border-[#1a3c36] bg-[#1a3c36] text-white"
                         : "border-[#d8cfc3] bg-white text-[#1d2925] hover:bg-[#faf8f5]"
                     }`}
                   >
-                    <Eye className="h-3.5 w-3.5 text-[#b07838]" />
+                    <Eye className="h-3.5 w-3.5 text-[#b07838] shrink-0" />
                     <span>{viewMode === "wall" ? "Studio View" : "Wall Visualizer"}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleDownloadHighRes}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[#d8cfc3] bg-white px-3 py-1.5 text-xs font-bold text-[#1d2925] hover:bg-[#faf8f5] shadow-xs transition"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#d8cfc3] bg-white px-2.5 sm:px-3 py-1.5 text-xs font-bold text-[#1d2925] hover:bg-[#faf8f5] shadow-xs transition whitespace-nowrap cursor-pointer"
                     title="Download high-resolution custom frame image"
                   >
-                    <Download className="h-3.5 w-3.5 text-[#b07838]" />
+                    <Download className="h-3.5 w-3.5 text-[#b07838] shrink-0" />
                     <span>Download High-Res</span>
                   </button>
 
-                  <div className="inline-flex rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs">
+                  <div className="inline-flex shrink-0 rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => setViewMode("editor")}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition whitespace-nowrap cursor-pointer ${
                         viewMode === "editor"
                           ? "bg-[#1a3c36] text-white shadow-xs"
                           : "text-[#666] hover:text-[#1d2925]"
                       }`}
                     >
-                      <Layers className="h-3.5 w-3.5" /> Slot Editor
+                      <Layers className="h-3.5 w-3.5 shrink-0" /> Slot Editor
                     </button>
                     <button
                       type="button"
                       onClick={() => setViewMode("preview")}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 font-bold transition whitespace-nowrap cursor-pointer ${
                         viewMode === "preview"
                           ? "bg-[#1a3c36] text-white shadow-xs"
                           : "text-[#666] hover:text-[#1d2925]"
                       }`}
                     >
-                      <Eye className="h-3.5 w-3.5" /> Whole Frame Preview
+                      <Eye className="h-3.5 w-3.5 shrink-0" /> Whole Frame Preview
                     </button>
                   </div>
                 </div>
