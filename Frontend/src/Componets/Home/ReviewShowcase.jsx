@@ -18,14 +18,14 @@ const ReviewShowcase = ({ reviews = [] }) => {
   const activeReviews = reviews.filter((review) => review?.status !== "Inactive");
 
   return (
-    <section className="bg-[#f8eee5] py-8 text-[#213729]">
+    <section className="bg-[#322d29] py-8 text-[#e7efea]">
       <div className="mx-auto max-w-7xl px-1">
         <div className="mb-5 flex flex-col items-center text-center">
           <span className="mb-2 h-px w-24 bg-[#b28b58]" />
-          <h2 className="text-3xl font-black uppercase tracking-[0.18em] text-[#173721] sm:text-4xl">
+          <h2 className="text-3xl font-black uppercase tracking-[0.18em] text-[#f8eee5] sm:text-4xl">
             Customer Reviews
           </h2>
-          <p className="mt-2 text-sm font-medium text-[#607062] sm:text-base">
+          <p className="mt-2 text-sm font-medium text-[#e3d0bd] sm:text-base">
             Loved by happy customers
           </p>
         </div>
