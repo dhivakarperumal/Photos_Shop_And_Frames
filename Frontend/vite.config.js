@@ -11,13 +11,13 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:5000',
-        // target:"https://myqtechx.qtechx.com",
+        // target:"https://qframes.qtechx.com",
         changeOrigin: true,
         secure: false,
       },
       '/uploads': {
         target: 'http://127.0.0.1:5000',
-        // target:"https://qt1.qtechx.com",
+        // target:"https://qframes.qtechx.com",
         changeOrigin: true,
         secure: false,
       },

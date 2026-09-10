@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { BACKEND_BASE_URL } from "../api";
 import {
   ArrowUpRight,
   ChevronDown,
@@ -48,7 +49,8 @@ const getImageUrl = (imagePath) => {
   else if (finalPath.startsWith("images/")) finalPath = `/${finalPath}`;
   else finalPath = `/${finalPath.replace(/^\//, "")}`;
 
-  return encodeURI(`http://localhost:5000${finalPath}`);
+  const backendUrl = (BACKEND_BASE_URL || window.location.origin).replace(/\/$/, "");
+  return encodeURI(`${backendUrl}${finalPath}`);
 };
 
 const normalizeAlbum = (album) => {

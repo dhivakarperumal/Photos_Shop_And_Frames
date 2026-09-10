@@ -3,6 +3,17 @@ import axios from "axios";
 const rawApiUrl = import.meta.env.VITE_API_URL || "/api";
 export const API_URL = rawApiUrl.endsWith("/") ? rawApiUrl.slice(0, -1) : rawApiUrl;
 
+export const BACKEND_BASE_URL = (() => {
+  const configuredBackend = import.meta.env.VITE_BACKEND_URL;
+  if (configuredBackend) return configuredBackend.replace(/\/$/, "");
+
+  if (/^https?:\/\//i.test(API_URL)) {
+    return API_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
+  }
+
+  return window.location.origin.replace(/\/$/, "");
+})();
+
 const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
