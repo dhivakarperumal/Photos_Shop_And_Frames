@@ -1,19 +1,29 @@
 const { getDB } = require("../config/db");
 
-const normalizeSubCategories = (value) => {
+const parseSubCategories = (value) => {
+  if (!value) return [];
+
   if (Array.isArray(value)) return value;
-  if (value === null || value === undefined || value === "") return [];
 
   if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
     try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [String(parsed)];
-    } catch {
-      return [value.trim()].filter(Boolean);
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === "string") return parsed ? [parsed] : [];
+      return [];
+    } catch (error) {
+      return trimmed
+        .replace(/\[|\]|\{|\}/g, "")
+        .split(/[,\n]/)
+        .map((item) => String(item).trim())
+        .filter(Boolean);
     }
   }
 
-  return [String(value)];
+  return [];
 };
 
 const getNextCategoryId = async () => {
@@ -105,7 +115,7 @@ const getAllCategories = async () => {
 
   return rows.map((row) => ({
     ...row,
-    sub_categories: normalizeSubCategories(row.sub_categories),
+    sub_categories: parseSubCategories(row.sub_categories),
   }));
 };
 
@@ -119,7 +129,7 @@ const getCategoryById = async (categoryId) => {
   const category = rows[0];
   return {
     ...category,
-    sub_categories: normalizeSubCategories(category.sub_categories),
+    sub_categories: parseSubCategories(category.sub_categories),
   };
 };
 
