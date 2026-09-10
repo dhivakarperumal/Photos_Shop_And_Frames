@@ -54,7 +54,7 @@ app.use(
         const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
         if (isLocalhost) return callback(null, origin);
       } catch (err) { }
-      const allowed = ["https://qt1.qtechx.com"];
+      const allowed = ["https://qframes.qtechx.com"];
       if (allowed.includes(origin)) return callback(null, origin);
       callback(new Error("Not allowed by CORS"));
     },

@@ -323,6 +323,23 @@ async function ensureDatabaseSchema() {
     `;
 
     await connection.query(createUsersTableQuery);
+
+    const userSchemaMigrations = [
+      `ALTER TABLE users ADD COLUMN provider VARCHAR(50) NOT NULL DEFAULT 'local'`,
+      `ALTER TABLE users ADD COLUMN provider_account_id VARCHAR(255) NULL`,
+      `ALTER TABLE users ADD COLUMN google_client_id VARCHAR(255) NULL`,
+    ];
+
+    for (const migration of userSchemaMigrations) {
+      try {
+        await connection.query(migration);
+      } catch (error) {
+        if (error.code !== "ER_DUP_FIELDNAME") {
+          throw error;
+        }
+      }
+    }
+
     await connection.query(createCategoriesTableQuery);
     await connection.query(createEnquiriesTableQuery);
     try {
