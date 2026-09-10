@@ -31,6 +31,7 @@ const cartRouter = require("./src/routers/cartRouter");
 const orderRouter = require("./src/routers/orderRouter");
 const giftBoxRouter = require("./src/routers/giftBoxRouter");
 const wishlistRouter = require("./src/routers/wishlistRouter");
+const serviceRouter = require("./src/routers/serviceRouter");
 
 const app = express();
 const als = new AsyncLocalStorage();
@@ -115,6 +116,7 @@ app.use("/api/cart", cartRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/gift-boxes", giftBoxRouter);
 app.use("/api/wishlist", wishlistRouter);
+app.use("/api/services", serviceRouter);
 
 app.use("/api", (req, res) => {
   res.status(404).json({

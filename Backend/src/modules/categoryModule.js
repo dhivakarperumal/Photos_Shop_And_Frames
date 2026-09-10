@@ -1,5 +1,31 @@
 const { getDB } = require("../config/db");
 
+const parseSubCategories = (value) => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === "string") return parsed ? [parsed] : [];
+      return [];
+    } catch (error) {
+      return trimmed
+        .replace(/\[|\]|\{|\}/g, "")
+        .split(/[,\n]/)
+        .map((item) => String(item).trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+};
+
 const getNextCategoryId = async () => {
   const query = `
     SELECT category_id
@@ -89,7 +115,7 @@ const getAllCategories = async () => {
 
   return rows.map((row) => ({
     ...row,
-    sub_categories: row.sub_categories ? JSON.parse(row.sub_categories) : [],
+    sub_categories: parseSubCategories(row.sub_categories),
   }));
 };
 
@@ -103,7 +129,7 @@ const getCategoryById = async (categoryId) => {
   const category = rows[0];
   return {
     ...category,
-    sub_categories: category.sub_categories ? JSON.parse(category.sub_categories) : [],
+    sub_categories: parseSubCategories(category.sub_categories),
   };
 };
 

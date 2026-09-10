@@ -37,9 +37,6 @@ const ReviewShowcase = ({ reviews = [] }) => {
                 .review-showcase-swiper {
                   padding: 1.5rem 3rem !important;
                 }
-                .review-showcase-swiper .swiper-slide {
-                  width: 100% !important;
-                }
                 .review-showcase-swiper .swiper-wrapper {
                   align-items: stretch;
                 }
@@ -72,9 +69,6 @@ const ReviewShowcase = ({ reviews = [] }) => {
                 @media (max-width: 640px) {
                   .review-showcase-swiper {
                     padding: 0 0.5rem !important;
-                  }
-                  .review-showcase-swiper .swiper-slide {
-                    width: 100% !important;
                   }
                   .review-showcase-swiper .swiper-slide article {
                     margin: 0 auto;
