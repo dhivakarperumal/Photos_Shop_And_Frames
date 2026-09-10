@@ -216,8 +216,8 @@ const addToCart = async (cartData) => {
     const newQty = existing[0].quantity + Number(quantity);
 
     await pool.query(
-      `UPDATE carts SET quantity = ?, price = ?, item_type = ?, preview_image = COALESCE(?, preview_image), updated_by = ?, updated_at = NOW() WHERE id = ?`,
-      [newQty, Number(price), item_type, preview_image || null, updated_by, existingId]
+      `UPDATE carts SET quantity = ?, price = ?, item_type = ?, slot_photos = COALESCE(?, slot_photos), preview_image = COALESCE(?, preview_image), updated_by = ?, updated_at = NOW() WHERE id = ?`,
+      [newQty, Number(price), item_type, slot_photos ? JSON.stringify(slot_photos) : null, preview_image || null, updated_by, existingId]
     );
 
     return {

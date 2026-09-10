@@ -61,21 +61,37 @@ const isPhotoUrl = (value) => {
   return /^(https?:\/\/|\/|data:|blob:)/i.test(str) || /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(str);
 };
 
-const getSlotPhotos = (value) => {
+const getSlotPhotoEntries = (value) => {
   if (!value) return [];
   let parsed = value;
   if (typeof parsed === "string") {
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return isPhotoUrl(parsed) ? [imageUrl(parsed)] : [];
+      return isPhotoUrl(parsed) ? [["Photo 1", imageUrl(parsed)]] : [];
     }
   }
-  if (Array.isArray(parsed)) return parsed.filter(isPhotoUrl).map(imageUrl);
-  if (typeof parsed === "object") {
-    return Object.values(parsed).filter(isPhotoUrl).map(imageUrl);
-  }
+  if (Array.isArray(parsed)) return parsed.filter(isPhotoUrl).map((photo, index) => [`Photo ${index + 1}`, imageUrl(photo)]);
+  if (typeof parsed === "object") return Object.entries(parsed)
+    .filter(([, photo]) => isPhotoUrl(photo))
+    .map(([slot, photo]) => [slot, imageUrl(photo)]);
   return [];
+};
+
+const handleDownloadPhoto = async (photoUrl, fileName) => {
+  try {
+    const response = await fetch(photoUrl);
+    const blobUrl = window.URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch {
+    window.open(photoUrl, "_blank", "noopener,noreferrer");
+  }
 };
 
 const handleDownloadAllPhotos = async (photos, orderId, productName) => {
@@ -290,7 +306,7 @@ const NewOrderDetails = () => {
                 {items.map((item) => {
                   const image = imageUrl(item.product_image || item.frame_image);
                   const wholeFrame = imageUrl(item.whole_frame_image);
-                  const slotPhotos = getSlotPhotos(item.slot_photos);
+                  const slotPhotoEntries = getSlotPhotoEntries(item.slot_photos);
                   return (
                     <div key={item.id || item.product_id || item.product_name} className="border-b border-[#f0e8dc] pb-5 last:border-0 last:pb-0">
                       <div className="flex items-center gap-3">
@@ -318,23 +334,23 @@ const NewOrderDetails = () => {
                           </div>
                         </div>
                       )}
-                      {slotPhotos.length > 0 && (
+                      {slotPhotoEntries.length > 0 && (
                         <div className="mt-4">
                           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2 text-sm font-bold">
-                              <ImageIcon className="h-4 w-4 text-[#b07838]" /> Uploaded Photos ({slotPhotos.length})
+                              <ImageIcon className="h-4 w-4 text-[#b07838]" /> Uploaded Photos ({slotPhotoEntries.length})
                             </div>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleDownloadAllPhotos(slotPhotos, order.order_id, item.product_name)}
+                                onClick={() => handleDownloadAllPhotos(slotPhotoEntries.map(([, photo]) => photo), order.order_id, item.product_name)}
                                 className="inline-flex items-center gap-1 rounded-lg bg-[#1a3c36] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#235048]"
                               >
-                                <Download className="h-3.5 w-3.5" /> Download All ({slotPhotos.length})
+                                <Download className="h-3.5 w-3.5" /> Download All ({slotPhotoEntries.length})
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handlePrintAlbumPhotos(slotPhotos, order.order_id, item.product_name, order)}
+                                onClick={() => handlePrintAlbumPhotos(slotPhotoEntries.map(([, photo]) => photo), order.order_id, item.product_name, order)}
                                 className="inline-flex items-center gap-1 rounded-lg border border-[#1a3c36] bg-white px-3 py-1.5 text-xs font-bold text-[#1a3c36] hover:bg-[#faf7f2]"
                               >
                                 <Printer className="h-3.5 w-3.5" /> Print All
@@ -342,14 +358,14 @@ const NewOrderDetails = () => {
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 max-h-96 overflow-y-auto p-1 scrollbar-thin">
-                            {slotPhotos.map((photo, index) => (
+                            {slotPhotoEntries.map(([slot, photo], index) => (
                               <div key={`${photo}-${index}`} className="overflow-hidden rounded-xl border border-[#e8dfd2] bg-[#faf8f4] p-2">
-                                <img src={photo} alt={`Uploaded position ${index + 1}`} className="h-36 w-full rounded-lg object-cover" />
+                                <img src={photo} alt={`${slot} uploaded photo`} className="h-36 w-full rounded-lg object-cover" />
                                 <div className="mt-2 flex items-center justify-between gap-2">
-                                  <span className="text-xs font-bold">Position {index + 1}</span>
-                                  <a href={photo} download={`Order-${order.order_id}-Position-${index + 1}.jpg`} target="_blank" rel="noreferrer" className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white" title="Download uploaded photo">
+                                  <span className="text-xs font-bold">{slot || `Photo ${index + 1}`}</span>
+                                  <button type="button" onClick={() => handleDownloadPhoto(photo, `Order-${order.order_id}-Position-${index + 1}.jpg`)} className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1a3c36] text-white" title="Download uploaded photo" aria-label={`Download ${slot || `photo ${index + 1}`}`}>
                                     <Download className="h-3.5 w-3.5" />
-                                  </a>
+                                  </button>
                                 </div>
                               </div>
                             ))}
