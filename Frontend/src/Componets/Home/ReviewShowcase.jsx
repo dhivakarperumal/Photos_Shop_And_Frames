@@ -91,9 +91,9 @@ const ReviewShowcase = ({ reviews = [] }) => {
               slidesPerView={1}
               breakpoints={{
                 0: { slidesPerView: 1, spaceBetween: 16 },
-                640: { slidesPerView: 1 },
-                768: { slidesPerView: 2 },
-                1024: { slidesPerView: 3 },
+                640: { slidesPerView: 1, spaceBetween: 16 },
+                768: { slidesPerView: 2, spaceBetween: 20 },
+                1024: { slidesPerView: 4, spaceBetween: 24 },
               }}
               className="review-showcase-swiper"
             >
