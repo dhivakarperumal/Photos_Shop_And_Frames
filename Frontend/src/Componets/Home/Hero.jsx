@@ -5,7 +5,7 @@ import React, {
   useCallback,
 } from "react";
 import { Link } from "react-router-dom";
-import api from "../../api";
+import api, { API_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 
 import {
@@ -124,10 +124,7 @@ const resolveAssetUrl = (url) => {
     ? cleanPath
     : `/${cleanPath}`;
 
-  const backendUrl = (
-    import.meta.env.VITE_BACKEND_URL ||
-    "http://localhost:5000"
-  ).replace(/\/$/, "");
+  const backendUrl = API_URL.replace(/\/api\/?$/, "");
 
   return `${backendUrl}${path}`;
 };

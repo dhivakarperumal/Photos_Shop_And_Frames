@@ -22,7 +22,7 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import api from "../api";
+import api, { API_URL } from "../api";
 
 const formatCurrency = (value) => {
   const numeric = Number(value || 0);
@@ -48,7 +48,7 @@ const getImageUrl = (imagePath) => {
   else if (finalPath.startsWith("images/")) finalPath = `/${finalPath}`;
   else finalPath = `/${finalPath.replace(/^\//, "")}`;
 
-  return encodeURI(`http://localhost:5000${finalPath}`);
+  return encodeURI(`${API_URL.replace(/\/api\/?$/, "")}${finalPath}`);
 };
 
 const normalizeAlbum = (album) => {
