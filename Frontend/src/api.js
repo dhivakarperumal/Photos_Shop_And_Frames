@@ -11,7 +11,12 @@ export const BACKEND_BASE_URL = (() => {
     return API_URL.replace(/\/api\/?$/, "").replace(/\/$/, "");
   }
 
-  return window.location.origin.replace(/\/$/, "");
+  const currentOrigin = window.location.origin.replace(/\/$/, "");
+  if (/localhost|127\.0\.0\.1/i.test(currentOrigin)) {
+    return "http://localhost:5000";
+  }
+
+  return currentOrigin;
 })();
 
 const api = axios.create({
