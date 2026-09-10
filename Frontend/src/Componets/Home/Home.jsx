@@ -5,6 +5,7 @@ import FrameShowcase from "./FrameShowcase";
 import AlbumShowcase from "./AlbumShowcase";
 import PromoBanner from "./PromoBanner";
 import GiftShowcase from "./GiftShowcase";
+import LoveCollageBanner from "./LoveCollageBanner";
 import HomeGallery from "./HomeGallery";
 import ProductCollection from "./ProductCollection";
 import api from "../../api";
@@ -37,6 +38,7 @@ const Home = () => {
       <AlbumShowcase />
       <PromoBanner />
       <GiftShowcase />
+      <LoveCollageBanner />
       <HomeGallery />
     </>
   );
