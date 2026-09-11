@@ -122,66 +122,83 @@ const Gallery = () => {
       <PageHeader title="Gallery" />
       <section className="relative z-0 overflow-visible border-b border-[#eadfd5] bg-[#f4eee9]">
         <PageContainer>
-          <div className="grid min-h-[330px] items-center gap-8 py-10 lg:grid-cols-[0.82fr_1.18fr] lg:py-12">
-            <div className="relative z-10 max-w-xl pl-2">
-              <h1 className="mt-2 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">
+          <div className="grid min-h-[280px] items-center gap-6 py-7 sm:py-10 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8 lg:py-12">
+            <div className="relative z-10 max-w-xl text-center sm:text-left sm:pl-2">
+              <h1 className="mt-2 text-3xl font-black leading-[1.08] tracking-tight sm:text-4xl md:text-5xl">
                 Moments Framed
                 <br />
                 <span className="font-serif font-medium italic text-[#ed741d]">
                   Memories Forever
                 </span>
               </h1>
-              <p className="mt-4 max-w-md text-sm leading-6 text-[#344052]">
+              <p className="mx-auto mt-3 max-w-md text-xs sm:text-sm leading-5 sm:leading-6 text-[#344052] sm:mx-0">
                 Explore beautiful memories captured by our customers and framed
                 with love.
               </p>
             </div>
-            <div className="relative flex min-h-[260px] items-end justify-center lg:min-h-[300px]">
-              <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-[#6d914d]/20 blur-2xl" />
-              <div className="relative grid w-full max-w-2xl grid-cols-3 items-end gap-3 px-4">
-                <div className="hidden h-36 rounded-t-sm border-[7px] border-[#c7a16b] bg-white shadow-xl sm:block">
+
+            <div className="relative flex min-h-[220px] sm:min-h-[260px] items-end justify-center lg:min-h-[300px] pb-2">
+              <div className="absolute bottom-0 left-1/4 h-24 w-24 rounded-full bg-[#6d914d]/20 blur-2xl" />
+              <div className="relative flex w-full max-w-sm sm:max-w-xl md:max-w-2xl items-end justify-center gap-3 sm:gap-4 px-2 sm:px-4">
+                {/* Left Frame (Gold) - visible on sm+ screens */}
+                <div className="hidden sm:block w-32 md:w-44 aspect-[3/4] shrink-0 rounded-sm border-[6px] md:border-[7px] border-[#c7a16b] bg-white p-1 shadow-xl transition-transform duration-300 hover:-translate-y-1">
                   <img
                     src="/images/1.png"
                     alt="Frame collection"
-                    className="h-full w-full object-cover object-left"
+                    className="h-full w-full object-cover object-center"
                   />
                 </div>
-                <div className="h-64 rounded-sm border-[9px] border-[#252525] bg-white p-1 shadow-2xl sm:h-72">
+
+                {/* Center Frame (Black) - main centerpiece with true 3:4 frame proportions */}
+                <div className="w-[50%] max-w-[190px] sm:w-44 md:w-56 aspect-[3/4] shrink-0 rounded-sm border-[7px] sm:border-[9px] border-[#252525] bg-white p-1 shadow-2xl transition-transform duration-300 hover:-translate-y-1">
                   <img
                     src={imageUrl(albums[0]?.photos?.[0]) || "/images/1.png"}
                     alt="Featured framed memory"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover object-center"
                   />
                 </div>
-                <div className="h-48 rounded-sm border-[7px] border-[#9b5b2c] bg-white p-1 shadow-xl sm:h-56">
+
+                {/* Right Frame (Rich Wood) - companion frame */}
+                <div className="w-[42%] max-w-[160px] sm:w-36 md:w-48 aspect-[3/4] shrink-0 rounded-sm border-[6px] sm:border-[7px] border-[#9b5b2c] bg-white p-1 shadow-xl transition-transform duration-300 hover:-translate-y-1">
                   <img
                     src={imageUrl(albums[0]?.photos?.[1]) || "/images/1.png"}
                     alt="Featured framed landscape"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover object-center"
                   />
                 </div>
               </div>
             </div>
           </div>
         </PageContainer>
-        <div className="relative z-30 mx-auto -mb-8 max-w-6xl px-4">
-          <div className="relative z-30 grid grid-cols-5 gap-1 rounded-2xl border border-[#eee8e1] bg-white p-2 shadow-[0_8px_25px_rgba(31,31,31,0.1)] sm:grid-cols-10">
+
+        {/* RESPONSIVE CATEGORY BAR */}
+        <div className="relative z-30 mx-auto -mb-6 sm:-mb-8 max-w-6xl px-3 sm:px-4">
+          <div className="relative z-30 flex items-center gap-2 overflow-x-auto rounded-2xl border border-[#eee8e1] bg-white p-2 shadow-[0_8px_25px_rgba(31,31,31,0.1)] scrollbar-none sm:grid sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 sm:gap-1">
             {galleryCategories.map((label) => {
               const Icon =
                 label === "All Photos"
                   ? Grid2X2
                   : categoryIcons[label] || Image;
+              const isSelected = activeCategory === label;
               return (
                 <button
                   key={label}
                   type="button"
                   onClick={() => setActiveCategory(label)}
-                  className={`flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-[9px] font-semibold transition sm:text-[10px] ${activeCategory === label ? "bg-[#fff0e3] text-[#ed741d]" : "text-[#384151] hover:bg-[#f8f5f2]"}`}
+                  className={`flex shrink-0 min-w-[76px] sm:min-w-0 flex-col items-center gap-1.5 rounded-xl px-2.5 sm:px-1 py-2.5 sm:py-3 text-[10px] font-bold transition ${
+                    isSelected
+                      ? "bg-[#fff0e3] text-[#ed741d] shadow-2xs"
+                      : "text-[#4b5563] hover:bg-[#f8f5f2] hover:text-[#101d35]"
+                  }`}
                 >
                   <Icon
-                    className={`h-5 w-5 ${activeCategory === label ? "text-[#ed741d]" : "text-[#4b5563]"}`}
+                    className={`h-5 w-5 transition-transform duration-200 ${
+                      isSelected ? "scale-110 text-[#ed741d]" : "text-[#6b7280]"
+                    }`}
                   />
-                  <span className="truncate">{label}</span>
+                  <span className="whitespace-nowrap sm:truncate text-center">
+                    {label}
+                  </span>
                 </button>
               );
             })}
@@ -189,7 +206,7 @@ const Gallery = () => {
         </div>
       </section>
 
-      <section id="gallery-grid" className="pt-16">
+      <section id="gallery-grid" className="pt-12 sm:pt-16">
         <PageContainer>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-semibold text-[#303b4b]">
@@ -244,7 +261,7 @@ const Gallery = () => {
             <div
               className={
                 viewMode === "card"
-                  ? "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                  ? "grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
                   : "overflow-hidden rounded-xl border border-[#e7e0d8] bg-white"
               }
             >
@@ -255,7 +272,7 @@ const Gallery = () => {
                   onClick={() => setSelectedPhoto(photo)}
                   className={
                     viewMode === "card"
-                      ? "group relative aspect-square overflow-hidden rounded-md bg-[#eee7df] text-left"
+                      ? "group relative aspect-square overflow-hidden rounded-xl bg-[#eee7df] text-left shadow-2xs transition hover:shadow-md"
                       : "flex w-full items-center gap-4 border-b border-[#eee8e1] p-3 text-left last:border-b-0 hover:bg-[#faf7f3]"
                   }
                 >
@@ -281,7 +298,7 @@ const Gallery = () => {
                   <span
                     className={
                       viewMode === "card"
-                        ? "absolute inset-x-0 bottom-0 translate-y-full bg-black/65 px-3 py-2 text-[10px] font-semibold text-white transition group-hover:translate-y-0"
+                        ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 text-[11px] font-semibold text-white transition sm:translate-y-full sm:bg-black/65 sm:group-hover:translate-y-0"
                         : "text-sm font-bold text-[#263448]"
                     }
                   >
@@ -296,7 +313,7 @@ const Gallery = () => {
               <button
                 type="button"
                 onClick={() => setVisibleCount((count) => count + 20)}
-                className="inline-flex items-center gap-2 rounded-md border border-[#cfd4d9] bg-white px-5 py-2.5 text-[10px] font-bold uppercase text-[#263448] hover:border-[#ed741d] hover:text-[#ed741d]"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#cfd4d9] bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#263448] shadow-xs hover:border-[#ed741d] hover:text-[#ed741d]"
               >
                 Load more <Loader2 className="h-3.5 w-3.5" />
               </button>
@@ -352,11 +369,11 @@ const Gallery = () => {
             event.target === event.currentTarget && setSelectedPhoto(null)
           }
         >
-          <div className="relative max-h-[90vh] max-w-4xl rounded-xl bg-white p-2 shadow-2xl">
+          <div className="relative max-h-[90vh] max-w-4xl rounded-2xl bg-white p-2 sm:p-3 shadow-2xl">
             <button
               type="button"
               onClick={() => setSelectedPhoto(null)}
-              className="absolute -right-3 -top-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#ed741d] text-white"
+              className="absolute right-2 top-2 sm:-right-3 sm:-top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#ed741d] text-white shadow-md hover:bg-[#d66515] transition"
               aria-label="Close image"
             >
               <X className="h-4 w-4" />
@@ -364,8 +381,13 @@ const Gallery = () => {
             <img
               src={selectedPhoto.src}
               alt={selectedPhoto.title}
-              className="max-h-[82vh] max-w-full rounded-lg object-contain"
+              className="max-h-[78vh] sm:max-h-[82vh] max-w-full rounded-xl object-contain mx-auto"
             />
+            {selectedPhoto.title && (
+              <p className="mt-2 text-center text-xs font-bold text-[#1d2925] truncate px-3">
+                {selectedPhoto.title}
+              </p>
+            )}
           </div>
         </div>
       )}
