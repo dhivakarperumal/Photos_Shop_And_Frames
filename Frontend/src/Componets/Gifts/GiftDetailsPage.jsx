@@ -640,7 +640,7 @@ const GiftDetailsPage = () => {
                       : "bg-[#e8efeb] text-[#1a3c36]"
                   }`}
                 >
-                  {isOutOfStock ? "Out of Stock" : "In Stock"}
+                  {isOutOfStock ? "Out of Stock" : `In Stock (${stock} available)`}
                 </span>
               </div>
 

@@ -273,8 +273,8 @@ const AlbumDetailsPage = () => {
   }, [variants, selectedSize, selectedColor]);
 
   // Compute pricing
-  const { displayPrice, displayMrp, discountPercentage, isOutOfStock } = useMemo(() => {
-    if (!album) return { displayPrice: 0, displayMrp: 0, discountPercentage: 0, isOutOfStock: false };
+  const { displayPrice, displayMrp, discountPercentage, stock, isOutOfStock } = useMemo(() => {
+    if (!album) return { displayPrice: 0, displayMrp: 0, discountPercentage: 0, stock: 0, isOutOfStock: false };
 
     let mrp = Number(activeVariant?.mrp || activeVariant?.selling_price || album.selling_price || 0);
     let offer = Number(
@@ -303,6 +303,7 @@ const AlbumDetailsPage = () => {
       displayPrice: offer,
       displayMrp: mrp,
       discountPercentage: discount,
+      stock,
       isOutOfStock: outOfStock,
     };
   }, [album, activeVariant]);
@@ -881,7 +882,7 @@ const AlbumDetailsPage = () => {
                       : "bg-[#e8efeb] text-[#1a3c36]"
                   }`}
                 >
-                  {isOutOfStock ? "Out of Stock" : "In Stock"}
+                  {isOutOfStock ? "Out of Stock" : `In Stock (${stock} available)`}
                 </span>
               </div>
 

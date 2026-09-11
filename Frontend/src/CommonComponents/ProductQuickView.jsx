@@ -115,6 +115,10 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
 
   const variantMrp = Number(activeVariant?.mrp || activeVariant?.price || activeVariant?.selling_price || 0);
   const variantOffer = Number(activeVariant?.offerPrice || activeVariant?.offer_price || activeVariant?.price || variantMrp || 0);
+  const stock = isAlbum
+    ? Number(activeVariant?.stock ?? activeVariant?.stock_quantity ?? item.stock_quantity ?? 0)
+    : Number(item.current_stock ?? item.stock_quantity ?? item.stock ?? 0);
+  const isOutOfStock = stock <= 0;
 
   const originalPrice = Number(
     isAlbum
@@ -246,7 +250,7 @@ const ProductQuickView = ({ item, type, image, onClose }) => {
             </div>
             <h2 className="mt-2 pr-8 text-2xl font-black leading-tight text-[#1d2925] sm:text-3xl">{title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-[#777]">{item.short_description || item.description || (isAlbum ? `${item.cover_material || "Premium cover"} • ${item.page_thickness || "300 GSM"}` : `${item.box_type || "Magnetic Closure"} • ${item.material || "Premium Box"}`)}</p>
-            <div className="mt-4 flex items-baseline gap-3"><span className="text-2xl font-black text-[#1a3c36]">₹{price.toLocaleString()}</span>{originalPrice > price && <><span className="text-sm text-[#999] line-through">₹{originalPrice.toLocaleString()}</span><span className="rounded-md bg-[#eef6f3] px-2 py-0.5 text-xs font-bold text-[#1b794b]">Save ₹{(originalPrice - price).toLocaleString()}</span></>}</div>
+            <div className="mt-4 flex flex-wrap items-baseline gap-3"><span className="text-2xl font-black text-[#1a3c36]">₹{price.toLocaleString()}</span>{originalPrice > price && <><span className="text-sm text-[#999] line-through">₹{originalPrice.toLocaleString()}</span><span className="rounded-md bg-[#eef6f3] px-2 py-0.5 text-xs font-bold text-[#1b794b]">Save ₹{(originalPrice - price).toLocaleString()}</span></>}<span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${isOutOfStock ? "bg-red-50 text-red-600" : "bg-[#e8efeb] text-[#1a3c36]"}`}>{isOutOfStock ? "Out of Stock" : `In Stock (${stock} available)`}</span></div>
 
             {/* ALBUM SIZE SELECTOR */}
             {isAlbum && albumSizes.length > 0 && (
