@@ -193,6 +193,12 @@ const RelatedProducts = ({
         </div>
 
         <div className="relative min-w-0 overflow-hidden px-0.5 pb-1">
+          <style>
+            {`.related-products-swiper .swiper-button-next,
+              .related-products-swiper .swiper-button-prev {
+                display: none !important;
+              }`}
+          </style>
           <Swiper
             spaceBetween={12}
             slidesPerView={1}
