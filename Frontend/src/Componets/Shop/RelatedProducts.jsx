@@ -176,8 +176,8 @@ const RelatedProducts = ({
 
   return (
     <>
-      <PageContainer className={className}>
-        <div className="mb-6 flex items-end justify-between gap-4">
+      <PageContainer className={`min-w-0 overflow-hidden ${className}`}>
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b07838]">
               {headerInfo.subtitle}
@@ -188,25 +188,26 @@ const RelatedProducts = ({
           </div>
           <Link
             to={headerInfo.viewAllLink}
-            className="text-xs font-bold text-[#1a3c36] hover:text-[#b07838] transition hover:underline"
+            className="shrink-0 whitespace-nowrap text-xs font-bold text-[#1a3c36] transition hover:text-[#b07838] hover:underline"
           >
             {headerInfo.viewAllText} &rarr;
           </Link>
         </div>
 
-        <Swiper
-          modules={[Navigation]}
-          navigation
-          spaceBetween={20}
-          slidesPerView={1.15}
-          breakpoints={{
-            640: { slidesPerView: 2 },
-            768: { slidesPerView: 3 },
-            1024: { slidesPerView: 4 },
-            1280: { slidesPerView: 4.5 },
-          }}
-          className="!overflow-visible"
-        >
+        <div className="relative min-w-0 overflow-hidden px-0.5 pb-1">
+          <Swiper
+            modules={[Navigation]}
+            navigation
+            spaceBetween={12}
+            slidesPerView={1}
+            breakpoints={{
+              640: { slidesPerView: 2, spaceBetween: 16 },
+              768: { slidesPerView: 3, spaceBetween: 18 },
+              1024: { slidesPerView: 4, spaceBetween: 20 },
+              1280: { slidesPerView: 4.5, spaceBetween: 20 },
+            }}
+            className="related-products-swiper overflow-hidden!"
+          >
           {relatedItems.map((rel) => {
             if (computedType === "album") {
               const albumId = rel.product_id || rel.id;
@@ -214,7 +215,7 @@ const RelatedProducts = ({
                 rel.thumbnail_image || rel.image || rel.product_images?.[0]
               );
               return (
-                <SwiperSlide key={albumId} className="!h-auto">
+                <SwiperSlide key={albumId} className="h-auto!">
                   <AlbumCard
                     album={rel}
                     image={image}
@@ -235,7 +236,7 @@ const RelatedProducts = ({
               const giftId = rel.gift_box_id || rel.id;
               const image = resolveImageUrl(rel.image || rel.product_images?.[0]);
               return (
-                <SwiperSlide key={giftId} className="!h-auto">
+                <SwiperSlide key={giftId} className="h-auto!">
                   <GiftCard
                     gift={rel}
                     image={image}
@@ -253,12 +254,13 @@ const RelatedProducts = ({
             }
 
             return (
-              <SwiperSlide key={rel.id} className="!h-auto">
+              <SwiperSlide key={rel.id} className="h-auto!">
                 <ProductCard product={rel} />
               </SwiperSlide>
             );
           })}
-        </Swiper>
+          </Swiper>
+        </div>
       </PageContainer>
 
       {quickViewItem && (
