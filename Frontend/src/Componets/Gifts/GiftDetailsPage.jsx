@@ -976,9 +976,19 @@ const GiftDetailsPage = () => {
 
               <div className="mt-5">
                 {reviewStoreArray.length > 0 ? (
-                  <div className="space-y-3">
+                  <Swiper
+                    modules={[Autoplay]}
+                    autoplay={{ delay: 3500, disableOnInteraction: false }}
+                    spaceBetween={12}
+                    slidesPerView={1}
+                    breakpoints={{
+                      768: { slidesPerView: 2, spaceBetween: 16 },
+                    }}
+                    className="product-reviews-swiper"
+                  >
                     {reviewStoreArray.slice(0, 6).map((entry, index) => (
-                      <article key={`${entry.name}-${index}`} className="rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                      <SwiperSlide key={`${entry.name}-${index}`} className="h-auto!">
+                        <article className="h-full rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                         <div className="flex items-start gap-3">
                           <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
                             {entry.image ? (
@@ -1013,9 +1023,10 @@ const GiftDetailsPage = () => {
                             </div>
                           </div>
                         </div>
-                      </article>
+                        </article>
+                      </SwiperSlide>
                     ))}
-                  </div>
+                  </Swiper>
                 ) : (
                   <div className="mt-4 rounded-2xl border border-dashed border-[#d8cfc3] bg-white px-4 py-6 text-center text-[11px] font-bold text-[#666]">
                     No reviews yet. Be the first to review this product!
