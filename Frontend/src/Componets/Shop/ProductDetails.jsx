@@ -1187,7 +1187,7 @@ const ProductDetails = () => {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           {/* ================= LEFT COLUMN: LIVE FRAME CANVAS & MERGED WHOLE PREVIEW (7 COLS) ================= */}
           <div className="lg:col-span-7">
-            <div className="sticky top-28 rounded-3xl border border-[#ebe3d7] bg-white p-5 shadow-sm md:p-8">
+            <div className="rounded-3xl border border-[#ebe3d7] bg-white p-4 shadow-sm sm:p-5 md:p-8 lg:sticky lg:top-28">
               {/* CANVAS HEADER WITH VIEW SWITCHER */}
               <div className="mb-4 flex flex-col gap-3 border-b border-[#f0e8dc] pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 shrink">
@@ -1264,7 +1264,7 @@ const ProductDetails = () => {
 
               {/* FRAME STAGE */}
               <div
-                className={`relative flex min-h-[460px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] p-4 sm:p-8 transition-all duration-300 ${
+                className={`relative flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] p-4 sm:min-h-[460px] sm:p-8 transition-all duration-300 ${
                   viewMode === "wall"
                     ? "bg-cover bg-center shadow-inner"
                     : "bg-[#f5efe7]"
@@ -1661,7 +1661,7 @@ const ProductDetails = () => {
 
           {/* ================= RIGHT COLUMN: PRODUCT INFO, SIZES, CUSTOMIZER & BUY (5 COLS) ================= */}
           <div className="space-y-6 lg:col-span-5">
-            <div className="rounded-3xl border border-[#ebe3d7] bg-white p-6 shadow-sm md:p-8">
+            <div className="rounded-3xl border border-[#ebe3d7] bg-white p-4 shadow-sm sm:p-6 md:p-8">
               {/* BADGES & HEADER */}
               <div className="flex items-center justify-between gap-2">
                 <span className="rounded-full bg-[#f6eee3] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#b07838]">
@@ -2713,7 +2713,7 @@ const ProductDetails = () => {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[460px_minmax(420px,1fr)]">
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[460px_minmax(0,1fr)]">
             <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
               {activeUserId && userAlreadyReviewedProduct ? (
                 <div className="rounded-2xl border border-[#d8cfc3] bg-[#f3f0ea] p-4 text-center">

@@ -511,7 +511,7 @@ const GiftDetailsPage = () => {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
           {/* LEFT: GALLERY (5 COLS) */}
           <div className="lg:col-span-6 xl:col-span-5">
-            <div className="sticky top-24 space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-24">
               <div className="relative flex aspect-4/3 sm:aspect-square w-full items-center justify-center overflow-hidden rounded-3xl border border-[#ebdcc8] bg-[#fbf9f6] p-4 shadow-sm sm:p-8">
                 {currentImage ? (
                   <img
@@ -596,7 +596,7 @@ const GiftDetailsPage = () => {
 
           {/* RIGHT: DETAILS & ACTIONS (7 COLS) */}
           <div className="lg:col-span-6 xl:col-span-7">
-            <div className="rounded-3xl border border-[#ebdcc8] bg-white p-6 shadow-sm md:p-8">
+            <div className="rounded-3xl border border-[#ebdcc8] bg-white p-4 shadow-sm sm:p-6 md:p-8">
               {/* CATEGORY & CODE */}
               <div className="flex items-center justify-between gap-3">
                 <span className="inline-flex rounded-full bg-[#f2ecdf] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#9b6b2d]">
@@ -848,7 +848,7 @@ const GiftDetailsPage = () => {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[460px_minmax(420px,1fr)]">
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[460px_minmax(0,1fr)]">
             <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
               {activeUserId && userAlreadyReviewedGift ? (
                 <div className="rounded-2xl border border-[#d8cfc3] bg-[#f3f0ea] p-4 text-center">
