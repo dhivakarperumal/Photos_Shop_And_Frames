@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import "swiper/css/navigation";
 import api, { API_URL } from "../../api";
 import PageContainer from "../../CommonComponents/PageContainer";
 import ProductCard from "../../CommonComponents/ProductCard";
@@ -196,8 +194,6 @@ const RelatedProducts = ({
 
         <div className="relative min-w-0 overflow-hidden px-0.5 pb-1">
           <Swiper
-            modules={[Navigation]}
-            navigation
             spaceBetween={12}
             slidesPerView={1}
             breakpoints={{
