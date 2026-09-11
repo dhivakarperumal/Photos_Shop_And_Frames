@@ -1181,7 +1181,7 @@ const ProductDetails = () => {
   return (
     <main className="min-h-screen bg-[#f7f3ed]">
       <PageHeader title={product.product_name} />
-      <PageContainer className="py-10">
+      <PageContainer className="py-6 sm:py-10">
 
         {/* TWO-COLUMN PRODUCT WORKSPACE */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
@@ -1211,7 +1211,7 @@ const ProductDetails = () => {
                 </div>
 
                 {/* VIEW MODE TOGGLE BUTTONS & TOOLBAR */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-nowrap overflow-x-auto scrollbar-none">
+                <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:gap-2">
                   <button
                     type="button"
                     onClick={() => setViewMode((m) => (m === "wall" ? "editor" : "wall"))}
@@ -1235,7 +1235,7 @@ const ProductDetails = () => {
                     <span>Download High-Res</span>
                   </button>
 
-                  <div className="inline-flex shrink-0 rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs whitespace-nowrap">
+                  <div className="inline-flex max-w-full shrink-0 overflow-x-auto rounded-xl border border-[#e2d9cd] bg-[#f9f7f4] p-1 text-xs whitespace-nowrap scrollbar-none">
                     <button
                       type="button"
                       onClick={() => setViewMode("editor")}
@@ -1264,7 +1264,7 @@ const ProductDetails = () => {
 
               {/* FRAME STAGE */}
               <div
-                className={`relative flex min-h-[320px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] p-4 sm:min-h-[460px] sm:p-8 transition-all duration-300 ${
+                className={`relative flex min-h-[280px] items-center justify-center overflow-hidden rounded-2xl border border-[#e8dfd2] p-3 sm:min-h-115 sm:p-8 transition-all duration-300 ${
                   viewMode === "wall"
                     ? "bg-cover bg-center shadow-inner"
                     : "bg-[#f5efe7]"
@@ -1600,8 +1600,8 @@ const ProductDetails = () => {
 
               {/* ================= MULTI-PHOTO POSITION STRIP ================= */}
               {photoSlots.length > 0 && (
-                <div className="mt-4 flex w-full flex-col gap-2.5 rounded-2xl border border-[#e2d9cd] bg-white p-3.5 shadow-xs">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="mt-4 flex w-full flex-col gap-2.5 rounded-2xl border border-[#e2d9cd] bg-white p-3 shadow-xs sm:p-3.5">
+                  <div className="flex flex-col items-start gap-1 text-xs sm:flex-row sm:items-center sm:justify-between">
                     <span className="font-bold text-[#1d2925]">
                       Photos inside this frame ({photoSlots.length} Positions):
                     </span>
@@ -2687,7 +2687,7 @@ const ProductDetails = () => {
 
       {/* ================= CUSTOMER REVIEWS AT PAGE END ================= */}
       <PageContainer className="pb-10">
-        <section className="mt-8 rounded-[2rem] border border-[#e5ded4] bg-white p-5 shadow-sm md:p-8">
+        <section className="mt-6 rounded-4xl border border-[#e5ded4] bg-white p-3 shadow-sm sm:mt-8 sm:p-5 md:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -2713,8 +2713,8 @@ const ProductDetails = () => {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-[460px_minmax(0,1fr)]">
-            <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-[460px_minmax(0,1fr)]">
+            <section className="rounded-3xl border border-[#e8dfd2] bg-[#faf8f5] p-3 sm:p-5">
               {activeUserId && userAlreadyReviewedProduct ? (
                 <div className="rounded-2xl border border-[#d8cfc3] bg-[#f3f0ea] p-4 text-center">
                   <p className="text-sm font-black text-[#1a3c36]">You have already reviewed this product.</p>
@@ -2778,7 +2778,7 @@ const ProductDetails = () => {
                     </div>
 
                     {reviewDraft.photos.length > 0 && (
-                      <div className="mt-3 grid grid-cols-4 gap-2">
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         {reviewDraft.photos.map((photo, index) => (
                           <div key={`${photo}-${index}`} className="relative group">
                             <img src={photo} alt="Review upload" className="h-20 w-full rounded-xl border border-[#e8dfd2] object-cover" />
@@ -2807,7 +2807,7 @@ const ProductDetails = () => {
               )}
             </section>
 
-            <section className="rounded-[1.5rem] border border-[#e8dfd2] bg-[#faf8f5] p-5">
+            <section className="rounded-3xl border border-[#e8dfd2] bg-[#faf8f5] p-3 sm:p-5">
               <div className="flex items-center justify-between gap-3 border-b border-[#e8dfd2] pb-3">
                 <div>
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#b07838]">Reviews</span>
@@ -2852,7 +2852,7 @@ const ProductDetails = () => {
                     className="product-reviews-swiper"
                   >
                     {reviewStoreArray.slice(0, 6).map((entry, index) => (
-                      <SwiperSlide key={`${entry.name}-${index}`} className="!h-auto">
+                      <SwiperSlide key={`${entry.name}-${index}`} className="h-auto!">
                         <article className="h-full rounded-2xl border border-[#e8dfd2] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                           <div className="flex items-start gap-3">
                             <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#d8cfc3] bg-[#f8f4ee]">
@@ -2875,7 +2875,7 @@ const ProductDetails = () => {
                               <p className="mt-2 text-[11px] font-black text-[#1d2925]">{entry.title || "Product Feedback"}</p>
                               <p className="mt-1 text-[11px] leading-5 text-[#555]">{entry.dis}</p>
                               {entry.images?.length > 0 && (
-                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                                   {entry.images.slice(0,4).map((image, photoIndex) => (
                                     <img key={`${image}-${photoIndex}`} src={image} alt="" className="h-16 w-full rounded-xl border border-[#ede4d8] object-cover" />
                                   ))}
