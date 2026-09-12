@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   CreditCard,
+  LoaderCircle,
   LocateFixed,
   Search,
   Image as ImageIcon,
@@ -209,10 +210,12 @@ const Checkout = () => {
           const doorNumber = address.house_number || address.building || "";
           const street =
             address.road ||
+            address.residential ||
             address.pedestrian ||
             address.footway ||
             address.path ||
             address.cycleway ||
+            address.street ||
             address.locality ||
             address.suburb ||
             address.neighbourhood ||
@@ -1022,6 +1025,29 @@ const Checkout = () => {
           </form>
         </div>
       </PageContainer>
+
+      {fetchingLocation && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fetching delivery location"
+        >
+          <div className="w-full max-w-xs rounded-2xl border border-[#ebdcc8] bg-white p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eef6f3] text-[#1a3c36]">
+              <LoaderCircle className="h-6 w-6 animate-spin" />
+            </div>
+            <h2 className="mt-4 text-base font-black text-[#1d2925]">Fetching your location</h2>
+            <p className="mt-2 text-xs leading-5 text-[#777]">
+              Finding your street name and delivery address. Please wait.
+            </p>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-[#eee5d8]">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-[#1a3c36]" />
+            </div>
+            <p className="mt-3 text-[10px] font-semibold text-[#999]">Please do not interact with the page.</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
