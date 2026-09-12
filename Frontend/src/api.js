@@ -24,6 +24,36 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Keep successful GET responses available while users move between routes.
+// Any write clears the cache so the next view gets current backend data.
+const getCache = new Map();
+const pendingGets = new Map();
+
+const serializeParams = (params) => {
+  if (!params) return "";
+  if (typeof params.toString === "function" && params instanceof URLSearchParams) {
+    return params.toString();
+  }
+  return JSON.stringify(
+    Object.keys(params)
+      .sort()
+      .reduce((result, key) => {
+        result[key] = params[key];
+        return result;
+      }, {}),
+  );
+};
+
+const getCacheKey = (url, config = {}) => {
+  const token = localStorage.getItem("token") || "guest";
+  return `${token}:${config.baseURL || API_URL}:${url}:${serializeParams(config.params)}`;
+};
+
+const clearGetCache = () => {
+  getCache.clear();
+  pendingGets.clear();
+};
+
 // Add token automatically and preserve FormData headers
 api.interceptors.request.use(
   (config) => {
@@ -68,5 +98,45 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+const originalGet = api.get.bind(api);
+const originalPost = api.post.bind(api);
+const originalPut = api.put.bind(api);
+const originalPatch = api.patch.bind(api);
+const originalDelete = api.delete.bind(api);
+
+api.get = (url, config = {}) => {
+  if (config.skipCache) {
+    const nextConfig = { ...config };
+    delete nextConfig.skipCache;
+    return originalGet(url, nextConfig);
+  }
+
+  const cacheKey = getCacheKey(url, config);
+  if (getCache.has(cacheKey)) return Promise.resolve(getCache.get(cacheKey));
+  if (pendingGets.has(cacheKey)) return pendingGets.get(cacheKey);
+
+  const requestConfig = { ...config };
+  delete requestConfig.skipCache;
+  const request = originalGet(url, requestConfig)
+    .then((response) => {
+      getCache.set(cacheKey, response);
+      return response;
+    })
+    .finally(() => pendingGets.delete(cacheKey));
+
+  pendingGets.set(cacheKey, request);
+  return request;
+};
+
+const wrapMutation = (request) => (...args) => {
+  clearGetCache();
+  return request(...args);
+};
+
+api.post = wrapMutation(originalPost);
+api.put = wrapMutation(originalPut);
+api.patch = wrapMutation(originalPatch);
+api.delete = wrapMutation(originalDelete);
 
 export default api;
