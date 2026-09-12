@@ -205,9 +205,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       if (searchTerm.trim()) {
         params.search = searchTerm.trim();
       }
-      if (todayOnly) {
-        params.today = "1";
-      } else if (!allowedStatuses) {
+      if (!todayOnly && !allowedStatuses) {
         params.billing_type = "Online Order";
       }
 
@@ -216,6 +214,18 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
         const nextOrders = res.data.data.filter((order) => {
           const normalizedStatus = normalizeStatus(order.order_status);
           const rawStatus = String(order.order_status || "").trim().toLowerCase();
+          if (todayOnly) {
+            const orderDate = order.order_date || order.created_at;
+            if (!orderDate) return false;
+            const parsedDate = new Date(orderDate);
+            const now = new Date();
+            if (
+              Number.isNaN(parsedDate.getTime()) ||
+              parsedDate.getFullYear() !== now.getFullYear() ||
+              parsedDate.getMonth() !== now.getMonth() ||
+              parsedDate.getDate() !== now.getDate()
+            ) return false;
+          }
           if (todayOnly && ["completed", "delivered", "cancelled"].includes(rawStatus)) return false;
           if (
             allowedStatuses &&
