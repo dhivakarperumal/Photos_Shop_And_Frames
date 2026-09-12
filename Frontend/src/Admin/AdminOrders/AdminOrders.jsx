@@ -173,6 +173,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [viewMode, setViewMode] = useState("table");
   const [statusDraft, setStatusDraft] = useState("");
   const [shippingDetails, setShippingDetails] = useState({
@@ -290,9 +291,26 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     fetchEnquiryCategories();
   }, [showEnquiryPopup]);
 
-  const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
   const paginatedOrders = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleStatusSelection = async (nextStatus, order = selectedOrder) => {
+    if (!order || normalizeStatus(nextStatus) === normalizeStatus(order.order_status)) return;
+
+    setStatusDraft(nextStatus);
+    if (normalizeStatus(nextStatus) === "CANCELLED") {
+      const reason = window.prompt("Enter cancellation reason:", cancellationReason || "");
+      if (!reason?.trim()) {
+        setStatusDraft(normalizeStatus(order.order_status));
+        return;
+      }
+      setCancellationReason(reason.trim());
+      await handleStatusChange(order.order_id, nextStatus, shippingDetails, reason.trim());
+      return;
+    }
+
+    await handleStatusChange(order.order_id, nextStatus, shippingDetails);
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -621,8 +639,8 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     }
   };
 
-  const handleStatusChange = async (orderId, newStatus, details = shippingDetails) => {
-    if ((newStatus === "Cancelled" || newStatus === "CANCELLED") && !cancellationReason.trim()) {
+  const handleStatusChange = async (orderId, newStatus, details = shippingDetails, reason = cancellationReason) => {
+    if ((newStatus === "Cancelled" || newStatus === "CANCELLED") && !reason.trim()) {
       toast.error("Please enter a cancellation reason");
       return;
     }
@@ -631,13 +649,13 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
       const res = await api.patch(`/orders/${orderId}/status`, {
         order_status: newStatus,
         ...details,
-        notes: cancellationReason.trim(),
+        notes: reason.trim(),
       });
 
       if (res.data?.success) {
         toast.success(`Order status updated to ${statusName(newStatus)}`);
         if (selectedOrder) {
-          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus, notes: cancellationReason.trim() }));
+          setSelectedOrder((prev) => ({ ...prev, order_status: newStatus, notes: reason.trim() }));
         }
         setOrders((prev) =>
           prev.map((o) =>
@@ -645,7 +663,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
           )
         );
         setStatusPopupOrderId(null);
-        setStatusDraft("");
+        setStatusDraft(normalizeStatus(newStatus));
         setStatusPopupOrderId(null);
       }
     } catch (err) {
@@ -1071,9 +1089,25 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                 </table>
               </div>
               <div className={viewMode === "card" ? "hidden" : "flex flex-col gap-3 border-t border-[#f0e8dc] px-4 py-3 text-xs text-[#777] sm:flex-row sm:items-center sm:justify-between"}>
-              <span>
-                Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, orders.length)} of {orders.length} orders
-              </span>
+              <div className="flex flex-wrap items-center gap-3">
+                <span>
+                  Showing {orders.length ? ((currentPage - 1) * pageSize) + 1 : 0}-{Math.min(currentPage * pageSize, orders.length)} of {orders.length} orders
+                </span>
+                <label className="flex items-center gap-2 font-semibold text-[#444]">
+                  Items per page
+                  <select
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(Number(event.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="h-8 rounded-lg border border-[#d8cfc3] bg-white px-2 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
+                    aria-label="Items per page"
+                  >
+                    {[5, 10, 20, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+                  </select>
+                </label>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -1169,49 +1203,15 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                   <label className="text-xs font-bold text-[#666]">Change Status:</label>
                   <select
                     value={statusDraft || selectedOrder.order_status}
-                    onChange={(e) => {
-                      setStatusDraft(e.target.value);
-                      if (e.target.value !== "Cancelled" && e.target.value !== "CANCELLED") {
-                        setCancellationReason("");
-                      }
-                    }}
+                    onChange={(e) => handleStatusSelection(e.target.value, selectedOrder)}
                     disabled={updatingStatus}
                     className="h-9 rounded-xl border border-[#d8cfc3] bg-white px-3 text-xs font-bold text-[#1a3c36] outline-none focus:border-[#1a3c36]"
                   >
-                    {["Pending", "Order Placed", "Processing", "Shipped", "Delivered", "Cancelled"].map(
-                      (st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      )
-                    )}
+                    {getStatusOptions(selectedOrder.order_status).map((status) => (
+                      <option key={status.id} value={status.id}>{status.name}</option>
+                    ))}
                   </select>
-                  {(statusDraft === "Shipped" || statusDraft === "SHIPPED") && (
-                    <div className="mt-3 grid w-full gap-2 sm:grid-cols-3">
-                      <input type="datetime-local" value={shippingDetails.shipped_at} onChange={(e) => setShippingDetails((prev) => ({ ...prev, shipped_at: e.target.value }))} className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" aria-label="Shipped date and time" />
-                      <input value={shippingDetails.docket_number} onChange={(e) => setShippingDetails((prev) => ({ ...prev, docket_number: e.target.value }))} placeholder="Docket number" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
-                      <input value={shippingDetails.courier_name} onChange={(e) => setShippingDetails((prev) => ({ ...prev, courier_name: e.target.value }))} placeholder="Courier name" className="h-9 rounded-md border border-[#d8cfc3] px-2 text-xs outline-none focus:border-[#1a3c36]" />
-                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft, shippingDetails)} disabled={updatingStatus || statusDraft === selectedOrder.order_status} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50 sm:col-span-3">{updatingStatus ? "Updating..." : "Update Shipped Status"}</button>
-                    </div>
-                  )}
-                  {(statusDraft === "Cancelled" || statusDraft === "CANCELLED") && (
-                    <div className="mt-3 w-full">
-                      <textarea
-                        value={cancellationReason}
-                        onChange={(e) => setCancellationReason(e.target.value)}
-                        placeholder="Enter cancellation reason"
-                        rows={3}
-                        required
-                        className="w-full rounded-md border border-[#d8cfc3] px-2 py-2 text-xs outline-none focus:border-[#1a3c36]"
-                        aria-label="Cancellation reason"
-                      />
-                      <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus || !cancellationReason.trim()} className="mt-2 rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">{updatingStatus ? "Updating..." : "Update Cancelled Status"}</button>
-                    </div>
-                  )}
-                  {statusDraft !== "Shipped" && statusDraft !== "SHIPPED" && statusDraft !== selectedOrder.order_status && (
-                    statusDraft !== "Cancelled" && statusDraft !== "CANCELLED" &&
-                    <button type="button" onClick={() => handleStatusChange(selectedOrder.order_id, statusDraft)} disabled={updatingStatus} className="rounded-md bg-[#1a3c36] px-3 py-2 text-xs font-bold text-white hover:bg-[#235048] disabled:opacity-50">Update</button>
-                  )}
+                  {updatingStatus && <span className="text-xs font-semibold text-[#777]">Updating...</span>}
                 </div>}
               </div>
             </div>
