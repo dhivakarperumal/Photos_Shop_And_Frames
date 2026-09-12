@@ -46,6 +46,8 @@ const features = [
   },
 ];
 
+let cachedHeroBanners = null;
+
 /* =========================================================
    SERVICES
 ========================================================= */
@@ -172,9 +174,9 @@ const BannerLink = ({
 ========================================================= */
 
 const Hero = () => {
-  const [banners, setBanners] = useState([]);
+  const [banners, setBanners] = useState(() => cachedHeroBanners || []);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cachedHeroBanners === null);
 
   /* =======================================================
      FETCH BANNERS FROM BACKEND
@@ -209,6 +211,7 @@ const Hero = () => {
         }
       );
 
+      cachedHeroBanners = activeHeroBanners;
       setBanners(activeHeroBanners);
     } catch (error) {
       console.error(
@@ -216,6 +219,7 @@ const Hero = () => {
         error
       );
 
+      cachedHeroBanners = [];
       setBanners([]);
     } finally {
       setLoading(false);
@@ -228,46 +232,6 @@ const Hero = () => {
 
   useEffect(() => {
     fetchBanners();
-  }, [fetchBanners]);
-
-  /* =======================================================
-     REFRESH WHEN TAB / WINDOW BECOMES ACTIVE
-  ======================================================= */
-
-  useEffect(() => {
-    const handleFocus = () => {
-      fetchBanners();
-    };
-
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "visible"
-      ) {
-        fetchBanners();
-      }
-    };
-
-    window.addEventListener(
-      "focus",
-      handleFocus
-    );
-
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibilityChange
-    );
-
-    return () => {
-      window.removeEventListener(
-        "focus",
-        handleFocus
-      );
-
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange
-      );
-    };
   }, [fetchBanners]);
 
   /* =======================================================
