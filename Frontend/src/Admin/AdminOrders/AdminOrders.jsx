@@ -165,6 +165,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   const [activeStatus, setActiveStatus] = useState(defaultStatus);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [printAddressOrder, setPrintAddressOrder] = useState(null);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [viewEnquiryProduct, setViewEnquiryProduct] = useState(null);
   const [editingEnquiryId, setEditingEnquiryId] = useState(null);
@@ -253,6 +254,19 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
   useEffect(() => {
     fetchOrders();
   }, [activeStatus, allowedStatuses, todayOnly]);
+
+  useEffect(() => {
+    if (!printAddressOrder) return undefined;
+
+    const finishPrinting = () => setPrintAddressOrder(null);
+    window.addEventListener("afterprint", finishPrinting);
+    const printTimer = window.setTimeout(() => window.print(), 100);
+
+    return () => {
+      window.clearTimeout(printTimer);
+      window.removeEventListener("afterprint", finishPrinting);
+    };
+  }, [printAddressOrder]);
 
   useEffect(() => {
     if (!showNewOrderButton) return;
@@ -619,65 +633,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
 
   const handlePrintAddress = (orderDetails) => {
     if (!orderDetails) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      toast.error("Popup blocked. Please allow popups to print the address.");
-      return;
-    }
-
-    const customerAddress = [
-      orderDetails.shipping_address,
-      [orderDetails.city, orderDetails.state, orderDetails.pincode].filter(Boolean).join(", "),
-    ].filter(Boolean).join("\n");
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Address - Order ${orderDetails.order_id || ""}</title>
-          <style>
-            @page { size: A4; margin: 18mm; }
-            body { font-family: Arial, sans-serif; color: #1a1a1a; margin: 0; }
-            .header { border-bottom: 2px solid #1a3c36; padding-bottom: 12px; margin-bottom: 28px; }
-            .brand { color: #1a3c36; font-size: 24px; font-weight: 800; }
-            .order { color: #666; font-size: 12px; margin-top: 5px; }
-            .addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-            .address { border: 1px solid #d8d8d8; border-radius: 8px; padding: 18px; min-height: 150px; }
-            .label { color: #8b5e2b; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-            h2 { color: #1a3c36; font-size: 18px; margin: 8px 0 14px; }
-            .value { white-space: pre-line; font-size: 14px; line-height: 1.6; }
-            .footer { margin-top: 34px; color: #666; font-size: 11px; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="brand">Q Frames</div>
-            <div class="order">Order: ${orderDetails.order_id || "-"}</div>
-          </div>
-          <div class="addresses">
-            <section class="address">
-              <div class="label">From Address</div>
-              <h2>Q Frames</h2>
-              <div class="value">123, MG Road,
-Coimbatore, Tamil Nadu
-Phone: +91 98765 43210</div>
-            </section>
-            <section class="address">
-              <div class="label">To Address</div>
-              <h2>${orderDetails.customer_name || "Customer"}</h2>
-              <div class="value">${customerAddress || "Address not provided"}
-Phone: ${orderDetails.customer_phone || "-"}${orderDetails.customer_email ? `\nEmail: ${orderDetails.customer_email}` : ""}</div>
-            </section>
-          </div>
-          <div class="footer">Please handle this order with care.</div>
-          <script>window.onload = function() { window.print(); };</script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    setPrintAddressOrder(orderDetails);
   };
 
   const handleViewOrder = async (orderId) => {
@@ -1217,6 +1173,36 @@ Phone: ${orderDetails.customer_phone || "-"}${orderDetails.customer_email ? `\nE
         </div>
         )}
       </div>
+
+      {printAddressOrder && (
+        <>
+          <style>{`@page { size: A4; margin: 18mm; } @media print { body > #root > * { visibility: hidden !important; } #print-address-document, #print-address-document * { visibility: visible !important; } #print-address-document { display: block !important; position: absolute; left: 0; top: 0; width: 100%; } }`}</style>
+          <div id="print-address-document" className="hidden bg-white text-[#1a1a1a]">
+            <div className="border-b-2 border-[#1a3c36] pb-3 mb-7">
+              <div className="text-2xl font-extrabold text-[#1a3c36]">Q Frames</div>
+              <div className="mt-1 text-xs text-[#666]">Order: {printAddressOrder.order_id || "-"}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <section className="min-h-40 rounded-lg border border-[#d8d8d8] p-5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8b5e2b]">From Address</div>
+                <h2 className="my-2.5 text-lg font-bold text-[#1a3c36]">Q Frames</h2>
+                <p className="whitespace-pre-line text-sm leading-relaxed">{`123, MG Road,\nCoimbatore, Tamil Nadu\nPhone: +91 98765 43210`}</p>
+              </section>
+              <section className="min-h-40 rounded-lg border border-[#d8d8d8] p-5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#8b5e2b]">To Address</div>
+                <h2 className="my-2.5 text-lg font-bold text-[#1a3c36]">{printAddressOrder.customer_name || "Customer"}</h2>
+                <p className="whitespace-pre-line text-sm leading-relaxed">{[
+                  printAddressOrder.shipping_address,
+                  [printAddressOrder.city, printAddressOrder.state, printAddressOrder.pincode].filter(Boolean).join(", "),
+                  `Phone: ${printAddressOrder.customer_phone || "-"}`,
+                  printAddressOrder.customer_email ? `Email: ${printAddressOrder.customer_email}` : "",
+                ].filter(Boolean).join("\n") || "Address not provided"}</p>
+              </section>
+            </div>
+            <p className="mt-8 text-[11px] text-[#666]">Please handle this order with care.</p>
+          </div>
+        </>
+      )}
 
       {selectedEnquiry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="enquiry-details-title" onMouseDown={(event) => event.target === event.currentTarget && setSelectedEnquiry(null)}>
