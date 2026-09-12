@@ -617,6 +617,69 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
     printWindow.document.close();
   };
 
+  const handlePrintAddress = (orderDetails) => {
+    if (!orderDetails) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups to print the address.");
+      return;
+    }
+
+    const customerAddress = [
+      orderDetails.shipping_address,
+      [orderDetails.city, orderDetails.state, orderDetails.pincode].filter(Boolean).join(", "),
+    ].filter(Boolean).join("\n");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Address - Order ${orderDetails.order_id || ""}</title>
+          <style>
+            @page { size: A4; margin: 18mm; }
+            body { font-family: Arial, sans-serif; color: #1a1a1a; margin: 0; }
+            .header { border-bottom: 2px solid #1a3c36; padding-bottom: 12px; margin-bottom: 28px; }
+            .brand { color: #1a3c36; font-size: 24px; font-weight: 800; }
+            .order { color: #666; font-size: 12px; margin-top: 5px; }
+            .addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+            .address { border: 1px solid #d8d8d8; border-radius: 8px; padding: 18px; min-height: 150px; }
+            .label { color: #8b5e2b; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+            h2 { color: #1a3c36; font-size: 18px; margin: 8px 0 14px; }
+            .value { white-space: pre-line; font-size: 14px; line-height: 1.6; }
+            .footer { margin-top: 34px; color: #666; font-size: 11px; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="brand">Q Frames</div>
+            <div class="order">Order: ${orderDetails.order_id || "-"}</div>
+          </div>
+          <div class="addresses">
+            <section class="address">
+              <div class="label">From Address</div>
+              <h2>Q Frames</h2>
+              <div class="value">123, MG Road,
+Coimbatore, Tamil Nadu
+Phone: +91 98765 43210</div>
+            </section>
+            <section class="address">
+              <div class="label">To Address</div>
+              <h2>${orderDetails.customer_name || "Customer"}</h2>
+              <div class="value">${customerAddress || "Address not provided"}
+Phone: ${orderDetails.customer_phone || "-"}${orderDetails.customer_email ? `\nEmail: ${orderDetails.customer_email}` : ""}</div>
+            </section>
+          </div>
+          <div class="footer">Please handle this order with care.</div>
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const handleViewOrder = async (orderId) => {
     try {
       setLoadingDetails(true);
@@ -932,6 +995,7 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                     <th className="px-4 py-3.5">Total</th>
                     <th className="px-4 py-3.5">Payment</th>
                     <th className="px-4 py-3.5">Status</th>
+                    <th className="px-4 py-3.5">Address</th>
                     <th className="px-4 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -1065,6 +1129,16 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
                               </div>
                             )}
                           </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handlePrintAddress(order)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#1a3c36] bg-white px-2.5 text-xs font-bold text-[#1a3c36] hover:bg-[#eef5f3]"
+                            title="Print customer and shop address"
+                          >
+                            <Printer className="h-3.5 w-3.5" /> Print
+                          </button>
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="inline-flex items-center gap-1">
@@ -1461,7 +1535,14 @@ const AdminOrders = ({ defaultStatus = "All", allowedStatuses = null, showNewOrd
             </div>
 
             {/* MODAL FOOTER */}
-            <div className="mt-6 flex justify-end border-t border-[#f0e8dc] pt-4">
+            <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-[#f0e8dc] pt-4">
+              <button
+                type="button"
+                onClick={() => handlePrintAddress(selectedOrder)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#1a3c36] bg-white px-4 py-2.5 text-xs font-bold text-[#1a3c36] shadow hover:bg-[#f4efe8]"
+              >
+                <Printer className="h-3.5 w-3.5" /> Print Address
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
