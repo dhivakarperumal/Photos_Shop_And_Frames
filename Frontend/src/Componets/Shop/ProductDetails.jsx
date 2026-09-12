@@ -1859,10 +1859,9 @@ const ProductDetails = () => {
                     onMouseMove={handleStudioTabsMouseMove}
                     onMouseUp={handleStudioTabsMouseUpOrLeave}
                     onMouseLeave={handleStudioTabsMouseUpOrLeave}
-                    className={`flex overflow-x-auto border-b border-[#f0e8dc] pb-2.5 text-xs font-bold gap-1.5 scroll-smooth select-none cursor-grab ${
+                    className={`flex flex-wrap overflow-visible border-b border-[#f0e8dc] pb-2.5 text-xs font-bold gap-1.5 select-none ${
                       isDraggingStudioTabs ? "cursor-grabbing" : ""
-                    } [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-[#f0ebe3] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#d5a65a]/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#1a3c36]`}
-                    style={{ scrollbarWidth: "thin", scrollbarColor: "#d5a65a99 #f0ebe3" }}
+                    }`}
                   >
                     {[
                       { id: "filters", label: "Brightness & Filters", icon: Wand2 },
