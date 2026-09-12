@@ -326,6 +326,7 @@ const ProductDetails = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [customerPhotos, setCustomerPhotos] = useState({});
   const [uploadingSlot, setUploadingSlot] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [savingCustomization, setSavingCustomization] = useState(false);
@@ -801,12 +802,19 @@ const ProductDetails = () => {
     }
 
     setUploadingSlot(slotId);
+    setUploadProgress(0);
     const formData = new FormData();
     formData.append("folder", "customizations");
     formData.append("file", file);
 
     try {
-      const res = await api.post("/upload", formData);
+      const res = await api.post("/upload", formData, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            setUploadProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+          }
+        },
+      });
       const url = res.data?.url || res.data?.urls?.[0];
       if (!url) throw new Error("Upload did not return photo URL");
 
@@ -848,6 +856,7 @@ const ProductDetails = () => {
       }));
     } finally {
       setUploadingSlot(null);
+      setUploadProgress(0);
       event.target.value = "";
     }
   };
@@ -2917,6 +2926,36 @@ const ProductDetails = () => {
       </PageContainer>
 
       <RelatedProducts product={product} />
+
+      {/* ================= PHOTO UPLOAD PROGRESS MODAL ================= */}
+      {uploadingSlot && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Uploading photo"
+        >
+          <div className="w-full max-w-xs rounded-2xl border border-[#ebdcc8] bg-white p-6 text-center shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eef6f3] text-[#1a3c36]">
+              <LoaderCircle className="h-6 w-6 animate-spin" />
+            </div>
+            <h2 className="mt-4 text-base font-black text-[#1d2925]">Uploading your photo</h2>
+            <p className="mt-1 text-xs text-[#777]">
+              {photoSlots.find((slot) => slot.id === uploadingSlot)?.name || "Photo position"}
+            </p>
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-[#eee5d8]">
+              <div
+                className={`h-full rounded-full bg-[#1a3c36] transition-all duration-200 ${uploadProgress === 0 ? "w-1/3 animate-pulse" : ""}`}
+                style={uploadProgress > 0 ? { width: `${uploadProgress}%` } : undefined}
+              />
+            </div>
+            <p className="mt-2 text-xs font-bold text-[#1a3c36]">
+              {uploadProgress > 0 ? `${uploadProgress}%` : "Preparing upload..."}
+            </p>
+            <p className="mt-3 text-[10px] font-semibold text-[#999]">Please wait. Do not close or interact with this page.</p>
+          </div>
+        </div>
+      )}
 
       {/* ================= CUSTOMIZATION CONFIRMATION MODAL ================= */}
       {isConfirmModalOpen && (
