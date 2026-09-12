@@ -1120,6 +1120,12 @@ const ProductDetails = () => {
                 customization_id: savedCust?.customization_id || customizationId,
                 slot_photos: customerPhotos,
                 photo_adjustments: photoAdjustments,
+                preview_image:
+                  savedCust?.preview_image ||
+                  compositeServerUrl ||
+                  mergedPreviewUrl ||
+                  product.product_images?.[0] ||
+                  frameData.frame_image,
                 product_image:
                   savedCust?.preview_image ||
                   compositeServerUrl ||
