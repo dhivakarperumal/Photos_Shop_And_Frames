@@ -92,7 +92,29 @@ const handleUploadRequest = (req, res) => {
   });
 };
 
-app.post("/api/upload", upload.any(), handleUploadRequest);
+const requireUploadAuth = (req, res, next) => {
+  const authorization = String(req.headers.authorization || "");
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Please login before uploading files",
+    });
+  }
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET || "your_secret_key");
+    next();
+  } catch {
+    return res.status(401).json({
+      success: false,
+      message: "Your login session has expired. Please login again",
+    });
+  }
+};
+
+app.post("/api/upload", requireUploadAuth, upload.any(), handleUploadRequest);
 app.post("/api/banners/upload", upload.any(), handleUploadRequest);
 app.post("/api/videos/upload", upload.any(), handleUploadRequest);
 app.post("/api/videos/upload-thumbnail", upload.any(), handleUploadRequest);

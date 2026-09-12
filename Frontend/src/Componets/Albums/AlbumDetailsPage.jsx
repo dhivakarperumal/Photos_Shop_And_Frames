@@ -591,6 +591,13 @@ const AlbumDetailsPage = () => {
     }
   };
 
+  const handleUploadButtonClick = (event) => {
+    if (!isAuthenticated) {
+      event.preventDefault();
+      notifyLoginRequired("Please login to upload photos");
+    }
+  };
+
   // Remove individual photo
   const handleRemovePhoto = (index) => {
     setAlbumPhotos((prev) => prev.filter((_, idx) => idx !== index));
@@ -1065,7 +1072,7 @@ const AlbumDetailsPage = () => {
                 {/* MULTI-FILE UPLOAD AREA */}
                 {albumPhotos.length < maxPhotos ? (
                   <div className="mt-4">
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#1a3c36]/35 bg-white p-5 text-center transition hover:border-[#1a3c36] hover:bg-[#faf7f2]">
+                    <label onClick={handleUploadButtonClick} className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#1a3c36]/35 bg-white p-5 text-center transition hover:border-[#1a3c36] hover:bg-[#faf7f2]">
                       <UploadCloud className="h-8 w-8 text-[#1a3c36]" />
                       <p className="mt-2 text-xs font-bold text-[#1d2925]">
                         {uploadingAlbumPhotos ? "Uploading Photos to Album..." : "Click or Drag & Drop Photos to Upload"}
@@ -1119,6 +1126,7 @@ const AlbumDetailsPage = () => {
                           {/* Hover Controls: Replace / Delete */}
                           <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/65 opacity-0 transition group-hover:opacity-100 rounded-xl">
                             <label
+                              onClick={handleUploadButtonClick}
                               className="cursor-pointer rounded-lg bg-white/95 p-1.5 text-[#1d2925] shadow transition hover:bg-white hover:text-[#1a3c36]"
                               title="Replace this photo"
                             >
@@ -1379,7 +1387,7 @@ const AlbumDetailsPage = () => {
 
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#1a3c36] bg-white px-4 py-2 text-[11px] font-black text-[#1a3c36] shadow-sm transition hover:bg-[#eef6f3]">
+                      <label onClick={handleUploadButtonClick} className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#1a3c36] bg-white px-4 py-2 text-[11px] font-black text-[#1a3c36] shadow-sm transition hover:bg-[#eef6f3]">
                         <ImagePlus className="h-4 w-4" />
                         {reviewUploadingPhotos ? "Uploading..." : "Add Photos"}
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleReviewPhotoUpload} />

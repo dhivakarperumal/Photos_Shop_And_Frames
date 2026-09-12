@@ -2806,7 +2806,15 @@ const ProductDetails = () => {
 
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#1a3c36] bg-white px-4 py-2 text-[11px] font-black text-[#1a3c36] shadow-sm transition hover:bg-[#eef6f3]">
+                      <label
+                        onClick={(event) => {
+                          if (!isAuthenticated) {
+                            event.preventDefault();
+                            notifyLoginRequired("Please login to upload photos");
+                          }
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-[#1a3c36] bg-white px-4 py-2 text-[11px] font-black text-[#1a3c36] shadow-sm transition hover:bg-[#eef6f3]"
+                      >
                         <ImagePlus className="h-4 w-4" />
                         {reviewUploadingPhotos ? "Uploading..." : "Add Photos"}
                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleReviewPhotoUpload} />
