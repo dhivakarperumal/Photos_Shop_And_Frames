@@ -86,8 +86,8 @@ const getCartByUser = async (userId) => {
       c.price,
       c.quantity,
       (c.price * c.quantity) AS total_price,
-      c.slot_photos,
-      c.preview_image,
+      COALESCE(cp.slot_photos, c.slot_photos) AS slot_photos,
+      COALESCE(cp.preview_image, c.preview_image) AS preview_image,
       c.created_at,
       c.updated_at,
       COALESCE(
@@ -135,6 +135,7 @@ const getCartByUser = async (userId) => {
       a.product_images AS album_images,
       a.stock_quantity AS album_stock
     FROM carts c
+    LEFT JOIN customized_photos cp ON cp.customization_id = c.customization_id
     LEFT JOIN products p ON (
       (c.item_type = 'product' OR (c.item_type IS NULL AND c.preview_image NOT LIKE '%/gifts/%' AND c.preview_image NOT LIKE '%/albums/%'))
       AND c.product_id = p.id
