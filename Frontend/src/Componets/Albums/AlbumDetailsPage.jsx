@@ -185,6 +185,7 @@ const AlbumDetailsPage = () => {
   }, [album, id]);
 
   const activeUserId = user?.user_id || user?.id || user?.uuid || null;
+  const isAuthenticated = Boolean(activeUserId && localStorage.getItem("token"));
   const activeAlbumCode = album?.product_code || album?.product_id || id;
 
   const userAlreadyReviewedAlbum = useMemo(() => {
@@ -358,7 +359,7 @@ const AlbumDetailsPage = () => {
   };
 
   const handleReviewPhotoUpload = async (event) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       event.target.value = "";
       return;
@@ -471,7 +472,7 @@ const AlbumDetailsPage = () => {
 
   // Handle custom photo upload
   const handleCoverPhotoUpload = async (e) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       e.target.value = "";
       return;
@@ -500,7 +501,7 @@ const AlbumDetailsPage = () => {
 
   // Handle album photos batch upload (up to maxPhotos = sheetCount * 2)
   const handleAlbumPhotosUpload = async (e) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       e.target.value = "";
       return;
@@ -563,7 +564,7 @@ const AlbumDetailsPage = () => {
 
   // Handle individual photo replacement
   const handleReplacePhoto = async (index, file) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       return;
     }

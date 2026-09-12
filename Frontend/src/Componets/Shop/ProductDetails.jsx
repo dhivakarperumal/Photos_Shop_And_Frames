@@ -523,6 +523,7 @@ const ProductDetails = () => {
   }, [id]);
 
   const activeUserId = user?.user_id || user?.id || user?.uuid || null;
+  const isAuthenticated = Boolean(activeUserId && localStorage.getItem("token"));
   const activeProductId = Number(product?.id ?? product?.product_id ?? 0);
 
   const userAlreadyReviewedProduct = useMemo(() => {
@@ -564,7 +565,7 @@ const ProductDetails = () => {
   }, [productReviews]);
 
   const handleReviewPhotoUpload = async (event) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       event.target.value = "";
       return;
@@ -798,7 +799,7 @@ const ProductDetails = () => {
 
   // Handle uploading user's personal photo into a slot
   const openSlotUpload = (slotId) => {
-    if (!user) {
+    if (!isAuthenticated) {
       notifyLoginRequired("Please login to upload photos");
       return;
     }
@@ -978,16 +979,14 @@ const ProductDetails = () => {
    * Admin product in products table remains 100% UNTOUCHED.
    */
   const ensureCustomizationSaved = async () => {
+    if (!isAuthenticated) {
+      notifyLoginRequired("Please login before uploading photos");
+      return null;
+    }
     const hasPhotos = Object.keys(customerPhotos).length > 0;
 
     setSavingCustomization(true);
     try {
-      const activeUserId =
-        user?.user_id ||
-        user?.id ||
-        localStorage.getItem("frame_shop_guest_id") ||
-        null;
-
       // 1. Generate full composite (Whole Frame + Customer Photos merged on Canvas)
       let wholeFramePhotoUrl = compositeServerUrl || frameData.frame_image || null;
 
@@ -1060,6 +1059,10 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (!isAuthenticated) {
+      notifyLoginRequired("Please login before uploading photos");
+      return;
+    }
     if (!inStock) {
       toast.error("Selected size variant is out of stock.");
       return;
