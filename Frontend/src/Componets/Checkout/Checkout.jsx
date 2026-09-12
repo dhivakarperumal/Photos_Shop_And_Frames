@@ -206,7 +206,8 @@ const Checkout = () => {
           );
           if (!response.ok) throw new Error("Location lookup failed");
 
-          const address = (await response.json()).address || {};
+          const locationData = await response.json();
+          const address = locationData.address || {};
           const doorNumber = address.house_number || address.building || "";
           const street =
             address.road ||
@@ -216,9 +217,8 @@ const Checkout = () => {
             address.path ||
             address.cycleway ||
             address.street ||
-            address.locality ||
-            address.suburb ||
-            address.neighbourhood ||
+            address.unclassified ||
+            address.service ||
             "";
           const city = address.city || address.town || address.village || address.municipality || "";
           const district = address.state_district || address.county || "";
@@ -243,7 +243,11 @@ const Checkout = () => {
             pincode: address.postcode || prev.pincode,
             landmark: landmark || prev.landmark,
           }));
-          toast.success("Current delivery location added");
+          if (street) {
+            toast.success("Current delivery location added");
+          } else {
+            toast.success("Location added. Please enter your street name.");
+          }
         } catch (error) {
           console.error("Reverse geocoding error:", error);
           toast.error("Could not read this location. Please enter the address manually.");
