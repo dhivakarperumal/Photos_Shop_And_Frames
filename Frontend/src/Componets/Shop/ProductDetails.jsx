@@ -48,7 +48,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import api from "../../api";
-import { StoreContext } from "../../PrivateRouter/StoreContext";
+import { StoreContext, notifyLoginRequired } from "../../PrivateRouter/StoreContext";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import toast from "react-hot-toast";
 import PhotoAdjustModal, {
@@ -564,6 +564,11 @@ const ProductDetails = () => {
   }, [productReviews]);
 
   const handleReviewPhotoUpload = async (event) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      event.target.value = "";
+      return;
+    }
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
@@ -792,7 +797,21 @@ const ProductDetails = () => {
   }, [customerPhotos, photoAdjustments, frameData.frame_image, photoSlots, product]);
 
   // Handle uploading user's personal photo into a slot
+  const openSlotUpload = (slotId) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      return;
+    }
+    setActiveSlotId(slotId);
+    fileInputRefs.current[slotId]?.click();
+  };
+
   const handleSlotUpload = async (slotId, event) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      event.target.value = "";
+      return;
+    }
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -1496,8 +1515,7 @@ const ProductDetails = () => {
                                     onPointerDown={(e) => e.stopPropagation()}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setActiveSlotId(slot.id);
-                                      fileInputRefs.current[slot.id]?.click();
+                                      openSlotUpload(slot.id);
                                     }}
                                     className="pointer-events-auto absolute top-1 right-1 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 hover:bg-[#1a3c36] text-white/90 hover:text-[#d5a65a] shadow transition cursor-pointer"
                                     title="Change Photo"
@@ -1545,8 +1563,7 @@ const ProductDetails = () => {
                                       onPointerDown={(e) => e.stopPropagation()}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setActiveSlotId(slot.id);
-                                        fileInputRefs.current[slot.id]?.click();
+                                        openSlotUpload(slot.id);
                                       }}
                                       className="rounded-md bg-[#1a3c36] px-2 py-1 text-[10px] font-bold text-white shadow hover:bg-[#235048] flex items-center gap-1 cursor-pointer"
                                       title="Change photo file"
@@ -1559,8 +1576,7 @@ const ProductDetails = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setActiveSlotId(slot.id);
-                                    fileInputRefs.current[slot.id]?.click();
+                                        openSlotUpload(slot.id);
                                   }}
                                   className="flex h-full w-full flex-col items-center justify-center p-1 text-center"
                                 >
@@ -1823,7 +1839,7 @@ const ProductDetails = () => {
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     )}
-                    <button
+                    {/* <button
                       type="button"
                       onClick={() => {
                         if (activeSlotId) {
@@ -1834,7 +1850,7 @@ const ProductDetails = () => {
                     >
                       <UploadCloud className="h-3.5 w-3.5 text-[#d5a65a]" />
                       <span>{customerPhotos[activeSlot?.id] ? "Replace Photo" : "Upload Photo"}</span>
-                    </button>
+                    </button> */}
                   </div>
                 </div>
 
@@ -2586,8 +2602,7 @@ const ProductDetails = () => {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveSlotId(slot.id);
-                                fileInputRefs.current[slot.id]?.click();
+                                openSlotUpload(slot.id);
                               }}
                               disabled={isUploading}
                               className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition disabled:opacity-50 cursor-pointer ${

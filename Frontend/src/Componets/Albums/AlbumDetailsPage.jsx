@@ -358,6 +358,11 @@ const AlbumDetailsPage = () => {
   };
 
   const handleReviewPhotoUpload = async (event) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      event.target.value = "";
+      return;
+    }
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
@@ -466,6 +471,11 @@ const AlbumDetailsPage = () => {
 
   // Handle custom photo upload
   const handleCoverPhotoUpload = async (e) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      e.target.value = "";
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -490,6 +500,11 @@ const AlbumDetailsPage = () => {
 
   // Handle album photos batch upload (up to maxPhotos = sheetCount * 2)
   const handleAlbumPhotosUpload = async (e) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      e.target.value = "";
+      return;
+    }
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
@@ -548,6 +563,10 @@ const AlbumDetailsPage = () => {
 
   // Handle individual photo replacement
   const handleReplacePhoto = async (index, file) => {
+    if (!user) {
+      notifyLoginRequired("Please login to upload photos");
+      return;
+    }
     if (!file) return;
     const formData = new FormData();
     formData.append("folder", "album_customer_photos");
