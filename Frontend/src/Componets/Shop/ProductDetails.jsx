@@ -25,6 +25,7 @@ import {
   ImagePlus,
   Italic,
   Layers,
+  LoaderCircle,
   Move,
   Package,
   Palette,
@@ -2538,6 +2539,12 @@ const ProductDetails = () => {
                                 <Check className="h-2 w-2" />
                               </div>
                             )}
+                            {isUploading && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-[#1a3c36]/85 text-white">
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                                <span className="text-[7px] font-bold uppercase tracking-wide">Uploading</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -2582,7 +2589,7 @@ const ProductDetails = () => {
                               }`}
                             >
                               <UploadCloud className="h-3 w-3" />
-                              {isUploading ? "..." : userPhoto ? "Change" : "Upload"}
+                              {isUploading ? "Uploading..." : userPhoto ? "Change" : "Upload"}
                             </button>
                           </div>
                         </div>
